@@ -25,15 +25,8 @@ fn main() {
 
     let mut vm = vm::VM::new(inst);
 
-    debug_single_step(&mut vm);
-    debug_single_step(&mut vm);
-    debug_single_step(&mut vm);
-    debug_single_step(&mut vm);
-    debug_single_step(&mut vm);
-    debug_single_step(&mut vm);
-    debug_single_step(&mut vm);
-    debug_single_step(&mut vm);
-    debug_single_step(&mut vm);
-    debug_single_step(&mut vm);
+    vm.step_until_value(true);
+
+    println!("{:?}", vm);
 
 }

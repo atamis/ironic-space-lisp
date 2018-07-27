@@ -95,6 +95,20 @@ pub mod vm {
             }
         }
 
+        pub fn step_until_value(&mut self, print: bool) -> &data::Literal {
+            loop {
+                if let Some(ref r) = self.return_value {
+                    return &r
+                }
+
+                if print {
+                    println!("{:?}", self);
+                }
+
+                self.single_step();
+            }
+        }
+
         pub fn single_step(&mut self) {
 
             let mut is_return = false;
