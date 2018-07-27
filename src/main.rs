@@ -32,5 +32,8 @@ fn main() {
     debug_single_step(&mut vm);
     debug_single_step(&mut vm);
     debug_single_step(&mut vm);
+    debug_single_step(&mut vm);
+    debug_single_step(&mut vm);
+    debug_single_step(&mut vm);
 
 }

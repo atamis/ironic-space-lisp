@@ -98,6 +98,7 @@ pub mod vm {
         pub fn single_step(&mut self) {
 
             let mut is_return = false;
+            let mut new_frame: Option<StackFrame> = None;
 
             {
                 let frame = self.frames.last_mut().expect("Looks like we're done");
@@ -120,7 +121,17 @@ pub mod vm {
                             data::Literal::Builtin(f) => {
                                 f.invoke(&mut frame.stack);
                             },
-                            data::Literal::Lambda(b) => {},
+                            data::Literal::Lambda(f) => {
+                                let mut new_stack: Vec<data::Literal> = Vec::new();
+                                for _ in 0..f.get_arity() {
+                                    new_stack.push(frame.stack.pop().unwrap());
+                                }
+                                new_frame = Some(StackFrame {
+                                    instructions: f.get_instructions(),
+                                    idx: 0,
+                                    stack: new_stack
+                                });
+                            },
                             _ => panic!("Attempted to apply non-function"),
                         }
 
@@ -129,6 +140,10 @@ pub mod vm {
                         is_return = true;
                     }
                 }
+            }
+
+            if let Some(f) = new_frame {
+                self.frames.push(f);
             }
 
 
