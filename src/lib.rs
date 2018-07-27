@@ -72,6 +72,20 @@ pub mod vm {
     }
 
     impl StackFrame {
+        pub fn new(instructions: Vec<Op>, initial_stack: Vec<data::Literal>) -> StackFrame {
+            StackFrame {
+                instructions,
+                idx: 0,
+                stack: initial_stack,
+            }
+        }
+
+        pub fn next_instruction(&mut self) -> Op {
+            let op = &self.instructions[self.idx];
+            self.idx += 1;
+            op.clone()
+        }
+
         pub fn stack_pop(&mut self) -> Result<data::Literal,error::VmPopError> {
             match self.stack.pop() {
                 Some(x) => Ok(x),
@@ -82,24 +96,24 @@ pub mod vm {
 
     impl VM {
         pub fn new(instructions: Vec<Op>) -> VM {
-            let frame = StackFrame {instructions, idx: 0, stack: Vec::new()};
+            let frame = StackFrame::new(instructions, Vec::new());
             VM {
                 return_value: None,
                 frames: vec![frame],
             }
         }
 
-        pub fn step_until_value(&mut self, print: bool) -> &data::Literal {
+        pub fn step_until_value(&mut self, print: bool) -> Result<&data::Literal, error::VmError> {
             loop {
                 if let Some(ref r) = self.return_value {
-                    return &r
+                    return Ok(&r)
                 }
 
                 if print {
                     println!("{:?}", self);
                 }
 
-                self.single_step();
+                self.single_step()?;
             }
         }
 
@@ -110,14 +124,13 @@ pub mod vm {
 
             {
                 let frame = self.frames.last_mut().expect("Looks like we're done");
-                let op = frame.instructions[frame.idx].clone();
-                frame.idx += 1;
+                let op = frame.next_instruction();
 
                 match op {
                     Op::Lit(l) => frame.stack.push(( l ).clone()),
                     Op::PlusOp => {
-                        let x = frame.stack_pop()?.expect_number();
-                        let y = frame.stack_pop()?.expect_number();
+                        let x = frame.stack_pop()?.ensure_number()?;
+                        let y = frame.stack_pop()?.ensure_number()?;
                         let s = x + y;
                         frame.stack.push(data::Literal::Number(s));
                     }
@@ -133,11 +146,7 @@ pub mod vm {
                                 for _ in 0..f.get_arity() {
                                     new_stack.push(frame.stack_pop()?);
                                 }
-                                new_frame = Some(StackFrame {
-                                    instructions: f.get_instructions(),
-                                    idx: 0,
-                                    stack: new_stack
-                                });
+                                new_frame = Some(StackFrame::new(f.get_instructions(), new_stack))
                             },
                             _ => panic!("Attempted to apply non-function"),
                         }

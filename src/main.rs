@@ -7,12 +7,6 @@ use ironic_space_lisp::vm;
 use ironic_space_lisp::vm::Op;
 use ironic_space_lisp::data;
 
-fn debug_single_step(vm: &mut vm::VM) {
-    vm.single_step();
-
-    println!("{:?}", vm);
-}
-
 fn main() {
     let inst = vec![Op::Lit(data::Literal::Number(4)),
                     Op::Lit(data::Literal::Number(4)),
@@ -25,7 +19,7 @@ fn main() {
 
     let mut vm = vm::VM::new(inst);
 
-    vm.step_until_value(true);
+    vm.step_until_value(true).unwrap();
 
     println!("{:?}", vm);
 
