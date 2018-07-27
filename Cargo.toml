@@ -1,0 +1,6 @@
+[package]
+name = "ironic-space-lisp"
+version = "0.1.0"
+authors = ["Andrew Amis <atamiser@gmail.com>"]
+
+[dependencies]
