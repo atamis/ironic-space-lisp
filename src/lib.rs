@@ -6,23 +6,15 @@ pub mod vm {
         pub type Literal = u32;
     }
 
+    #[derive(Debug)]
     pub enum Op {
         Lit(data::Literal),
         PlusOp,
         ApplyFunction(Box<Function>),
     }
 
-    impl fmt::Debug for Op {
-        fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-            match self {
-                Op::ApplyFunction(_) => write!(f, "ApplyFunction"),
-                Op::PlusOp => write!(f, "PlusOp"),
-                Op::Lit(i) => write!(f, "Lit({})", i),
-            }
-        }
-    }
-
-    pub trait Function {
+    // Bad hack here
+    pub trait Function: fmt::Debug {
         fn get_arity(&self) -> usize;
         fn invoke(&self, stack: &mut Vec<data::Literal>);
     }
