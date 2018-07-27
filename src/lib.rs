@@ -1,30 +1,14 @@
+pub mod data;
+pub mod error;
 
 pub mod vm {
     use std::fmt;
     use std::mem;
 
-    pub mod data {
-        use std::rc::Rc;
-        #[derive(Debug, Clone)]
-        pub enum Literal {
-            Number(u32),
-            Builtin(Rc<super::BuiltinFunction>),
-            Lambda(Rc<super::LambdaFunction>)
-        }
+    use ::data;
+    use ::error;
 
-        impl Literal {
-            pub fn expect_number(&self) -> u32 {
-                if let Literal::Number(n) = self {
-                    return *n
-                } else {
-                    panic!("Expected number, got {:?}", self)
-                }
-            }
-        }
-
-    }
-
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     pub enum Op {
         Lit(data::Literal),
         ReturnOp,
@@ -53,6 +37,7 @@ pub mod vm {
         }
 
         fn invoke(&self, stack: &mut Vec<data::Literal>) {
+            // TODO: maybe make this return result?
             let x = stack.pop().unwrap().expect_number();
             let y = stack.pop().unwrap().expect_number();
             let s = x + y;
@@ -86,6 +71,15 @@ pub mod vm {
         stack: Vec<data::Literal>,
     }
 
+    impl StackFrame {
+        pub fn stack_pop(&mut self) -> Result<data::Literal,error::VmPopError> {
+            match self.stack.pop() {
+                Some(x) => Ok(x),
+                None => Err(error::VmPopError),
+            }
+        }
+    }
+
     impl VM {
         pub fn new(instructions: Vec<Op>) -> VM {
             let frame = StackFrame {instructions, idx: 0, stack: Vec::new()};
@@ -109,27 +103,26 @@ pub mod vm {
             }
         }
 
-        pub fn single_step(&mut self) {
+        pub fn single_step(&mut self) -> Result<(), error::VmError> {
 
             let mut is_return = false;
             let mut new_frame: Option<StackFrame> = None;
 
             {
                 let frame = self.frames.last_mut().expect("Looks like we're done");
-                let instructions = &frame.instructions;
-                let op = &instructions[frame.idx];
+                let op = frame.instructions[frame.idx].clone();
                 frame.idx += 1;
 
                 match op {
-                    Op::Lit(l) => frame.stack.push(( *l ).clone()),
+                    Op::Lit(l) => frame.stack.push(( l ).clone()),
                     Op::PlusOp => {
-                        let x = frame.stack.pop().unwrap().expect_number();
-                        let y = frame.stack.pop().unwrap().expect_number();
+                        let x = frame.stack_pop()?.expect_number();
+                        let y = frame.stack_pop()?.expect_number();
                         let s = x + y;
                         frame.stack.push(data::Literal::Number(s));
                     }
                     Op::ApplyFunction => {
-                        let function = frame.stack.pop().unwrap();
+                        let function = frame.stack_pop()?;
 
                         match function {
                             data::Literal::Builtin(f) => {
@@ -138,7 +131,7 @@ pub mod vm {
                             data::Literal::Lambda(f) => {
                                 let mut new_stack: Vec<data::Literal> = Vec::new();
                                 for _ in 0..f.get_arity() {
-                                    new_stack.push(frame.stack.pop().unwrap());
+                                    new_stack.push(frame.stack_pop()?);
                                 }
                                 new_frame = Some(StackFrame {
                                     instructions: f.get_instructions(),
@@ -175,6 +168,8 @@ pub mod vm {
                 }
 
             }
+
+            return Ok(())
 
         }
     }

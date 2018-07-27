@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use ironic_space_lisp::vm;
 use ironic_space_lisp::vm::Op;
-use ironic_space_lisp::vm::data;
+use ironic_space_lisp::data;
 
 fn debug_single_step(vm: &mut vm::VM) {
     vm.single_step();
