@@ -1,42 +1,81 @@
 
 pub mod vm {
     use std::fmt;
+    use std::mem;
 
     pub mod data {
-        pub type Literal = u32;
+        use std::rc::Rc;
+        #[derive(Debug, Clone)]
+        pub enum Literal {
+            Number(u32),
+            Builtin(Rc<super::BuiltinFunction>),
+            Lambda(Rc<super::LambdaFunction>)
+        }
+
+        impl Literal {
+            pub fn expect_number(&self) -> u32 {
+                if let Literal::Number(n) = self {
+                    return *n
+                } else {
+                    panic!("Expected number, got {:?}", self)
+                }
+            }
+        }
+
     }
 
     #[derive(Debug)]
     pub enum Op {
         Lit(data::Literal),
+        ReturnOp,
         PlusOp,
-        ApplyFunction(Box<Function>),
+        ApplyFunction,
     }
 
     // Bad hack here
-    pub trait Function: fmt::Debug {
+    pub trait BuiltinFunction: fmt::Debug {
         fn get_arity(&self) -> usize;
         fn invoke(&self, stack: &mut Vec<data::Literal>);
+    }
+
+    // Same bad hack
+    pub trait LambdaFunction: fmt::Debug {
+        fn get_arity(&self) -> usize;
+        fn get_instructions(&self) -> Vec<Op>;
     }
 
     #[derive(Debug)]
     pub struct AdditionFunction;
 
-    impl Function for AdditionFunction {
+    impl BuiltinFunction for AdditionFunction {
         fn get_arity(&self) -> usize {
             2
         }
 
         fn invoke(&self, stack: &mut Vec<data::Literal>) {
-            let x = stack.pop().unwrap();
-            let y = stack.pop().unwrap();
+            let x = stack.pop().unwrap().expect_number();
+            let y = stack.pop().unwrap().expect_number();
             let s = x + y;
-            stack.push(s);
+            stack.push(data::Literal::Number(s));
+        }
+    }
+
+    #[derive(Debug)]
+    pub struct AddOneFunction;
+
+    impl LambdaFunction for AddOneFunction {
+        fn get_arity(&self) -> usize {
+            1
+        }
+
+        fn get_instructions(&self) -> Vec<Op> {
+            vec![Op::Lit(data::Literal::Number(1)), Op::PlusOp, Op::ReturnOp]
         }
     }
 
     #[derive(Debug)]
     pub struct VM {
+        return_value: Option<data::Literal>,
         frames: Vec<StackFrame>,
     }
 
@@ -51,25 +90,63 @@ pub mod vm {
         pub fn new(instructions: Vec<Op>) -> VM {
             let frame = StackFrame {instructions, idx: 0, stack: Vec::new()};
             VM {
-                frames: vec![frame]
+                return_value: None,
+                frames: vec![frame],
             }
         }
 
         pub fn single_step(&mut self) {
-            let frame = self.frames.last_mut().expect("Looks like we're done");
-            let op = &frame.instructions[frame.idx];
-            frame.idx += 1;
 
-            match op {
-                Op::Lit(l) => frame.stack.push(l.clone()),
-                Op::PlusOp => {
-                    let x = frame.stack.pop().unwrap();
-                    let y = frame.stack.pop().unwrap();
-                    let s = x + y;
-                    frame.stack.push(s);
+            let mut is_return = false;
+
+            {
+                let frame = self.frames.last_mut().expect("Looks like we're done");
+                let instructions = &frame.instructions;
+                let op = &instructions[frame.idx];
+                frame.idx += 1;
+
+                match op {
+                    Op::Lit(l) => frame.stack.push(( *l ).clone()),
+                    Op::PlusOp => {
+                        let x = frame.stack.pop().unwrap().expect_number();
+                        let y = frame.stack.pop().unwrap().expect_number();
+                        let s = x + y;
+                        frame.stack.push(data::Literal::Number(s));
+                    }
+                    Op::ApplyFunction => {
+                        let function = frame.stack.pop().unwrap();
+
+                        match function {
+                            data::Literal::Builtin(f) => {
+                                f.invoke(&mut frame.stack);
+                            },
+                            data::Literal::Lambda(b) => {},
+                            _ => panic!("Attempted to apply non-function"),
+                        }
+
+                    },
+                    Op::ReturnOp => {
+                        is_return = true;
+                    }
                 }
-                Op::ApplyFunction(f) => f.invoke(&frame.stack),
             }
+
+
+            if is_return {
+                let last_frame = self.frames.pop().unwrap();
+                let return_val = mem::replace(&mut last_frame.stack.last().unwrap(), &data::Literal::Number(0));
+
+                match self.frames.last_mut() {
+                    Some(ref mut next_frame) => {
+                        next_frame.stack.push(( *return_val ).clone());
+                    }
+                    None => {
+                        self.return_value = Some(( *return_val ).clone());
+                    }
+                }
+
+            }
+
         }
     }
 }
