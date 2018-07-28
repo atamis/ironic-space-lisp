@@ -4,32 +4,22 @@ Weird VM-lisp in Rust.
 
 ## Plan
 
-lisp strings -> AST -> simplified AST -> "bytecode" -> VM -> scheduler
+lisp strings -> AST -> simplified AST -> VM -> scheduler
 
-Currentlying working on "bytecode" -> VM.
+Currently working on "bytecode" -> VM.
 
 ### lisp strings -> AST
 
-Use some kind of parser library
+Use some kind of parser library. Hopefully parses to built in data structures.
 
 ### AST -> simplified AST
 
 "Undo" all the sugar
 
-### simplified AST -> "bytecode"
+### simplified AST -> VM
 
-Convert prefix to infix, and all code into opcodes.
-
-Maybe the above step should convert regular lisp code into prefix "opcodes", and
-this converts to infix and makes it real "bytecode".
-
-"bytecode" because it's not really bytecode, it's a weird enum mix of literals
-and opcodes.
-
-### "bytecode" -> VM
-
-VM runs the "bytecode" in its own environment. Because the "bytecode" is
-concatenative infix, can easy run single or batched steps.
+Run the simplified AST directly in the stepped VM. VM has to be stepped to
+enable preemptive scheduling.
 
 ### VM -> scheduler
 
