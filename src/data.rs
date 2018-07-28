@@ -1,20 +1,19 @@
 use std::rc::Rc;
 
-use ::vm;
-use ::error;
-
+use error;
+use vm;
 
 #[derive(Debug, Clone)]
 pub enum Literal {
     Number(u32),
     Builtin(Rc<vm::BuiltinFunction>),
-    Lambda(Rc<vm::LambdaFunction>)
+    Lambda(Rc<vm::LambdaFunction>),
 }
 
 impl Literal {
     pub fn expect_number(&self) -> u32 {
         if let Literal::Number(n) = self {
-            return *n
+            return *n;
         } else {
             panic!("Expected number, got {:?}", self)
         }
@@ -24,7 +23,10 @@ impl Literal {
         if let Literal::Number(n) = self {
             Ok(*n)
         } else {
-            Err(error::VmTypeError("Number".to_string(), format!("{:?}", self)))
+            Err(error::VmTypeError(
+                "Number".to_string(),
+                format!("{:?}", self),
+            ))
         }
     }
 }

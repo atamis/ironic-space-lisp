@@ -6,8 +6,8 @@ pub mod vm {
     use std::fmt;
     use std::mem;
 
-    use ::data;
-    use ::error;
+    use data;
+    use error;
 
     #[derive(Debug, Clone)]
     pub enum Op {
@@ -87,7 +87,7 @@ pub mod vm {
             op.clone()
         }
 
-        pub fn stack_pop(&mut self) -> Result<data::Literal,error::VmPopError> {
+        pub fn stack_pop(&mut self) -> Result<data::Literal, error::VmPopError> {
             match self.stack.pop() {
                 Some(x) => Ok(x),
                 None => Err(error::VmPopError),
@@ -107,7 +107,7 @@ pub mod vm {
         pub fn step_until_value(&mut self, print: bool) -> Result<&data::Literal, error::VmError> {
             loop {
                 if let Some(ref r) = self.return_value {
-                    return Ok(&r)
+                    return Ok(&r);
                 }
 
                 if print {
@@ -119,7 +119,6 @@ pub mod vm {
         }
 
         pub fn single_step(&mut self) -> Result<(), error::VmError> {
-
             let mut is_return = false;
             let mut new_frame: Option<StackFrame> = None;
 
@@ -128,7 +127,7 @@ pub mod vm {
                 let op = frame.next_instruction();
 
                 match op {
-                    Op::Lit(l) => frame.stack.push(( l ).clone()),
+                    Op::Lit(l) => frame.stack.push((l).clone()),
                     Op::PlusOp => {
                         let x = frame.stack_pop()?.ensure_number()?;
                         let y = frame.stack_pop()?.ensure_number()?;
@@ -141,18 +140,19 @@ pub mod vm {
                         match function {
                             data::Literal::Builtin(f) => {
                                 f.invoke(&mut frame.stack);
-                            },
+                            }
                             data::Literal::Lambda(f) => {
-                                let mut new_stack: Vec<data::Literal> = Vec::new();
+                                let mut new_stack: Vec<
+                                    data::Literal,
+                                > = Vec::new();
                                 for _ in 0..f.get_arity() {
                                     new_stack.push(frame.stack_pop()?);
                                 }
                                 new_frame = Some(StackFrame::new(f.get_instructions(), new_stack))
-                            },
+                            }
                             _ => panic!("Attempted to apply non-function"),
                         }
-
-                    },
+                    }
                     Op::ReturnOp => {
                         is_return = true;
                     }
@@ -163,24 +163,24 @@ pub mod vm {
                 self.frames.push(f);
             }
 
-
             if is_return {
                 let last_frame = self.frames.pop().unwrap();
-                let return_val = mem::replace(&mut last_frame.stack.last().unwrap(), &data::Literal::Number(0));
+                let return_val = mem::replace(
+                    &mut last_frame.stack.last().unwrap(),
+                    &data::Literal::Number(0),
+                );
 
                 match self.frames.last_mut() {
                     Some(ref mut next_frame) => {
-                        next_frame.stack.push(( *return_val ).clone());
+                        next_frame.stack.push((*return_val).clone());
                     }
                     None => {
-                        self.return_value = Some(( *return_val ).clone());
+                        self.return_value = Some((*return_val).clone());
                     }
                 }
-
             }
 
-            return Ok(())
-
+            return Ok(());
         }
     }
 }

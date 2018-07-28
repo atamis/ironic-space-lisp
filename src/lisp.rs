@@ -1,12 +1,12 @@
-use std::rc::Rc;
 use std::fmt;
 use std::mem;
+use std::rc::Rc;
 
-use ::error::VmGeneralError;
+use error::VmGeneralError;
 
 #[derive(Debug, Clone)]
 pub enum SimOp {
-    Add
+    Add,
 }
 
 #[derive(Debug, Clone)]
@@ -23,24 +23,21 @@ pub fn make_list<'a>(items: Vec<Lisp>) -> Lisp {
 pub fn normal_eval<'a>(l: &Lisp) -> Lisp {
     match l {
         Lisp::List(rc) => {
-            let l : Vec<Lisp> = rc.iter().map(normal_eval).collect();
+            let l: Vec<Lisp> = rc.iter().map(normal_eval).collect();
             let op = &l[0];
             let args = &l[1..];
 
             match op {
                 Lisp::Op(SimOp::Add) => {
-                    let sum = args.iter().fold(0, |sum, i| {
-                        match i {
-                            Lisp::Num(i) => sum + i,
-                            _ => panic!("Can't add non-numbers")
-                        }
-
+                    let sum = args.iter().fold(0, |sum, i| match i {
+                        Lisp::Num(i) => sum + i,
+                        _ => panic!("Can't add non-numbers"),
                     });
                     Lisp::Num(sum)
                 }
-                _ => panic!("Not operation, or operation not implemented")
+                _ => panic!("Not operation, or operation not implemented"),
             }
-        },
+        }
         x => (*x).clone(),
     }
 }
@@ -53,7 +50,10 @@ enum FrameStepResult {
 }
 
 trait Frame: fmt::Debug {
-    fn single_step(&mut self, return_val: &mut Option<Lisp>) -> Result<FrameStepResult, VmGeneralError>;
+    fn single_step(
+        &mut self,
+        return_val: &mut Option<Lisp>,
+    ) -> Result<FrameStepResult, VmGeneralError>;
 }
 
 #[derive(Debug)]
@@ -62,10 +62,13 @@ pub struct ValueFrame {
 }
 
 impl Frame for ValueFrame {
-    fn single_step(&mut self, _return_val: &mut Option<Lisp>) -> Result<FrameStepResult, VmGeneralError> {
+    fn single_step(
+        &mut self,
+        _return_val: &mut Option<Lisp>,
+    ) -> Result<FrameStepResult, VmGeneralError> {
         match &self.lisp {
             Lisp::List(_) => Err(VmGeneralError),
-            x => Ok(FrameStepResult::Return(x.clone()))
+            x => Ok(FrameStepResult::Return(x.clone())),
         }
     }
 }
@@ -81,15 +84,21 @@ impl ApplicationFrame {
         match lisp {
             Lisp::List(l) => {
                 let list = Rc::try_unwrap(l).unwrap();
-                ApplicationFrame {list: list, vals: Vec::new()}
-            },
-            _ => panic!("Attempted to make ApplicationFrame with lisp that wasn't an application")
+                ApplicationFrame {
+                    list: list,
+                    vals: Vec::new(),
+                }
+            }
+            _ => panic!("Attempted to make ApplicationFrame with lisp that wasn't an application"),
         }
     }
 }
 
 impl Frame for ApplicationFrame {
-    fn single_step(&mut self, return_val: &mut Option<Lisp>) -> Result<FrameStepResult, VmGeneralError> {
+    fn single_step(
+        &mut self,
+        return_val: &mut Option<Lisp>,
+    ) -> Result<FrameStepResult, VmGeneralError> {
         if let Some(_) = return_val {
             if let Some(myr) = mem::replace(return_val, None) {
                 self.vals.push(myr);
@@ -102,18 +111,14 @@ impl Frame for ApplicationFrame {
 
             match op {
                 Lisp::Op(SimOp::Add) => {
-                    let sum = args.iter().fold(0, |sum, i| {
-                        match i {
-                            Lisp::Num(i) => sum + i,
-                            _ => panic!("Can't add non-numbers")
-                        }
-
+                    let sum = args.iter().fold(0, |sum, i| match i {
+                        Lisp::Num(i) => sum + i,
+                        _ => panic!("Can't add non-numbers"),
                     });
-                    return Ok(FrameStepResult::Return(Lisp::Num(sum)))
+                    return Ok(FrameStepResult::Return(Lisp::Num(sum)));
                 }
-                _ => panic!("Not operation, or operation not implemented")
+                _ => panic!("Not operation, or operation not implemented"),
             }
-
         } else {
             let l = self.list.remove(0); // TODO: use pop and reverse arg list
 
@@ -122,15 +127,12 @@ impl Frame for ApplicationFrame {
     }
 }
 
-
 fn match_frame(lisp: Lisp) -> Box<Frame> {
     match lisp {
         Lisp::List(_) => Box::new(ApplicationFrame::new(lisp)),
-        x => Box::new(ValueFrame { lisp: x })
+        x => Box::new(ValueFrame { lisp: x }),
     }
 }
-
-
 
 #[derive(Debug)]
 pub struct Evaler {
@@ -151,7 +153,7 @@ impl Evaler {
             println!("{:?}", self);
 
             if self.frames.len() == 0 {
-                return Ok(self.return_value.clone())
+                return Ok(self.return_value.clone());
             }
 
             self.single_step()?;
@@ -172,13 +174,12 @@ impl Evaler {
                 FrameStepResult::Return(l) => {
                     self.return_value = Some(l);
                     pop_frame = true;
-                },
+                }
                 FrameStepResult::Recur(l) => {
                     self.return_value = None;
                     new_frame = Some(match_frame(l))
-                },
+                }
             }
-
         }
 
         if pop_frame {

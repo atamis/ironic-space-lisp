@@ -1,6 +1,6 @@
+use std::convert::From;
 use std::error;
 use std::fmt;
-use std::convert::From;
 
 #[derive(Debug)]
 pub enum VmError {
@@ -71,7 +71,6 @@ impl error::Error for VmTypeError {
         None
     }
 }
-
 
 #[derive(Debug)]
 pub struct VmPopError;
