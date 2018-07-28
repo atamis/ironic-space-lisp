@@ -1,13 +1,12 @@
-mod value;
 mod application;
+mod value;
 
 use std::fmt;
 
+use self::application::ApplicationFrame;
+use self::value::ValueFrame;
 use data::Lisp;
 use errors::*;
-use self::value::ValueFrame;
-use self::application::ApplicationFrame;
-
 
 // Make a new frame appropriate for the given lisp fragment. Boxed because
 // it will be a trait object.
@@ -36,9 +35,5 @@ pub trait Frame: fmt::Debug {
     // reference to the return val so the fragment can claim the relevant
     // return values from recurring. You can't set the normal return value,
     // you have to return via FrameStepResult.
-    fn single_step(
-        &mut self,
-        return_val: &mut Option<Lisp>,
-    ) -> Result<FrameStepResult>;
+    fn single_step(&mut self, return_val: &mut Option<Lisp>) -> Result<FrameStepResult>;
 }
-

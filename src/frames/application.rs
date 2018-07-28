@@ -1,5 +1,5 @@
-use std::rc::Rc;
 use std::mem;
+use std::rc::Rc;
 
 use data::Lisp;
 use data::Op;
@@ -7,8 +7,6 @@ use errors::*;
 
 use super::Frame;
 use super::FrameStepResult;
-
-
 
 // Will represent function application, currently handles operations.
 #[derive(Debug)]

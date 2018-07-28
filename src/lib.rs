@@ -19,9 +19,9 @@ mod frames;
 /// `::data` and errors from `::error`.
 pub mod vm {
 
-    use errors::*;
     use data::Lisp;
     use data::Op;
+    use errors::*;
     use frames::*;
 
     /// Normal recursive eval for lisp.
@@ -52,9 +52,6 @@ pub mod vm {
             x => (*x).clone(),
         }
     }
-
-
-
 
     /// Stepped evaluator for Ironic Space Lisp.
     ///
@@ -100,12 +97,13 @@ pub mod vm {
             while !self.is_done() {
                 println!("{:?}", self);
 
-                self.single_step().chain_err(|| "Continuously stepping until done")?;
+                self.single_step()
+                    .chain_err(|| "Continuously stepping until done")?;
             }
 
             match self.return_value {
                 Some(ref l) => Ok(l.clone()),
-                None => Err("No return error found".into())
+                None => Err("No return error found".into()),
             }
         }
 
@@ -125,8 +123,9 @@ pub mod vm {
             {
                 let frame = self.frames.last_mut().ok_or("No frames left")?;
 
-                let fsr = frame.single_step(&mut self.return_value).
-                    chain_err(|| "Executing current frame's single step.")?;
+                let fsr = frame
+                    .single_step(&mut self.return_value)
+                    .chain_err(|| "Executing current frame's single step.")?;
 
                 match fsr {
                     // Do nothing to the control flow.
