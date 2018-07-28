@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate error_chain;
+
 /// Contains global data definitions for Ironic Space Lisp.
 ///
 /// These data structures are used to represent both code/AST and live data.
@@ -5,7 +8,7 @@
 pub mod data;
 
 /// Contains out of date error types and a lot of boilerplate.
-pub mod error;
+pub mod errors;
 
 /// Ironic Space Lisp VM.
 ///
@@ -16,7 +19,7 @@ pub mod vm {
     use std::mem;
     use std::rc::Rc;
 
-    use error::VmGeneralError;
+    use errors::*;
     use data::Lisp;
     use data::Op;
 
@@ -70,7 +73,7 @@ pub mod vm {
         fn single_step(
             &mut self,
             return_val: &mut Option<Lisp>,
-        ) -> Result<FrameStepResult, VmGeneralError>;
+        ) -> Result<FrameStepResult>;
     }
 
     // Represents a single value fragment, usually a data literal.
@@ -84,9 +87,9 @@ pub mod vm {
         fn single_step(
             &mut self,
             _return_val: &mut Option<Lisp>,
-        ) -> Result<FrameStepResult, VmGeneralError> {
+        ) -> Result<FrameStepResult> {
             match &self.lisp {
-                Lisp::List(_) => Err(VmGeneralError),
+                Lisp::List(_) => Err("Can't make value frame on a list".into()),
                 x => Ok(FrameStepResult::Return(x.clone())),
             }
         }
@@ -125,7 +128,7 @@ pub mod vm {
         fn single_step(
             &mut self,
             return_val: &mut Option<Lisp>,
-        ) -> Result<FrameStepResult, VmGeneralError> {
+        ) -> Result<FrameStepResult> {
             // Extract the result of the last fragment we recurred on.
             if let Some(_) = return_val {
                 if let Some(myr) = mem::replace(return_val, None) {
@@ -141,12 +144,20 @@ pub mod vm {
 
                 match op {
                     Lisp::Op(Op::Add) => {
+                        // TODO: Hack
+                        let mut encountered_nonnumber = false;
                         // Sum everything up, and aggressively panic if we can't
                         // add correctly.
                         let sum = args.iter().fold(0, |sum, i| match i {
                             Lisp::Num(i) => sum + i,
-                            _ => panic!("Can't add non-numbers"),
+                            _ => {
+                                encountered_nonnumber = true;
+                                sum
+                            },
                         });
+                        if encountered_nonnumber {
+                            return Err("Attempted to add non-number".into())
+                        }
                         // Indicate that we want to return a value.
                         return Ok(FrameStepResult::Return(Lisp::Num(sum)));
                     }
@@ -212,16 +223,16 @@ pub mod vm {
         /// of continuing evaluation. See `Evaler::single_step` for more details.
         ///
         /// Additionally, this prints the evaler state before every step.
-        pub fn step_until_return(&mut self) -> Result<Lisp, VmGeneralError> {
+        pub fn step_until_return(&mut self) -> Result<Lisp> {
             while !self.is_done() {
                 println!("{:?}", self);
 
-                self.single_step()?;
+                self.single_step().chain_err(|| "Continuously stepping until done")?;
             }
 
             match self.return_value {
-                Some(l) => Ok(l.clone()),
-                None => Err(VmGeneralError)
+                Some(ref l) => Ok(l.clone()),
+                None => Err("No return error found".into())
             }
         }
 
@@ -233,15 +244,16 @@ pub mod vm {
         /// what will happen, because the single step function can return errors
         /// from a number of different places, and could potentially leave the
         /// evaler in an invalid state.
-        pub fn single_step(&mut self) -> Result<(), VmGeneralError> {
+        pub fn single_step(&mut self) -> Result<()> {
             // Borrow hacks
             let mut pop_frame = false;
             let mut new_frame = None;
 
             {
-                let frame = self.frames.last_mut().unwrap();
+                let frame = self.frames.last_mut().ok_or("No frames left")?;
 
-                let fsr = frame.single_step(&mut self.return_value)?;
+                let fsr = frame.single_step(&mut self.return_value).
+                    chain_err(|| "Executing current frame's single step.")?;
 
                 match fsr {
                     // Do nothing to the control flow.
