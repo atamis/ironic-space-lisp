@@ -1,5 +1,6 @@
 pub mod data;
 pub mod error;
+pub mod lisp;
 
 pub mod vm {
     use std::fmt;
