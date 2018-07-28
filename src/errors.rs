@@ -1,7 +1,7 @@
 use std::convert::From;
-use std::error;
-use std::fmt;
+#[allow(unused_attributes)]
 #[macro_use]
+#[allow(unused_imports)]
 use error_chain;
 
 error_chain! {
