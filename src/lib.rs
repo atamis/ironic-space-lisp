@@ -1,186 +1,190 @@
 pub mod data;
 pub mod error;
-pub mod lisp;
 
 pub mod vm {
     use std::fmt;
     use std::mem;
+    use std::rc::Rc;
 
-    use data;
-    use error;
+    use error::VmGeneralError;
+    use data::Lisp;
+    use data::Op;
 
-    #[derive(Debug, Clone)]
-    pub enum Op {
-        Lit(data::Literal),
-        ReturnOp,
-        PlusOp,
-        ApplyFunction,
-    }
+    #[deprecated]
+    pub fn normal_eval<'a>(l: &Lisp) -> Lisp {
+        match l {
+            Lisp::List(rc) => {
+                let l: Vec<Lisp> = rc.iter().map(normal_eval).collect();
+                let op = &l[0];
+                let args = &l[1..];
 
-    // Bad hack here
-    pub trait BuiltinFunction: fmt::Debug {
-        fn get_arity(&self) -> usize;
-        fn invoke(&self, stack: &mut Vec<data::Literal>);
-    }
-
-    // Same bad hack
-    pub trait LambdaFunction: fmt::Debug {
-        fn get_arity(&self) -> usize;
-        fn get_instructions(&self) -> Vec<Op>;
-    }
-
-    #[derive(Debug)]
-    pub struct AdditionFunction;
-
-    impl BuiltinFunction for AdditionFunction {
-        fn get_arity(&self) -> usize {
-            2
-        }
-
-        fn invoke(&self, stack: &mut Vec<data::Literal>) {
-            // TODO: maybe make this return result?
-            let x = stack.pop().unwrap().expect_number();
-            let y = stack.pop().unwrap().expect_number();
-            let s = x + y;
-            stack.push(data::Literal::Number(s));
-        }
-    }
-
-    #[derive(Debug)]
-    pub struct AddOneFunction;
-
-    impl LambdaFunction for AddOneFunction {
-        fn get_arity(&self) -> usize {
-            1
-        }
-
-        fn get_instructions(&self) -> Vec<Op> {
-            vec![Op::Lit(data::Literal::Number(1)), Op::PlusOp, Op::ReturnOp]
-        }
-    }
-
-    #[derive(Debug)]
-    pub struct VM {
-        return_value: Option<data::Literal>,
-        frames: Vec<StackFrame>,
-    }
-
-    #[derive(Debug)]
-    struct StackFrame {
-        instructions: Vec<Op>,
-        idx: usize,
-        stack: Vec<data::Literal>,
-    }
-
-    impl StackFrame {
-        pub fn new(instructions: Vec<Op>, initial_stack: Vec<data::Literal>) -> StackFrame {
-            StackFrame {
-                instructions,
-                idx: 0,
-                stack: initial_stack,
+                match op {
+                    Lisp::Op(Op::Add) => {
+                        let sum = args.iter().fold(0, |sum, i| match i {
+                            Lisp::Num(i) => sum + i,
+                            _ => panic!("Can't add non-numbers"),
+                        });
+                        Lisp::Num(sum)
+                    }
+                    _ => panic!("Not operation, or operation not implemented"),
+                }
             }
+            x => (*x).clone(),
         }
+    }
 
-        pub fn next_instruction(&mut self) -> Op {
-            let op = &self.instructions[self.idx];
-            self.idx += 1;
-            op.clone()
-        }
+    #[derive(Debug)]
+    enum FrameStepResult {
+        Continue,
+        Return(Lisp),
+        Recur(Lisp),
+    }
 
-        pub fn stack_pop(&mut self) -> Result<data::Literal, error::VmPopError> {
-            match self.stack.pop() {
-                Some(x) => Ok(x),
-                None => Err(error::VmPopError),
+    trait Frame: fmt::Debug {
+        fn single_step(
+            &mut self,
+            return_val: &mut Option<Lisp>,
+        ) -> Result<FrameStepResult, VmGeneralError>;
+    }
+
+    #[derive(Debug)]
+    pub struct ValueFrame {
+        lisp: Lisp,
+    }
+
+    impl Frame for ValueFrame {
+        fn single_step(
+            &mut self,
+            _return_val: &mut Option<Lisp>,
+        ) -> Result<FrameStepResult, VmGeneralError> {
+            match &self.lisp {
+                Lisp::List(_) => Err(VmGeneralError),
+                x => Ok(FrameStepResult::Return(x.clone())),
             }
         }
     }
 
-    impl VM {
-        pub fn new(instructions: Vec<Op>) -> VM {
-            let frame = StackFrame::new(instructions, Vec::new());
-            VM {
+    #[derive(Debug)]
+    pub struct ApplicationFrame {
+        list: Vec<Lisp>,
+        vals: Vec<Lisp>,
+    }
+
+    impl ApplicationFrame {
+        pub fn new(lisp: Lisp) -> ApplicationFrame {
+            match lisp {
+                Lisp::List(l) => {
+                    let list = Rc::try_unwrap(l).unwrap();
+                    ApplicationFrame {
+                        list: list,
+                        vals: Vec::new(),
+                    }
+                }
+                _ => panic!(
+                    "Attempted to make ApplicationFrame with lisp that wasn't an application"
+                ),
+            }
+        }
+    }
+
+    impl Frame for ApplicationFrame {
+        fn single_step(
+            &mut self,
+            return_val: &mut Option<Lisp>,
+        ) -> Result<FrameStepResult, VmGeneralError> {
+            if let Some(_) = return_val {
+                if let Some(myr) = mem::replace(return_val, None) {
+                    self.vals.push(myr);
+                }
+            }
+
+            if self.list.len() == 0 {
+                let op = &self.vals[0];
+                let args = &self.vals[1..];
+
+                match op {
+                    Lisp::Op(Op::Add) => {
+                        let sum = args.iter().fold(0, |sum, i| match i {
+                            Lisp::Num(i) => sum + i,
+                            _ => panic!("Can't add non-numbers"),
+                        });
+                        return Ok(FrameStepResult::Return(Lisp::Num(sum)));
+                    }
+                    _ => panic!("Not operation, or operation not implemented"),
+                }
+            } else {
+                let l = self.list.remove(0); // TODO: use pop and reverse arg list
+
+                return Ok(FrameStepResult::Recur(l));
+            }
+        }
+    }
+
+    fn match_frame(lisp: Lisp) -> Box<Frame> {
+        match lisp {
+            Lisp::List(_) => Box::new(ApplicationFrame::new(lisp)),
+            x => Box::new(ValueFrame { lisp: x }),
+        }
+    }
+
+    #[derive(Debug)]
+    pub struct Evaler {
+        return_value: Option<Lisp>,
+        frames: Vec<Box<Frame>>,
+    }
+
+    impl Evaler {
+        pub fn new(lisp: Lisp) -> Evaler {
+            Evaler {
+                frames: vec![match_frame(lisp)],
                 return_value: None,
-                frames: vec![frame],
             }
         }
 
-        pub fn step_until_value(&mut self, print: bool) -> Result<&data::Literal, error::VmError> {
-            loop {
-                if let Some(ref r) = self.return_value {
-                    return Ok(&r);
-                }
+        pub fn is_done(&self) -> bool {
+            self.frames.len() == 0
+        }
 
-                if print {
-                    println!("{:?}", self);
-                }
+        pub fn step_until_return(&mut self) -> Result<Option<Lisp>, VmGeneralError> {
+            while !self.is_done() {
+                println!("{:?}", self);
 
                 self.single_step()?;
             }
+
+            return Ok(self.return_value.clone());
         }
 
-        pub fn single_step(&mut self) -> Result<(), error::VmError> {
-            let mut is_return = false;
-            let mut new_frame: Option<StackFrame> = None;
+        pub fn single_step(&mut self) -> Result<(), VmGeneralError> {
+            let mut pop_frame = false;
+            let mut new_frame = None;
 
             {
-                let frame = self.frames.last_mut().expect("Looks like we're done");
-                let op = frame.next_instruction();
+                let frame = self.frames.last_mut().unwrap();
 
-                match op {
-                    Op::Lit(l) => frame.stack.push((l).clone()),
-                    Op::PlusOp => {
-                        let x = frame.stack_pop()?.ensure_number()?;
-                        let y = frame.stack_pop()?.ensure_number()?;
-                        let s = x + y;
-                        frame.stack.push(data::Literal::Number(s));
-                    }
-                    Op::ApplyFunction => {
-                        let function = frame.stack_pop()?;
+                let fsr = frame.single_step(&mut self.return_value)?;
 
-                        match function {
-                            data::Literal::Builtin(f) => {
-                                f.invoke(&mut frame.stack);
-                            }
-                            data::Literal::Lambda(f) => {
-                                let mut new_stack: Vec<
-                                    data::Literal,
-                                > = Vec::new();
-                                for _ in 0..f.get_arity() {
-                                    new_stack.push(frame.stack_pop()?);
-                                }
-                                new_frame = Some(StackFrame::new(f.get_instructions(), new_stack))
-                            }
-                            _ => panic!("Attempted to apply non-function"),
-                        }
+                match fsr {
+                    FrameStepResult::Continue => (),
+                    FrameStepResult::Return(l) => {
+                        self.return_value = Some(l);
+                        pop_frame = true;
                     }
-                    Op::ReturnOp => {
-                        is_return = true;
+                    FrameStepResult::Recur(l) => {
+                        self.return_value = None;
+                        new_frame = Some(match_frame(l))
                     }
                 }
+            }
+
+            if pop_frame {
+                self.frames.pop();
             }
 
             if let Some(f) = new_frame {
                 self.frames.push(f);
             }
-
-            if is_return {
-                let last_frame = self.frames.pop().unwrap();
-                let return_val = mem::replace(
-                    &mut last_frame.stack.last().unwrap(),
-                    &data::Literal::Number(0),
-                );
-
-                match self.frames.last_mut() {
-                    Some(ref mut next_frame) => {
-                        next_frame.stack.push((*return_val).clone());
-                    }
-                    None => {
-                        self.return_value = Some((*return_val).clone());
-                    }
-                }
-            }
-
-            return Ok(());
+            Ok(())
         }
     }
 }

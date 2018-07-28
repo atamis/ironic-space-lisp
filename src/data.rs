@@ -1,32 +1,25 @@
 use std::rc::Rc;
 
-use error;
-use vm;
-
+/// Omni-datatype. Represents both data and code for the lisp VM.
 #[derive(Debug, Clone)]
-pub enum Literal {
-    Number(u32),
-    Builtin(Rc<vm::BuiltinFunction>),
-    Lambda(Rc<vm::LambdaFunction>),
+pub enum Lisp {
+    /// Represents a single u32 number.
+    Num(u32),
+    /// Represents an operation see `Op` for more info.
+    Op(Op),
+    /// Represents a list of `Lisp` values. Note that this is reference counted.
+    List(Rc<Vec<Lisp>>),
 }
 
-impl Literal {
-    pub fn expect_number(&self) -> u32 {
-        if let Literal::Number(n) = self {
-            return *n;
-        } else {
-            panic!("Expected number, got {:?}", self)
-        }
-    }
+/// Enum of basic operations.
+#[derive(Debug, Clone)]
+pub enum Op {
+    /// Represents addition. Currently variadic.
+    Add,
+}
 
-    pub fn ensure_number(&self) -> Result<u32, error::VmTypeError> {
-        if let Literal::Number(n) = self {
-            Ok(*n)
-        } else {
-            Err(error::VmTypeError(
-                "Number".to_string(),
-                format!("{:?}", self),
-            ))
-        }
-    }
+/// Simplified method of making a list of lisp datums. Sets up both the
+/// Rc and tags it with the enum.
+pub fn make_list<'a>(items: Vec<Lisp>) -> Lisp {
+    Lisp::List(Rc::new(items))
 }
