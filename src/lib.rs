@@ -19,8 +19,8 @@ mod frames;
 /// `::data` and errors from `::error`.
 pub mod vm {
 
+    use std::rc::Rc;
     use data::Lisp;
-    use data::Op;
     use errors::*;
     use frames::*;
 
@@ -28,12 +28,12 @@ pub mod vm {
     ///
     /// This is more of an example of just how easy this stuff is to write in a
     /// normal recursive mode. Panics aggressively.
-    #[deprecated]
-    pub fn normal_eval<'a>(l: &Lisp) -> Lisp {
+    /*#[deprecated]
+    pub fn normal_eval(l: Lisp) -> Lisp {
         match l {
             Lisp::List(rc) => {
                 // Main recursion here:
-                let l: Vec<Lisp> = rc.iter().map(normal_eval).collect();
+                let l: Vec<Lisp> = (*rc ).iter().map(|r| { normal_eval(r.try_unwrap()) }).collect();
                 let op = &l[0];
                 let args = &l[1..];
 
@@ -49,9 +49,9 @@ pub mod vm {
                     _ => panic!("Not operation, or operation not implemented"),
                 }
             }
-            x => (*x).clone(),
+            x => x,
         }
-    }
+    }*/
 
     /// Stepped evaluator for Ironic Space Lisp.
     ///
@@ -65,7 +65,8 @@ pub mod vm {
     /// goal is to make preemptive scheduling of Ironic Space Lisp VMs possible.
     #[derive(Debug)]
     pub struct Evaler {
-        return_value: Option<Lisp>,
+        lisp: Rc<Lisp>,
+        return_value: Option<Rc<Lisp>>,
         frames: Vec<Box<Frame>>,
     }
 
@@ -76,10 +77,13 @@ pub mod vm {
         /// evaluated, the Evaler cannot be reset with a new fragment, and must
         /// be discarded.
         pub fn new(lisp: Lisp) -> Result<Evaler> {
+            let r = Rc::new(lisp);
+            let r_frame = Rc::clone(&r);
             Ok(
                 Evaler {
+                    lisp: r,
                     frames: vec![
-                        match_frame(lisp).chain_err(|| "finding suitable frame with match_frame")?,
+                        match_frame(r_frame).chain_err(|| "finding suitable frame with match_frame")?,
                     ],
                     return_value: None,
                 }
@@ -97,7 +101,7 @@ pub mod vm {
         /// of continuing evaluation. See `Evaler::single_step` for more details.
         ///
         /// Additionally, this prints the evaler state before every step.
-        pub fn step_until_return(&mut self) -> Result<Lisp> {
+        pub fn step_until_return(&mut self) -> Result<Rc<Lisp>> {
             while !self.is_done() {
                 println!("{:?}", self);
 

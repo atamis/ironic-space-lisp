@@ -29,9 +29,14 @@ fn main() {
 
 fn run() -> Result<()> {
     let prog = make_list(vec![
-        Lisp::Op(Op::Add),
-        Lisp::Num(1),
-        make_list(vec![Lisp::Op(Op::Add), Lisp::Num(1), Lisp::Num(1)]),
+        Lisp::Op(Op::If),
+        make_list(vec![
+            Lisp::Op(Op::Add),
+            Lisp::Num(1),
+            make_list(vec![Lisp::Op(Op::Add), Lisp::Num(1), Lisp::Num(1)]),
+        ]),
+        Lisp::Num(10),
+        Lisp::Num(11),
     ]);
 
     let mut evaler = Evaler::new(prog)?;

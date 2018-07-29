@@ -8,7 +8,7 @@ pub enum Lisp {
     /// Represents an operation see `Op` for more info.
     Op(Op),
     /// Represents a list of `Lisp` values. Note that this is reference counted.
-    List(Rc<Vec<Lisp>>),
+    List(Rc<Vec<Rc<Lisp>>>),
 }
 
 /// Enum of basic operations.
@@ -16,10 +16,18 @@ pub enum Lisp {
 pub enum Op {
     /// Represents addition. Currently variadic.
     Add,
+    If,
 }
 
 /// Simplified method of making a list of lisp datums. Sets up both the
 /// Rc and tags it with the enum.
-pub fn make_list<'a>(items: Vec<Lisp>) -> Lisp {
-    Lisp::List(Rc::new(items))
+pub fn make_list(mut items: Vec<Lisp>) -> Lisp {
+    let mut rcs = Vec::with_capacity(items.len());
+
+    while items.len() > 0 {
+        // TODO: not this?
+        rcs.push(Rc::new(items.remove(0)));
+    }
+
+    Lisp::List(Rc::new(rcs))
 }
