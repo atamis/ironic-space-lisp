@@ -10,10 +10,10 @@ use errors::*;
 
 // Make a new frame appropriate for the given lisp fragment. Boxed because
 // it will be a trait object.
-pub fn match_frame(lisp: Lisp) -> Box<Frame> {
+pub fn match_frame(lisp: Lisp) -> Result<Box<Frame>> {
     match lisp {
-        Lisp::List(_) => Box::new(ApplicationFrame::new(lisp)),
-        x => Box::new(ValueFrame::new(x)),
+        Lisp::List(_) => Ok(Box::new(ApplicationFrame::new(lisp))),
+        x => Ok(Box::new(ValueFrame::new(x))),
     }
 }
 

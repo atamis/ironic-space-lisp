@@ -75,11 +75,15 @@ pub mod vm {
         /// Loads the evaler with the given lisp fragment. Once the fragment is
         /// evaluated, the Evaler cannot be reset with a new fragment, and must
         /// be discarded.
-        pub fn new(lisp: Lisp) -> Evaler {
-            Evaler {
-                frames: vec![match_frame(lisp)],
-                return_value: None,
-            }
+        pub fn new(lisp: Lisp) -> Result<Evaler> {
+            Ok(
+                Evaler {
+                    frames: vec![
+                        match_frame(lisp).chain_err(|| "finding suitable frame with match_frame")?,
+                    ],
+                    return_value: None,
+                }
+            )
         }
 
         /// Whether the evaler has completely evaluated the lisp fragment.
@@ -138,7 +142,7 @@ pub mod vm {
                     // Currently can only "self-recur".
                     FrameStepResult::Recur(l) => {
                         self.return_value = None;
-                        new_frame = Some(match_frame(l))
+                        new_frame = Some(match_frame(l).chain_err(|| "finding suitable frame for recursion")?)
                     }
                 }
             }

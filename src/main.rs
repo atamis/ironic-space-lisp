@@ -34,7 +34,7 @@ fn run() -> Result<()> {
         make_list(vec![Lisp::Op(Op::Add), Lisp::Num(1), Lisp::Num(1)]),
     ]);
 
-    let mut evaler = Evaler::new(prog);
+    let mut evaler = Evaler::new(prog)?;
     //let mut evaler = Evaler::new(Lisp::Num(1));
     println!("{:?}", evaler);
 
