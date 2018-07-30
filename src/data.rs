@@ -1,11 +1,8 @@
-use std::rc::Rc;
-
-use vm;
 use errors::*;
 
 pub type Address = (usize, usize);
 
-pub fn address_inc(mut a: &mut Address) {
+pub fn address_inc(a: &mut Address) {
     a.1 += 1;
 }
 

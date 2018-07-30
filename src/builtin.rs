@@ -1,6 +1,5 @@
 use std::usize;
 
-use ::data;
 use ::data::Literal;
 use ::errors::*;
 

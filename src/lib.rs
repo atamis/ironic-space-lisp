@@ -9,9 +9,6 @@ mod builtin;
 
 pub mod vm {
 
-    use std::fmt;
-    use std::mem;
-
     use data;
     use data::Address;
     use data::Literal;
@@ -91,6 +88,7 @@ pub mod vm {
 
         pub fn single_step(&mut self) -> Result<()> {
             let pc = self.pcounter()?;
+            // TODO: maybe don't look up program chunk first?
             let op = match self.code.addr(pc) {
                 Ok(x) => x,
                 Err(e) => {
@@ -104,8 +102,6 @@ pub mod vm {
                     return Err(e).chain_err(|| "builtin lookup failed");
                 }
             };
-
-            let op = self.code.addr(pc)?;
 
             match op {
                 Op::Lit(l) => {

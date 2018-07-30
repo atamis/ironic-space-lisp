@@ -1,10 +1,6 @@
 extern crate ironic_space_lisp;
 
-
-use std::rc::Rc;
-
 use ironic_space_lisp::vm;
-use ironic_space_lisp::vm::Op;
 use ironic_space_lisp::data;
 use ironic_space_lisp::errors::*;
 
@@ -28,7 +24,6 @@ fn main() {
 
 fn code() -> vm::Bytecode {
     use data::Literal;
-    use data::Address;
     use vm::Op::*;
     use vm::Bytecode;
     use vm::Chunk;
