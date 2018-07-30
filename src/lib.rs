@@ -1,12 +1,15 @@
+#[macro_use]
+extern crate error_chain;
+
 pub mod data;
-pub mod error;
+pub mod errors;
 
 pub mod vm {
     use std::fmt;
     use std::mem;
 
     use ::data;
-    use ::error;
+    use ::errors::*;
 
     #[derive(Debug, Clone)]
     pub enum Op {
@@ -86,10 +89,10 @@ pub mod vm {
             op.clone()
         }
 
-        pub fn stack_pop(&mut self) -> Result<data::Literal,error::VmPopError> {
+        pub fn stack_pop(&mut self) -> Result<data::Literal> {
             match self.stack.pop() {
                 Some(x) => Ok(x),
-                None => Err(error::VmPopError),
+                None => Err("Attempted to pop stack but failed".into()),
             }
         }
     }
@@ -103,7 +106,7 @@ pub mod vm {
             }
         }
 
-        pub fn step_until_value(&mut self, print: bool) -> Result<&data::Literal, error::VmError> {
+        pub fn step_until_value(&mut self, print: bool) -> Result<&data::Literal> {
             loop {
                 if let Some(ref r) = self.return_value {
                     return Ok(&r)
@@ -117,7 +120,7 @@ pub mod vm {
             }
         }
 
-        pub fn single_step(&mut self) -> Result<(), error::VmError> {
+        pub fn single_step(&mut self) -> Result<()> {
 
             let mut is_return = false;
             let mut new_frame: Option<StackFrame> = None;

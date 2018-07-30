@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
-use ::vm;
-use ::error;
+use vm;
+use errors::*;
 
 
 #[derive(Debug, Clone)]
@@ -20,11 +20,11 @@ impl Literal {
         }
     }
 
-    pub fn ensure_number(&self) -> Result<u32, error::VmTypeError> {
+    pub fn ensure_number(&self) -> Result<u32> {
         if let Literal::Number(n) = self {
             Ok(*n)
         } else {
-            Err(error::VmTypeError("Number".to_string(), format!("{:?}", self)))
+            Err(format!("Type error, expected Number, got {:?}", self).into())
         }
     }
 }
