@@ -41,6 +41,9 @@ pub mod vm {
         Lit(data::Literal),
         Return,
         Jump,
+        // predicate address IfZ
+        // If predicate is 0, jump
+        IfZ,
     }
 
     #[derive(Debug)]
@@ -123,7 +126,19 @@ pub mod vm {
                         _ => return Err("attempted to jump to non-address".into()),
                     };
                     ()
-                }
+                },
+                Op::IfZ => {
+                    let address = self.stack.pop()
+                        .ok_or("Attepmted to pop stack for address for if zero")?
+                        .ensure_address()?;
+                    let cond = self.stack.pop()
+                        .ok_or("Attempted to pop stack for conditional for if zero")?
+                        .ensure_number()?;
+
+                    if cond == 0 {
+                        self.frames.push(address);
+                    }
+                },
             };
 
             Ok(())

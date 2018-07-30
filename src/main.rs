@@ -37,8 +37,10 @@ fn code() -> vm::Bytecode {
     let inst0 = vec![
         Lit(Literal::Number(4)),
         Lit(Literal::Number(4)),
+        Lit(Literal::Number(0)),
         Lit(Literal::Address((1, 0))),
-        Jump,
+        IfZ,
+        //Jump,
         Return,
     ];
 
