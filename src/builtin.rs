@@ -1,9 +1,10 @@
 use std::usize;
 
 use ::data;
+use ::data::Literal;
 use ::errors::*;
 
-pub type BuiltinFn = Fn(&mut Vec<data::Literal>) -> ();
+pub type BuiltinFn = Fn(&mut Vec<Literal>) -> Result<()>;
 
 #[derive(Debug)]
 pub struct Builtin;
@@ -23,7 +24,15 @@ impl Builtin {
         None
     }
 
-    fn add(s: &mut Vec<data::Literal>) {
+    fn add(s: &mut Vec<Literal>) -> Result<()> {
+        let a = s.pop().ok_or("Popping number for add builtin")?
+            .ensure_number()?;
+        let b = s.pop().ok_or("Popping number for add builtin")?
+            .ensure_number()?;
+
+        s.push(Literal::Number(a + b));
+
+        Ok(())
     }
 
 }

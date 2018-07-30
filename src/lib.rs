@@ -97,7 +97,7 @@ pub mod vm {
                     // TODO: This should only happen when chunk lookup fails
                     // Fix this when real error states are implemented.
                     if let Some(f) = self.builtin.lookup(pc.0) {
-                        f(&mut self.stack);
+                        f(&mut self.stack)?;
                         self.frames.pop();
                         return Ok(());
                     }
