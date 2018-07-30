@@ -26,21 +26,44 @@ fn main() {
     }
 }
 
-fn run() -> Result<()> {
-    let inst = vec![Op::Lit(data::Literal::Number(4)),
-                    Op::Lit(data::Literal::Number(4)),
-                    Op::Lit(data::Literal::Builtin(Rc::new(vm::AdditionFunction))),
-                    Op::ApplyFunction,
-                    Op::Lit(data::Literal::Lambda(Rc::new(vm::AddOneFunction))),
-                    Op::ApplyFunction,
-                    Op::ReturnOp,
+fn code() -> vm::Bytecode {
+    use data::Literal;
+    use data::Address;
+    use vm::Op::*;
+    use vm::Bytecode;
+    use vm::Chunk;
+    use std::usize::MAX;
+
+    let inst0 = vec![
+        Lit(Literal::Number(4)),
+        Lit(Literal::Number(4)),
+        Lit(Literal::Address((1, 0))),
+        Jump,
+        Return,
     ];
 
-    let mut vm = vm::VM::new(inst);
+    let inst1 = vec![
+        Lit(Literal::Address((MAX, 0))),
+        Jump,
+        Return,
+    ];
 
-    vm.step_until_value(true)?;
+    Bytecode {
+        chunks: vec![
+            Chunk { ops: inst0 },
+            Chunk { ops: inst1 },
+        ]
+    }
+}
+
+fn run() -> Result<()> {
+
+    let mut vm = vm::VM::new(code());
+
+    let r = vm.step_until_value(true).chain_err(|| "Execute hardcoded program")?;
 
     println!("{:?}", vm);
+    println!("{:?}", r);
 
     Ok(())
 }

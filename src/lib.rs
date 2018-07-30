@@ -3,113 +3,79 @@ extern crate error_chain;
 
 pub mod data;
 pub mod errors;
+mod builtin;
+
+// std::usize::MAX
 
 pub mod vm {
+
     use std::fmt;
     use std::mem;
 
-    use ::data;
-    use ::errors::*;
+    use data;
+    use data::Address;
+    use data::Literal;
+    use errors::*;
+    use builtin;
+
+    #[derive(Debug)]
+    pub struct Bytecode {
+        pub chunks: Vec<Chunk>,
+    }
+
+    #[derive(Debug)]
+    pub struct Chunk {
+        pub ops: Vec<Op>,
+    }
+
+    impl Bytecode {
+        pub fn addr(&self, a: Address) -> Result<Op> {
+            let chunk = self.chunks.get(a.0).ok_or("Invalid chunk address")?;
+            let op = chunk.ops.get(a.1).ok_or("Invalid operation address")?;
+            Ok(op.clone())
+        }
+    }
 
     #[derive(Debug, Clone)]
     pub enum Op {
         Lit(data::Literal),
-        ReturnOp,
-        PlusOp,
-        ApplyFunction,
-    }
-
-    // Bad hack here
-    pub trait BuiltinFunction: fmt::Debug {
-        fn get_arity(&self) -> usize;
-        fn invoke(&self, stack: &mut Vec<data::Literal>);
-    }
-
-    // Same bad hack
-    pub trait LambdaFunction: fmt::Debug {
-        fn get_arity(&self) -> usize;
-        fn get_instructions(&self) -> Vec<Op>;
-    }
-
-    #[derive(Debug)]
-    pub struct AdditionFunction;
-
-    impl BuiltinFunction for AdditionFunction {
-        fn get_arity(&self) -> usize {
-            2
-        }
-
-        fn invoke(&self, stack: &mut Vec<data::Literal>) {
-            // TODO: maybe make this return result?
-            let x = stack.pop().unwrap().expect_number();
-            let y = stack.pop().unwrap().expect_number();
-            let s = x + y;
-            stack.push(data::Literal::Number(s));
-        }
-    }
-
-    #[derive(Debug)]
-    pub struct AddOneFunction;
-
-    impl LambdaFunction for AddOneFunction {
-        fn get_arity(&self) -> usize {
-            1
-        }
-
-        fn get_instructions(&self) -> Vec<Op> {
-            vec![Op::Lit(data::Literal::Number(1)), Op::PlusOp, Op::ReturnOp]
-        }
+        Return,
+        Jump,
     }
 
     #[derive(Debug)]
     pub struct VM {
-        return_value: Option<data::Literal>,
-        frames: Vec<StackFrame>,
-    }
-
-    #[derive(Debug)]
-    struct StackFrame {
-        instructions: Vec<Op>,
-        idx: usize,
+        code: Bytecode,
+        frames: Vec<data::Address>,
         stack: Vec<data::Literal>,
-    }
-
-    impl StackFrame {
-        pub fn new(instructions: Vec<Op>, initial_stack: Vec<data::Literal>) -> StackFrame {
-            StackFrame {
-                instructions,
-                idx: 0,
-                stack: initial_stack,
-            }
-        }
-
-        pub fn next_instruction(&mut self) -> Op {
-            let op = &self.instructions[self.idx];
-            self.idx += 1;
-            op.clone()
-        }
-
-        pub fn stack_pop(&mut self) -> Result<data::Literal> {
-            match self.stack.pop() {
-                Some(x) => Ok(x),
-                None => Err("Attempted to pop stack but failed".into()),
-            }
-        }
+        builtin: builtin::Builtin,
     }
 
     impl VM {
-        pub fn new(instructions: Vec<Op>) -> VM {
-            let frame = StackFrame::new(instructions, Vec::new());
+        pub fn new(code: Bytecode) -> VM {
             VM {
-                return_value: None,
-                frames: vec![frame],
+                code: code,
+                frames: vec![(0, 0)],
+                stack: vec![],
+                builtin: builtin::Builtin::new(),
             }
         }
 
-        pub fn step_until_value(&mut self, print: bool) -> Result<&data::Literal> {
+        fn pcounter(&mut self) -> Result<Address> {
+            let pc = self.frames.last_mut().ok_or("Stack empty, no counter")?;
+            let a = pc.clone();
+
+            data::address_inc(pc);
+
+            Ok(a)
+        }
+
+
+        pub fn step_until_value(&mut self, print: bool) -> Result<data::Literal> {
             loop {
-                if let Some(ref r) = self.return_value {
-                    return Ok(&r)
+                if self.frames.len() == 0 {
+                    return self.stack.pop()
+                        .ok_or("Frames empty, but no value to return".into());
                 }
 
                 if print {
@@ -121,68 +87,46 @@ pub mod vm {
         }
 
         pub fn single_step(&mut self) -> Result<()> {
-
-            let mut is_return = false;
-            let mut new_frame: Option<StackFrame> = None;
-
-            {
-                let frame = self.frames.last_mut().expect("Looks like we're done");
-                let op = frame.next_instruction();
-
-                match op {
-                    Op::Lit(l) => frame.stack.push(( l ).clone()),
-                    Op::PlusOp => {
-                        let x = frame.stack_pop()?.ensure_number()?;
-                        let y = frame.stack_pop()?.ensure_number()?;
-                        let s = x + y;
-                        frame.stack.push(data::Literal::Number(s));
+            let pc = self.pcounter()?;
+            let op = match self.code.addr(pc) {
+                Ok(x) => x,
+                Err(e) => {
+                    // TODO: This should only happen when chunk lookup fails
+                    // Fix this when real error states are implemented.
+                    if let Some(f) = self.builtin.lookup(pc.0) {
+                        f(&mut self.stack);
+                        self.frames.pop();
+                        return Ok(());
                     }
-                    Op::ApplyFunction => {
-                        let function = frame.stack_pop()?;
-
-                        match function {
-                            data::Literal::Builtin(f) => {
-                                f.invoke(&mut frame.stack);
-                            },
-                            data::Literal::Lambda(f) => {
-                                let mut new_stack: Vec<data::Literal> = Vec::new();
-                                for _ in 0..f.get_arity() {
-                                    new_stack.push(frame.stack_pop()?);
-                                }
-                                new_frame = Some(StackFrame::new(f.get_instructions(), new_stack))
-                            },
-                            _ => panic!("Attempted to apply non-function"),
-                        }
-
-                    },
-                    Op::ReturnOp => {
-                        is_return = true;
-                    }
+                    return Err(e).chain_err(|| "builtin lookup failed");
                 }
-            }
+            };
 
-            if let Some(f) = new_frame {
-                self.frames.push(f);
-            }
+            let op = self.code.addr(pc)?;
 
-
-            if is_return {
-                let last_frame = self.frames.pop().unwrap();
-                let return_val = mem::replace(&mut last_frame.stack.last().unwrap(), &data::Literal::Number(0));
-
-                match self.frames.last_mut() {
-                    Some(ref mut next_frame) => {
-                        next_frame.stack.push(( *return_val ).clone());
-                    }
-                    None => {
-                        self.return_value = Some(( *return_val ).clone());
-                    }
+            match op {
+                Op::Lit(l) => {
+                    self.stack.push(l);
+                    ()
+                },
+                Op::Return => {
+                    self.frames.pop();
+                    ()
+                },
+                Op::Jump => {
+                    let a = self.stack.pop().ok_or("Attempted to pop data stack for jump")?;
+                    match a {
+                        Literal::Address(a) => {
+                            self.frames.push(a);
+                            ()
+                        },
+                        _ => return Err("attempted to jump to non-address".into()),
+                    };
+                    ()
                 }
+            };
 
-            }
-
-            return Ok(())
-
+            Ok(())
         }
     }
 }
