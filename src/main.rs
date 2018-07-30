@@ -46,10 +46,14 @@ fn run() -> Result<()> {
     let r = evaler
         .step_until_return()
         .chain_err(|| "Stepping through hardcoded program")?;
-
     println!("{:?}", r);
 
-    evaler.single_step().chain_err(|| "Single step to fail")?;
+    /*let mut line = String::new();
+    loop {
+        let input = std::io::stdin().read_line(&mut line).expect("Failed to read line");
+
+        evaler.single_step()?; println!("{:?}", evaler);
+    }*/
 
     Ok(())
 }
