@@ -1,19 +1,19 @@
 #[macro_use]
 extern crate error_chain;
 
+mod builtin;
 pub mod data;
 pub mod errors;
-mod builtin;
 
 // std::usize::MAX
 
 pub mod vm {
 
+    use builtin;
     use data;
     use data::Address;
     use data::Literal;
     use errors::*;
-    use builtin;
 
     #[derive(Debug)]
     pub struct Bytecode {
@@ -70,11 +70,12 @@ pub mod vm {
             Ok(a)
         }
 
-
         pub fn step_until_value(&mut self, print: bool) -> Result<data::Literal> {
             loop {
                 if self.frames.len() == 0 {
-                    return self.stack.pop()
+                    return self
+                        .stack
+                        .pop()
                         .ok_or("Frames empty, but no value to return".into());
                 }
 
@@ -107,34 +108,41 @@ pub mod vm {
                 Op::Lit(l) => {
                     self.stack.push(l);
                     ()
-                },
+                }
                 Op::Return => {
                     self.frames.pop();
                     ()
-                },
+                }
                 Op::Jump => {
-                    let a = self.stack.pop().ok_or("Attempted to pop data stack for jump")?;
+                    let a = self
+                        .stack
+                        .pop()
+                        .ok_or("Attempted to pop data stack for jump")?;
                     match a {
                         Literal::Address(a) => {
                             self.frames.push(a);
                             ()
-                        },
+                        }
                         _ => return Err("attempted to jump to non-address".into()),
                     };
                     ()
-                },
+                }
                 Op::IfZ => {
-                    let address = self.stack.pop()
+                    let address = self
+                        .stack
+                        .pop()
                         .ok_or("Attepmted to pop stack for address for if zero")?
                         .ensure_address()?;
-                    let cond = self.stack.pop()
+                    let cond = self
+                        .stack
+                        .pop()
                         .ok_or("Attempted to pop stack for conditional for if zero")?
                         .ensure_number()?;
 
                     if cond == 0 {
                         self.frames.push(address);
                     }
-                },
+                }
             };
 
             Ok(())

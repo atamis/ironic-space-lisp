@@ -1,8 +1,8 @@
 extern crate ironic_space_lisp;
 
-use ironic_space_lisp::vm;
 use ironic_space_lisp::data;
 use ironic_space_lisp::errors::*;
+use ironic_space_lisp::vm;
 
 fn main() {
     if let Err(ref e) = run() {
@@ -24,10 +24,10 @@ fn main() {
 
 fn code() -> vm::Bytecode {
     use data::Literal;
-    use vm::Op::*;
+    use std::usize::MAX;
     use vm::Bytecode;
     use vm::Chunk;
-    use std::usize::MAX;
+    use vm::Op::*;
 
     let inst0 = vec![
         Lit(Literal::Number(4)),
@@ -39,25 +39,19 @@ fn code() -> vm::Bytecode {
         Return,
     ];
 
-    let inst1 = vec![
-        Lit(Literal::Address((MAX, 0))),
-        Jump,
-        Return,
-    ];
+    let inst1 = vec![Lit(Literal::Address((MAX, 0))), Jump, Return];
 
     Bytecode {
-        chunks: vec![
-            Chunk { ops: inst0 },
-            Chunk { ops: inst1 },
-        ]
+        chunks: vec![Chunk { ops: inst0 }, Chunk { ops: inst1 }],
     }
 }
 
 fn run() -> Result<()> {
-
     let mut vm = vm::VM::new(code());
 
-    let r = vm.step_until_value(true).chain_err(|| "Execute hardcoded program")?;
+    let r = vm
+        .step_until_value(true)
+        .chain_err(|| "Execute hardcoded program")?;
 
     println!("{:?}", vm);
     println!("{:?}", r);
