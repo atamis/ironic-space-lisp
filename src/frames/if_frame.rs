@@ -97,9 +97,11 @@ impl Frame for IfFrame {
     }
 
     fn is_appropriate(lisp: Rc<Lisp>) -> bool where Self: Sized {
+        // Deref RC and destructure to the contained vector
         if let Lisp::List(ref l) = *lisp {
             if l.len() > 0 {
-                if let Lisp::Op(Op::If) = *(**l)[0] {
+                // Some of these might not be necessary.
+                if let Lisp::Op(Op::If) = *(**l)[0] { // Pointers were a mistake
                     return true
                 }
             }

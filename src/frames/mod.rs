@@ -27,6 +27,8 @@ pub fn match_frame(lisp: Rc<Lisp>) -> Result<Box<Frame>> {
         return Ok(Box::new(ApplicationFrame::new(lisp)));
     }
 
+    // TODO: this isn't a great idea. any unidentifed syntax
+    // gets returned as a value.
     if ValueFrame::is_appropriate(Rc::clone(&lisp)) {
         return Ok(Box::new(ValueFrame::new(lisp)));
     }

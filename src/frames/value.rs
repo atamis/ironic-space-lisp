@@ -19,7 +19,6 @@ impl ValueFrame {
 }
 
 impl Frame for ValueFrame {
-    // Currently handles numbers and ops.
     fn single_step(&mut self, _return_val: &mut Option<Rc<Lisp>>) -> Result<FrameStepResult> {
         Ok(
             FrameStepResult::Return(

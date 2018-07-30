@@ -41,9 +41,6 @@ impl Frame for ApplicationFrame {
         // Extract the result of the last fragment we recurred on.
         if let Some(r) = return_val {
             self.vals.push(r.clone());
-            //if let Some(myr) = mem::replace(return_val, None) {
-                //self.vals.push(&myr);
-            //}
         }
 
         // We've evaled all the arg fragments, so it's time to actually
@@ -85,6 +82,7 @@ impl Frame for ApplicationFrame {
 
     fn is_appropriate(lisp: Rc<Lisp>) -> bool where Self: Sized {
         if let Lisp::List(ref l) = *lisp {
+            // "Applying" an empty list probably panics when it should errors.
             if l.len() > 0 {
                 return true
             }

@@ -21,6 +21,7 @@ pub mod vm {
 
     use std::rc::Rc;
     use data::Lisp;
+    use data::Op;
     use errors::*;
     use frames::*;
 
@@ -33,7 +34,7 @@ pub mod vm {
         match l {
             Lisp::List(rc) => {
                 // Main recursion here:
-                let l: Vec<Lisp> = (*rc ).iter().map(|r| { normal_eval(r.try_unwrap()) }).collect();
+                let l: Vec<Lisp> = (*rc ).iter().map(|r| { normal_eval(Rc::try_unwrap(r).unwrap()) }).collect();
                 let op = &l[0];
                 let args = &l[1..];
 
