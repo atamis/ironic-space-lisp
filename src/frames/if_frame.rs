@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 use data::Lisp;
+use data::Op;
 use errors::*;
 
 use super::Frame;
@@ -93,5 +94,17 @@ impl Frame for IfFrame {
             FState::Predicate => self.predicate_state(return_val),
             FState::Answer => self.answer_state(return_val),
         };
+    }
+
+    fn is_appropriate(lisp: Rc<Lisp>) -> bool where Self: Sized {
+        if let Lisp::List(ref l) = *lisp {
+            if l.len() > 0 {
+                if let Lisp::Op(Op::If) = *(**l)[0] {
+                    return true
+                }
+            }
+        }
+
+        false
     }
 }

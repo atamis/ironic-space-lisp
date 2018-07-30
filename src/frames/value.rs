@@ -21,9 +21,14 @@ impl ValueFrame {
 impl Frame for ValueFrame {
     // Currently handles numbers and ops.
     fn single_step(&mut self, _return_val: &mut Option<Rc<Lisp>>) -> Result<FrameStepResult> {
-        match *self.lisp {
-            Lisp::List(_) => Err("Can't make value frame on a list".into()),
-            _ => Ok(FrameStepResult::Return(Rc::clone( &self.lisp ))),
-        }
+        Ok(
+            FrameStepResult::Return(
+                Rc::clone( &self.lisp )
+            )
+        )
+    }
+
+    fn is_appropriate(_lisp: Rc<Lisp>) -> bool where Self: Sized {
+        true
     }
 }

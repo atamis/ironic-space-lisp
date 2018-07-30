@@ -81,4 +81,14 @@ impl Frame for ApplicationFrame {
             return Ok(FrameStepResult::Recur(Rc::clone(l)));
         }
     }
+
+
+    fn is_appropriate(lisp: Rc<Lisp>) -> bool where Self: Sized {
+        if let Lisp::List(ref l) = *lisp {
+            if l.len() > 0 {
+                return true
+            }
+        }
+        false
+    }
 }
