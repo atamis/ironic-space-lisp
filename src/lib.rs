@@ -8,6 +8,7 @@ pub mod errors;
 // std::usize::MAX
 
 pub mod vm {
+    use std::fmt;
 
     use builtin;
     use data;
@@ -33,14 +34,27 @@ pub mod vm {
         }
     }
 
-    #[derive(Debug, Clone)]
+    #[derive(Clone)]
     pub enum Op {
         Lit(data::Literal),
         Return,
         Jump,
         // predicate address IfZ
         // If predicate is 0, jump
+        // can't really return directly from this sub-chunk
+        // Implement frame-pop operation?
         IfZ,
+    }
+
+    impl fmt::Debug for Op {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            match self {
+                Op::Lit(l) => write!(f, "l({:?})", l),
+                Op::Return => write!(f, "oR"),
+                Op::Jump => write!(f, "oJ"),
+                Op::IfZ => write!(f, "oIfZ"),
+            }
+        }
     }
 
     #[derive(Debug)]
