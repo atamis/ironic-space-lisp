@@ -39,11 +39,10 @@ pub mod vm {
         Lit(data::Literal),
         Return,
         Call,
-        // predicate address IfZ
-        // If predicate is 0, jump
-        // can't really return directly from this sub-chunk
-        // Implement frame-pop operation?
-        IfZ,
+        Jump,
+        // <else> <then> <pred>
+        // If pred is true, jump to then, otherwise jump to else
+        JumpCond,
     }
 
     impl fmt::Debug for Op {
@@ -52,7 +51,8 @@ pub mod vm {
                 Op::Lit(l) => write!(f, "l({:?})", l),
                 Op::Return => write!(f, "oR"),
                 Op::Call => write!(f, "oC"),
-                Op::IfZ => write!(f, "oIfZ"),
+                Op::Jump => write!(f, "oJ"),
+                Op::JumpCond => write!(f, "oJ?"),
             }
         }
     }
@@ -101,6 +101,15 @@ pub mod vm {
             }
         }
 
+        pub fn jump(&mut self, addr: data::Address) -> Result<()> {
+            let pc:&mut data::Address = self
+                .frames.last_mut()
+                .ok_or("Frames empty, no way to jump")?;
+
+            *pc = addr;
+            return Ok(());
+        }
+
         pub fn single_step(&mut self) -> Result<()> {
             let pc = self.pcounter()?;
             // TODO: maybe don't look up program chunk first?
@@ -124,7 +133,7 @@ pub mod vm {
                     ()
                 }
                 Op::Return => {
-                    self.frames.pop();
+                    self.frames.pop().ok_or("Attempted to return on empty stack")?;
                     ()
                 }
                 Op::Call => {
@@ -141,20 +150,35 @@ pub mod vm {
                     };
                     ()
                 }
-                Op::IfZ => {
+                Op::Jump => {
                     let address = self
                         .stack
                         .pop()
-                        .ok_or("Attepmted to pop stack for address for if zero")?
+                        .ok_or("Attempted to pop stack for address")?
                         .ensure_address()?;
+                    self.jump(address)?;
+                }
+                Op::JumpCond => {
                     let cond = self
                         .stack
                         .pop()
                         .ok_or("Attempted to pop stack for conditional for if zero")?
-                        .ensure_number()?;
+                        .ensure_bool()?;
+                    let then = self
+                        .stack
+                        .pop()
+                        .ok_or("Attepmted to pop stack for address for if true")?
+                        .ensure_address()?;
+                    let els = self
+                        .stack
+                        .pop()
+                        .ok_or("Attepmted to pop stack for address for if false")?
+                        .ensure_address()?;
 
-                    if cond == 0 {
-                        self.frames.push(address);
+                    if cond {
+                        self.jump(then)?;
+                    } else {
+                        self.jump(els)?;
                     }
                 }
             };

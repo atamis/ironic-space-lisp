@@ -29,4 +29,12 @@ impl Literal {
             Err(format!("Type error, expected Address, got {:?}", self).into())
         }
     }
+
+    pub fn ensure_bool(&self) -> Result<bool> {
+        if let Literal::Boolean(a) = self {
+            Ok(*a)
+        } else {
+            Err(format!("Type error, expected boolean, got {:?}", self).into())
+        }
+    }
 }

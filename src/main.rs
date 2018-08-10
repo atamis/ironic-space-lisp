@@ -32,14 +32,15 @@ fn code() -> vm::Bytecode {
     let inst0 = vec![
         Lit(Literal::Number(4)),
         Lit(Literal::Number(4)),
-        Lit(Literal::Number(0)),
         Lit(Literal::Address((1, 0))),
-        IfZ,
+        Lit(Literal::Address((1, 0))),
+        Lit(Literal::Boolean(true)),
+        JumpCond,
         //Jump,
         Return,
     ];
 
-    let inst1 = vec![Lit(Literal::Address(ADD)), Call, Return];
+    let inst1 = vec![Lit(Literal::Address(ADD)), Call, Lit(Literal::Address((0, 6))), Jump];
 
     Bytecode {
         chunks: vec![Chunk { ops: inst0 }, Chunk { ops: inst1 }],
