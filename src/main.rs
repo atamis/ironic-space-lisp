@@ -3,7 +3,7 @@ extern crate ironic_space_lisp;
 use ironic_space_lisp::data;
 use ironic_space_lisp::errors::*;
 use ironic_space_lisp::vm;
-use ironic_space_lisp::builtin::Add
+use ironic_space_lisp::builtin::ADD;
 
 fn main() {
     if let Err(ref e) = run() {
@@ -25,7 +25,6 @@ fn main() {
 
 fn code() -> vm::Bytecode {
     use data::Literal;
-    use std::usize::MAX;
     use vm::Bytecode;
     use vm::Chunk;
     use vm::Op::*;
@@ -40,7 +39,7 @@ fn code() -> vm::Bytecode {
         Return,
     ];
 
-    let inst1 = vec![Lit(Add), Call, Return];
+    let inst1 = vec![Lit(Literal::Address(ADD)), Call, Return];
 
     Bytecode {
         chunks: vec![Chunk { ops: inst0 }, Chunk { ops: inst1 }],

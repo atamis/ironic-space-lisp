@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate error_chain;
 
-mod builtin;
+pub mod builtin;
 pub mod data;
 pub mod errors;
 

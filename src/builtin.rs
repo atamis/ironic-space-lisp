@@ -4,7 +4,7 @@ use data::Literal;
 use data::Address;
 use errors::*;
 
-pub static Add:Address = (usize::MAX - 0, 0);
+pub static ADD:Address = (usize::MAX - 0, 0);
 
 pub type BuiltinFn = Fn(&mut Vec<Literal>) -> Result<()>;
 
@@ -22,7 +22,7 @@ impl Builtin {
         let c = addr.0;
         // Rust has no match pinning
         match c {
-            _ if c == Add.0 => return Some(Box::new(Builtin::add)),
+            _ if c == ADD.0 => return Some(Box::new(Builtin::add)),
             _ => None
         }
     }

@@ -9,6 +9,7 @@ pub fn address_inc(a: &mut Address) {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Literal {
     Number(u32),
+    Boolean(bool),
     Address(Address),
 }
 
