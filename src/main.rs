@@ -27,7 +27,6 @@ fn main() {
 fn code() -> vm::Bytecode {
     use data::Literal;
     use vm::Bytecode;
-    use vm::Chunk;
     use vm::Op::*;
 
     let inst0 = vec![
@@ -36,6 +35,8 @@ fn code() -> vm::Bytecode {
         Dup,
         Lit(Literal::Address(PRINT)),
         Call,
+        //Lit(Literal::Address((3, 0))),
+        //Call,
         Return,
     ];
 
@@ -61,17 +62,21 @@ fn code() -> vm::Bytecode {
         Jump,
     ];
 
-    Bytecode {
-        chunks: vec![
-            Chunk { ops: inst0 },
-            Chunk { ops: inst1 },
-            Chunk { ops: inst2 },
-        ],
-    }
+    let inst3 = vec![
+        Lit(Literal::Number(1)),
+        Lit(Literal::Address(ADD)),
+        Call,
+        Lit(Literal::Address((3, 0))),
+        Call,
+    ];
+
+    Bytecode::new(vec![inst0, inst1, inst2, inst3])
 }
 
 fn run() -> Result<()> {
-    let mut vm = vm::VM::new(code());
+    let c = code();
+    c.dissassemble();
+    let mut vm = vm::VM::new(c);
 
     let r = vm
         .step_until_value(true)

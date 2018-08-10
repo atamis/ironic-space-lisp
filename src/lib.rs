@@ -19,7 +19,6 @@ pub mod vm {
     use environment::Environment;
     use errors::*;
 
-    #[derive(Debug)]
     pub struct Bytecode {
         pub chunks: Vec<Chunk>,
     }
@@ -29,11 +28,55 @@ pub mod vm {
         pub ops: Vec<Op>,
     }
 
+
+    impl fmt::Debug for Bytecode {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            write!(f, "Bytecode {{compiled code}}")
+        }
+    }
+
     impl Bytecode {
+        pub fn new(v: Vec<Vec<Op>>) -> Bytecode {
+            Bytecode {
+                chunks: v.into_iter().map(|c| Chunk {ops: c}).collect()
+            }
+        }
+
         pub fn addr(&self, a: Address) -> Result<Op> {
             let chunk = self.chunks.get(a.0).ok_or("Invalid chunk address")?;
             let op = chunk.ops.get(a.1).ok_or("Invalid operation address")?;
             Ok(op.clone())
+        }
+
+        pub fn dissassemble(&self) {
+            fn dissassemble_op(o: &Op) -> &'static str {
+                match o {
+                    Op::Lit(_) => "Lit",
+                    Op::Return => "Return",
+                    Op::Call => "Call",
+                    Op::Jump => "Jump",
+                    Op::JumpCond => "JumpCond",
+                    Op::Load => "Load",
+                    Op::Store => "Store",
+                    Op::PushEnv => "PushEnv",
+                    Op::PopEnv => "PopEnv",
+                    Op::Dup => "Dup",
+                }
+            }
+
+            for ( chunk_idx, chunk ) in self.chunks.iter().enumerate() {
+                print!("################ CHUNK #{:?} ################\n", chunk_idx);
+                for (op_idx, op) in chunk.ops.iter().enumerate() {
+                    let a = (chunk_idx, op_idx);
+
+                    print!("\t{:?}\t{:}", a, dissassemble_op(&op));
+
+                    if let Op::Lit(l) = op {
+                        print!("\t{:?}", l);
+                    }
+                    print!("\n")
+                }
+            }
         }
     }
 
@@ -232,7 +275,7 @@ pub mod vm {
 
             let mut val = self.environment.get(&keyword)?;
 
-            let mut val = Rc::make_mut(&mut val);
+            let val = Rc::make_mut(&mut val);
 
             self.stack.push(val.clone());
             Ok(())
