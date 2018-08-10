@@ -4,8 +4,8 @@ use std::convert::From;
 #[allow(unused_imports)]
 use error_chain;
 
-use std::rc;
 use data;
+use std::rc;
 
 error_chain! {
     types {

@@ -3,8 +3,8 @@ extern crate error_chain;
 
 pub mod builtin;
 pub mod data;
-pub mod errors;
 mod environment;
+pub mod errors;
 
 // std::usize::MAX
 
@@ -16,8 +16,8 @@ pub mod vm {
     use data;
     use data::Address;
     use data::Literal;
-    use errors::*;
     use environment::Environment;
+    use errors::*;
 
     #[derive(Debug)]
     pub struct Bytecode {
@@ -117,8 +117,9 @@ pub mod vm {
         }
 
         pub fn jump(&mut self, addr: data::Address) -> Result<()> {
-            let pc:&mut data::Address = self
-                .frames.last_mut()
+            let pc: &mut data::Address = self
+                .frames
+                .last_mut()
                 .ok_or("Frames empty, no way to jump")?;
 
             *pc = addr;
@@ -147,10 +148,14 @@ pub mod vm {
                 Op::Return => self.op_return().chain_err(|| "Executing operation return"),
                 Op::Call => self.op_call().chain_err(|| "Executing operation call"),
                 Op::Jump => self.op_jump().chain_err(|| "Executing operation jump"),
-                Op::JumpCond => self.op_jumpcond().chain_err(|| "Executing operation jumpcond"),
+                Op::JumpCond => self
+                    .op_jumpcond()
+                    .chain_err(|| "Executing operation jumpcond"),
                 Op::Load => self.op_load().chain_err(|| "Executing operation load"),
                 Op::Store => self.op_store().chain_err(|| "Executing operation store"),
-                Op::PushEnv => self.op_pushenv().chain_err(|| "Executing operation pushenv"),
+                Op::PushEnv => self
+                    .op_pushenv()
+                    .chain_err(|| "Executing operation pushenv"),
                 Op::PopEnv => self.op_popenv().chain_err(|| "Executing operation popenv"),
                 Op::Dup => self.op_dup().chain_err(|| "Executing operation dup"),
             }
@@ -162,7 +167,9 @@ pub mod vm {
         }
 
         fn op_return(&mut self) -> Result<()> {
-            self.frames.pop().ok_or("Attempted to return on empty stack")?;
+            self.frames
+                .pop()
+                .ok_or("Attempted to return on empty stack")?;
             Ok(())
         }
 
@@ -217,7 +224,9 @@ pub mod vm {
         }
 
         fn op_load(&mut self) -> Result<()> {
-            let keyword = self.stack.pop()
+            let keyword = self
+                .stack
+                .pop()
                 .ok_or("Attempted to pop stack for keyword for load")?
                 .ensure_keyword()?;
 
@@ -230,10 +239,14 @@ pub mod vm {
         }
 
         fn op_store(&mut self) -> Result<()> {
-            let keyword = self.stack.pop()
+            let keyword = self
+                .stack
+                .pop()
                 .ok_or("Attempted to pop stack for keyword for store")?
                 .ensure_keyword()?;
-            let value = self.stack.pop()
+            let value = self
+                .stack
+                .pop()
                 .ok_or("Attempted to pop stack for value for store")?;
 
             self.environment.put(keyword, Rc::new(value));
@@ -249,7 +262,11 @@ pub mod vm {
             Ok(())
         }
         fn op_dup(&mut self) -> Result<()> {
-            let v = self.stack.last().ok_or("Attmempted to dup empty stack")?.clone();
+            let v = self
+                .stack
+                .last()
+                .ok_or("Attmempted to dup empty stack")?
+                .clone();
             self.stack.push(v);
             Ok(())
         }

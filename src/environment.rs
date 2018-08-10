@@ -1,6 +1,6 @@
-use std::rc::Rc;
 use std::collections::HashMap;
 use std::mem;
+use std::rc::Rc;
 
 use data;
 use errors::*;

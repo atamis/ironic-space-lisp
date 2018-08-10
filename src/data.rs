@@ -14,11 +14,11 @@ pub enum Literal {
     Number(u32),
     Boolean(bool),
     Address(Address),
-    Keyword(Keyword)
+    Keyword(Keyword),
 }
 
 impl fmt::Debug for Literal {
-    fn fmt (&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Literal::Number(n) => write!(f, "N({:?})", n),
             Literal::Boolean(true) => write!(f, "#t"),
@@ -29,7 +29,10 @@ impl fmt::Debug for Literal {
     }
 }
 
-impl Literal {pub fn ensure_number(&self) -> Result<u32> {if let Literal::Number(n) = self {Ok(*n)
+impl Literal {
+    pub fn ensure_number(&self) -> Result<u32> {
+        if let Literal::Number(n) = self {
+            Ok(*n)
         } else {
             Err(format!("Type error, expected Number, got {:?}", self).into())
         }

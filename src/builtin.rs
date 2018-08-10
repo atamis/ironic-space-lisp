@@ -1,11 +1,11 @@
 use std::usize;
 
-use data::Literal;
 use data::Address;
+use data::Literal;
 use errors::*;
 
-pub static ADD:Address = (usize::MAX - 0, 0);
-pub static PRINT:Address = (usize::MAX - 1, 0);
+pub static ADD: Address = (usize::MAX - 0, 0);
+pub static PRINT: Address = (usize::MAX - 1, 0);
 
 pub type BuiltinFn = Fn(&mut Vec<Literal>) -> Result<()>;
 
@@ -25,7 +25,7 @@ impl Builtin {
         match c {
             _ if c == ADD.0 => return Some(Box::new(Builtin::add)),
             _ if c == PRINT.0 => return Some(Box::new(Builtin::print)),
-            _ => None
+            _ => None,
         }
     }
 
