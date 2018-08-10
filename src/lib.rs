@@ -38,7 +38,7 @@ pub mod vm {
     pub enum Op {
         Lit(data::Literal),
         Return,
-        Jump,
+        Call,
         // predicate address IfZ
         // If predicate is 0, jump
         // can't really return directly from this sub-chunk
@@ -51,7 +51,7 @@ pub mod vm {
             match self {
                 Op::Lit(l) => write!(f, "l({:?})", l),
                 Op::Return => write!(f, "oR"),
-                Op::Jump => write!(f, "oJ"),
+                Op::Call => write!(f, "oC"),
                 Op::IfZ => write!(f, "oIfZ"),
             }
         }
@@ -109,7 +109,7 @@ pub mod vm {
                 Err(e) => {
                     // TODO: This should only happen when chunk lookup fails
                     // Fix this when real error states are implemented.
-                    if let Some(f) = self.builtin.lookup(pc.0) {
+                    if let Some(f) = self.builtin.lookup(pc) {
                         f(&mut self.stack)?;
                         self.frames.pop();
                         return Ok(());
@@ -127,7 +127,7 @@ pub mod vm {
                     self.frames.pop();
                     ()
                 }
-                Op::Jump => {
+                Op::Call => {
                     let a = self
                         .stack
                         .pop()

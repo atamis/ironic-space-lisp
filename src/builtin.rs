@@ -1,7 +1,10 @@
 use std::usize;
 
 use data::Literal;
+use data::Address;
 use errors::*;
+
+pub static Add:Address = (usize::MAX - 0, 0);
 
 pub type BuiltinFn = Fn(&mut Vec<Literal>) -> Result<()>;
 
@@ -15,14 +18,13 @@ impl Builtin {
         Builtin
     }
 
-    pub fn lookup(&self, chunk: usize) -> Option<Box<BuiltinFn>> {
-        let c = usize::MAX - chunk;
-
-        if c == 0 {
-            return Some(Box::new(Builtin::add));
+    pub fn lookup(&self, addr: Address) -> Option<Box<BuiltinFn>> {
+        let c = addr.0;
+        // Rust has no match pinning
+        match c {
+            _ if c == Add.0 => return Some(Box::new(Builtin::add)),
+            _ => None
         }
-
-        None
     }
 
     fn add(s: &mut Vec<Literal>) -> Result<()> {
