@@ -50,6 +50,7 @@ pub mod vm {
         Store,
         PushEnv,
         PopEnv,
+        Dup,
     }
 
     impl fmt::Debug for Op {
@@ -64,6 +65,7 @@ pub mod vm {
                 Op::Store => write!(f, "oS"),
                 Op::PushEnv => write!(f, "oPuE"),
                 Op::PopEnv => write!(f, "oPoE"),
+                Op::Dup => write!(f, "oD"),
             }
         }
     }
@@ -216,6 +218,10 @@ pub mod vm {
                         .ok_or("Attempted to pop stack for value for store")?;
 
                     self.environment.put(keyword, Rc::new(value));
+                }
+                Op::Dup => {
+                    let v = self.stack.last().ok_or("Attmempted to dup empty stack")?.clone();
+                    self.stack.push(v);
                 }
             };
 

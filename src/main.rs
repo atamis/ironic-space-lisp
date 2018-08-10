@@ -4,6 +4,7 @@ use ironic_space_lisp::data;
 use ironic_space_lisp::errors::*;
 use ironic_space_lisp::vm;
 use ironic_space_lisp::builtin::ADD;
+use ironic_space_lisp::builtin::PRINT;
 
 fn main() {
     if let Err(ref e) = run() {
@@ -31,6 +32,9 @@ fn code() -> vm::Bytecode {
 
     let inst0 = vec![
         Lit(Literal::Address(( 1, 0 ))),
+        Call,
+        Dup,
+        Lit(Literal::Address(PRINT)),
         Call,
         Return,
     ];
