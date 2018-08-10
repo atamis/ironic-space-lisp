@@ -30,20 +30,35 @@ fn code() -> vm::Bytecode {
     use vm::Op::*;
 
     let inst0 = vec![
+        Lit(Literal::Address(( 1, 0 ))),
+        Call,
+        Return,
+    ];
+
+    let inst1 = vec![
         Lit(Literal::Number(4)),
+        Lit(Literal::Keyword("test".to_string())),
+        Store,
         Lit(Literal::Number(4)),
-        Lit(Literal::Address((1, 0))),
-        Lit(Literal::Address((1, 0))),
+        Lit(Literal::Address((2, 0))),
+        Lit(Literal::Address((2, 0))),
         Lit(Literal::Boolean(true)),
         JumpCond,
         //Jump,
         Return,
     ];
 
-    let inst1 = vec![Lit(Literal::Address(ADD)), Call, Lit(Literal::Address((0, 6))), Jump];
+    let inst2 = vec![
+        Lit(Literal::Keyword("test".to_string())),
+        Load,
+        Lit(Literal::Address(ADD)),
+        Call,
+        Lit(Literal::Address((1, 8))),
+        Jump
+    ];
 
     Bytecode {
-        chunks: vec![Chunk { ops: inst0 }, Chunk { ops: inst1 }],
+        chunks: vec![Chunk { ops: inst0 }, Chunk { ops: inst1 }, Chunk { ops: inst2}],
     }
 }
 

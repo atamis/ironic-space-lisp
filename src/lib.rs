@@ -4,17 +4,20 @@ extern crate error_chain;
 pub mod builtin;
 pub mod data;
 pub mod errors;
+mod environment;
 
 // std::usize::MAX
 
 pub mod vm {
     use std::fmt;
+    use std::rc::Rc;
 
     use builtin;
     use data;
     use data::Address;
     use data::Literal;
     use errors::*;
+    use environment::Environment;
 
     #[derive(Debug)]
     pub struct Bytecode {
@@ -43,6 +46,10 @@ pub mod vm {
         // <else> <then> <pred>
         // If pred is true, jump to then, otherwise jump to else
         JumpCond,
+        Load,
+        Store,
+        PushEnv,
+        PopEnv,
     }
 
     impl fmt::Debug for Op {
@@ -53,6 +60,10 @@ pub mod vm {
                 Op::Call => write!(f, "oC"),
                 Op::Jump => write!(f, "oJ"),
                 Op::JumpCond => write!(f, "oJ?"),
+                Op::Load => write!(f, "oL"),
+                Op::Store => write!(f, "oS"),
+                Op::PushEnv => write!(f, "oPuE"),
+                Op::PopEnv => write!(f, "oPoE"),
             }
         }
     }
@@ -63,6 +74,7 @@ pub mod vm {
         frames: Vec<data::Address>,
         stack: Vec<data::Literal>,
         builtin: builtin::Builtin,
+        environment: Environment,
     }
 
     impl VM {
@@ -72,6 +84,7 @@ pub mod vm {
                 frames: vec![(0, 0)],
                 stack: vec![],
                 builtin: builtin::Builtin::new(),
+                environment: Environment::new(),
             }
         }
 
@@ -180,6 +193,29 @@ pub mod vm {
                     } else {
                         self.jump(els)?;
                     }
+                }
+                Op::PushEnv => {
+                    self.environment.push();
+                },
+                Op::PopEnv => {
+                    self.environment.pop()?;
+                },
+                Op::Load => {
+                    let keyword = self.stack.pop()
+                        .ok_or("Attempted to pop stack for keyword for load")?
+                        .ensure_keyword()?;
+                    let mut val = self.environment.get(&keyword)?;
+                    let mut val = Rc::make_mut(&mut val);
+                    self.stack.push(val.clone())
+                },
+                Op::Store => {
+                    let keyword = self.stack.pop()
+                        .ok_or("Attempted to pop stack for keyword for store")?
+                        .ensure_keyword()?;
+                    let value = self.stack.pop()
+                        .ok_or("Attempted to pop stack for value for store")?;
+
+                    self.environment.put(keyword, Rc::new(value));
                 }
             };
 
