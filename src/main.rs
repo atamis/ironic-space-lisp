@@ -5,6 +5,7 @@ use ironic_space_lisp::builtin::PRINT;
 use ironic_space_lisp::data;
 use ironic_space_lisp::errors::*;
 use ironic_space_lisp::vm;
+use ironic_space_lisp::parser;
 
 fn main() {
     if let Err(ref e) = run() {
@@ -79,11 +80,15 @@ fn run() -> Result<()> {
     let mut vm = vm::VM::new(c);
 
     let r = vm
-        .step_until_value(true)
+        .step_until_value(false)
         .chain_err(|| "Execute hardcoded program")?;
 
     println!("{:?}", vm);
     println!("{:?}", r);
+
+
+    //println!("{:?}", parser::expr("(test asdf asdf asdf ( asdf  qwerqwer ) )"));
+    println!("{:?}", parser::tokens("(( ((( asdf asdf asdf)))) aa\n asdf    "));
 
     Ok(())
 }

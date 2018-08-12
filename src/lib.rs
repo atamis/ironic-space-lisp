@@ -1,10 +1,13 @@
 #[macro_use]
 extern crate error_chain;
+#[macro_use]
+extern crate nom;
 
 pub mod builtin;
 pub mod data;
 mod environment;
 pub mod errors;
+pub mod parser;
 
 // std::usize::MAX
 
