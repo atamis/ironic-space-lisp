@@ -5,7 +5,6 @@ use ironic_space_lisp::builtin::PRINT;
 use ironic_space_lisp::data;
 use ironic_space_lisp::errors::*;
 use ironic_space_lisp::vm;
-use ironic_space_lisp::parser;
 
 fn main() {
     if let Err(ref e) = run() {
@@ -88,7 +87,8 @@ fn run() -> Result<()> {
 
 
     //println!("{:?}", parser::expr("(test asdf asdf asdf ( asdf  qwerqwer ) )"));
-    println!("{:?}", parser::tokens("(( ((( asdf asdf asdf)))) aa\n asdf    "));
+    //println!("{:?}", parser::tokens("(( ((( asdf asdf asdf)))) aa\n asdf    "));
+    //println!("{:?}", parser::expr(vec![parser::Token::Open]));
 
     Ok(())
 }

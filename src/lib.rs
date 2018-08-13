@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate error_chain;
-#[macro_use]
-extern crate nom;
+extern crate lalrpop_util;
 
 pub mod builtin;
 pub mod data;

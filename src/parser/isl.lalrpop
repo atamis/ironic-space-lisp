@@ -1,0 +1,21 @@
+use std::str::FromStr;
+use parser::ast::Lisp;
+use parser::ast::list;
+
+grammar;
+
+pub Num: Lisp = r"[0-9]+" => Lisp::Num(i32::from_str(<>).unwrap());
+
+// [a-zA-Z0-9\-!?*+/$<>.]
+// can't start with number
+pub Keyword: Lisp = r"[a-zA-Z\-!?*+/$<>.][a-zA-Z0-9\-!?*+/$<>.]*" => Lisp::Keyword(<>.to_string());
+
+pub List: Lisp = "(" <Exprs> ")" => list(<>);
+
+pub Expr: Lisp = {
+    Num => <>,
+    Keyword => <>,
+    List => <>,
+}
+
+pub Exprs: Vec<Lisp> = <Expr*> => <>;

@@ -3,10 +3,10 @@ name = "ironic-space-lisp"
 version = "0.1.0"
 authors = ["Andrew Amis <atamiser@gmail.com>"]
 
+[build-dependencies]
+lalrpop = "0.15.2"
+
 [dependencies]
 error-chain = {version = "0.12.0"}
-
-[dependencies.nom]
-version = "^4.0"
-features = ["regexp_macros", "verbose-errors"]
-
+lalrpop-util = "0.15.2"
+regex = "0.2.1"
