@@ -1,8 +1,8 @@
 // auto-generated: "lalrpop 0.15.2"
-// sha256: 738e2ace2f2ea7222fdd4271f5b3b6cea68e118a4666e3eb9ad17bd96337c
+// sha256: 852334e75719364c72ccf5de787709f76bbf3d66285bbf556870f5ab106c7f
 use std::str::FromStr;
-use parser::ast::Lisp;
-use parser::ast::list;
+use data::Literal;
+use data::list;
 #[allow(unused_extern_crates)]
 extern crate lalrpop_util as __lalrpop_util;
 
@@ -11,8 +11,8 @@ mod __parse__Expr {
     #![allow(non_snake_case, non_camel_case_types, unused_mut, unused_variables, unused_imports, unused_parens)]
 
     use std::str::FromStr;
-    use parser::ast::Lisp;
-    use parser::ast::list;
+    use data::Literal;
+    use data::list;
     #[allow(unused_extern_crates)]
     extern crate lalrpop_util as __lalrpop_util;
     use super::__intern_token::Token;
@@ -20,9 +20,9 @@ mod __parse__Expr {
     pub enum __Symbol<'input>
      {
         Variant0(&'input str),
-        Variant1(Lisp),
-        Variant2(::std::vec::Vec<Lisp>),
-        Variant3(Vec<Lisp>),
+        Variant1(Literal),
+        Variant2(::std::vec::Vec<Literal>),
+        Variant3(Vec<Literal>),
     }
     const __ACTION: &'static [i8] = &[
         // State 0
@@ -143,7 +143,7 @@ mod __parse__Expr {
         >(
             &self,
             input: &'input str,
-        ) -> Result<Lisp, __lalrpop_util::ParseError<usize, Token<'input>, &'static str>>
+        ) -> Result<Literal, __lalrpop_util::ParseError<usize, Token<'input>, &'static str>>
         {
             let mut __tokens = self.builder.matcher(input);
             let mut __states = vec![0_i8];
@@ -246,7 +246,7 @@ mod __parse__Expr {
         __states: &mut ::std::vec::Vec<i8>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<()>,
-    ) -> Option<Result<Lisp,__lalrpop_util::ParseError<usize, Token<'input>, &'static str>>>
+    ) -> Option<Result<Literal,__lalrpop_util::ParseError<usize, Token<'input>, &'static str>>>
     {
         let (__pop_states, __symbol, __nonterminal) = match -__action {
             1 => {
@@ -319,7 +319,7 @@ mod __parse__Expr {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Lisp, usize)
+    ) -> (usize, Literal, usize)
      {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::Variant1(__v), __r) => (__l, __v, __r),
@@ -330,7 +330,7 @@ mod __parse__Expr {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Vec<Lisp>, usize)
+    ) -> (usize, Vec<Literal>, usize)
      {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::Variant3(__v), __r) => (__l, __v, __r),
@@ -341,7 +341,7 @@ mod __parse__Expr {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<Lisp>, usize)
+    ) -> (usize, ::std::vec::Vec<Literal>, usize)
      {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::Variant2(__v), __r) => (__l, __v, __r),
@@ -672,8 +672,8 @@ mod __parse__Exprs {
     #![allow(non_snake_case, non_camel_case_types, unused_mut, unused_variables, unused_imports, unused_parens)]
 
     use std::str::FromStr;
-    use parser::ast::Lisp;
-    use parser::ast::list;
+    use data::Literal;
+    use data::list;
     #[allow(unused_extern_crates)]
     extern crate lalrpop_util as __lalrpop_util;
     use super::__intern_token::Token;
@@ -681,9 +681,9 @@ mod __parse__Exprs {
     pub enum __Symbol<'input>
      {
         Variant0(&'input str),
-        Variant1(Lisp),
-        Variant2(::std::vec::Vec<Lisp>),
-        Variant3(Vec<Lisp>),
+        Variant1(Literal),
+        Variant2(::std::vec::Vec<Literal>),
+        Variant3(Vec<Literal>),
     }
     const __ACTION: &'static [i8] = &[
         // State 0
@@ -804,7 +804,7 @@ mod __parse__Exprs {
         >(
             &self,
             input: &'input str,
-        ) -> Result<Vec<Lisp>, __lalrpop_util::ParseError<usize, Token<'input>, &'static str>>
+        ) -> Result<Vec<Literal>, __lalrpop_util::ParseError<usize, Token<'input>, &'static str>>
         {
             let mut __tokens = self.builder.matcher(input);
             let mut __states = vec![0_i8];
@@ -907,7 +907,7 @@ mod __parse__Exprs {
         __states: &mut ::std::vec::Vec<i8>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<()>,
-    ) -> Option<Result<Vec<Lisp>,__lalrpop_util::ParseError<usize, Token<'input>, &'static str>>>
+    ) -> Option<Result<Vec<Literal>,__lalrpop_util::ParseError<usize, Token<'input>, &'static str>>>
     {
         let (__pop_states, __symbol, __nonterminal) = match -__action {
             1 => {
@@ -980,7 +980,7 @@ mod __parse__Exprs {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Lisp, usize)
+    ) -> (usize, Literal, usize)
      {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::Variant1(__v), __r) => (__l, __v, __r),
@@ -991,7 +991,7 @@ mod __parse__Exprs {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Vec<Lisp>, usize)
+    ) -> (usize, Vec<Literal>, usize)
      {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::Variant3(__v), __r) => (__l, __v, __r),
@@ -1002,7 +1002,7 @@ mod __parse__Exprs {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<Lisp>, usize)
+    ) -> (usize, ::std::vec::Vec<Literal>, usize)
      {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::Variant2(__v), __r) => (__l, __v, __r),
@@ -1333,8 +1333,8 @@ mod __parse__Keyword {
     #![allow(non_snake_case, non_camel_case_types, unused_mut, unused_variables, unused_imports, unused_parens)]
 
     use std::str::FromStr;
-    use parser::ast::Lisp;
-    use parser::ast::list;
+    use data::Literal;
+    use data::list;
     #[allow(unused_extern_crates)]
     extern crate lalrpop_util as __lalrpop_util;
     use super::__intern_token::Token;
@@ -1342,9 +1342,9 @@ mod __parse__Keyword {
     pub enum __Symbol<'input>
      {
         Variant0(&'input str),
-        Variant1(Lisp),
-        Variant2(::std::vec::Vec<Lisp>),
-        Variant3(Vec<Lisp>),
+        Variant1(Literal),
+        Variant2(::std::vec::Vec<Literal>),
+        Variant3(Vec<Literal>),
     }
     const __ACTION: &'static [i8] = &[
         // State 0
@@ -1405,7 +1405,7 @@ mod __parse__Keyword {
         >(
             &self,
             input: &'input str,
-        ) -> Result<Lisp, __lalrpop_util::ParseError<usize, Token<'input>, &'static str>>
+        ) -> Result<Literal, __lalrpop_util::ParseError<usize, Token<'input>, &'static str>>
         {
             let mut __tokens = self.builder.matcher(input);
             let mut __states = vec![0_i8];
@@ -1508,7 +1508,7 @@ mod __parse__Keyword {
         __states: &mut ::std::vec::Vec<i8>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<()>,
-    ) -> Option<Result<Lisp,__lalrpop_util::ParseError<usize, Token<'input>, &'static str>>>
+    ) -> Option<Result<Literal,__lalrpop_util::ParseError<usize, Token<'input>, &'static str>>>
     {
         let (__pop_states, __symbol, __nonterminal) = match -__action {
             1 => {
@@ -1581,7 +1581,7 @@ mod __parse__Keyword {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Lisp, usize)
+    ) -> (usize, Literal, usize)
      {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::Variant1(__v), __r) => (__l, __v, __r),
@@ -1592,7 +1592,7 @@ mod __parse__Keyword {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Vec<Lisp>, usize)
+    ) -> (usize, Vec<Literal>, usize)
      {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::Variant3(__v), __r) => (__l, __v, __r),
@@ -1603,7 +1603,7 @@ mod __parse__Keyword {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<Lisp>, usize)
+    ) -> (usize, ::std::vec::Vec<Literal>, usize)
      {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::Variant2(__v), __r) => (__l, __v, __r),
@@ -1934,8 +1934,8 @@ mod __parse__List {
     #![allow(non_snake_case, non_camel_case_types, unused_mut, unused_variables, unused_imports, unused_parens)]
 
     use std::str::FromStr;
-    use parser::ast::Lisp;
-    use parser::ast::list;
+    use data::Literal;
+    use data::list;
     #[allow(unused_extern_crates)]
     extern crate lalrpop_util as __lalrpop_util;
     use super::__intern_token::Token;
@@ -1943,9 +1943,9 @@ mod __parse__List {
     pub enum __Symbol<'input>
      {
         Variant0(&'input str),
-        Variant1(Lisp),
-        Variant2(::std::vec::Vec<Lisp>),
-        Variant3(Vec<Lisp>),
+        Variant1(Literal),
+        Variant2(::std::vec::Vec<Literal>),
+        Variant3(Vec<Literal>),
     }
     const __ACTION: &'static [i8] = &[
         // State 0
@@ -2066,7 +2066,7 @@ mod __parse__List {
         >(
             &self,
             input: &'input str,
-        ) -> Result<Lisp, __lalrpop_util::ParseError<usize, Token<'input>, &'static str>>
+        ) -> Result<Literal, __lalrpop_util::ParseError<usize, Token<'input>, &'static str>>
         {
             let mut __tokens = self.builder.matcher(input);
             let mut __states = vec![0_i8];
@@ -2169,7 +2169,7 @@ mod __parse__List {
         __states: &mut ::std::vec::Vec<i8>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<()>,
-    ) -> Option<Result<Lisp,__lalrpop_util::ParseError<usize, Token<'input>, &'static str>>>
+    ) -> Option<Result<Literal,__lalrpop_util::ParseError<usize, Token<'input>, &'static str>>>
     {
         let (__pop_states, __symbol, __nonterminal) = match -__action {
             1 => {
@@ -2242,7 +2242,7 @@ mod __parse__List {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Lisp, usize)
+    ) -> (usize, Literal, usize)
      {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::Variant1(__v), __r) => (__l, __v, __r),
@@ -2253,7 +2253,7 @@ mod __parse__List {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Vec<Lisp>, usize)
+    ) -> (usize, Vec<Literal>, usize)
      {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::Variant3(__v), __r) => (__l, __v, __r),
@@ -2264,7 +2264,7 @@ mod __parse__List {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<Lisp>, usize)
+    ) -> (usize, ::std::vec::Vec<Literal>, usize)
      {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::Variant2(__v), __r) => (__l, __v, __r),
@@ -2595,8 +2595,8 @@ mod __parse__Num {
     #![allow(non_snake_case, non_camel_case_types, unused_mut, unused_variables, unused_imports, unused_parens)]
 
     use std::str::FromStr;
-    use parser::ast::Lisp;
-    use parser::ast::list;
+    use data::Literal;
+    use data::list;
     #[allow(unused_extern_crates)]
     extern crate lalrpop_util as __lalrpop_util;
     use super::__intern_token::Token;
@@ -2604,9 +2604,9 @@ mod __parse__Num {
     pub enum __Symbol<'input>
      {
         Variant0(&'input str),
-        Variant1(Lisp),
-        Variant2(::std::vec::Vec<Lisp>),
-        Variant3(Vec<Lisp>),
+        Variant1(Literal),
+        Variant2(::std::vec::Vec<Literal>),
+        Variant3(Vec<Literal>),
     }
     const __ACTION: &'static [i8] = &[
         // State 0
@@ -2667,7 +2667,7 @@ mod __parse__Num {
         >(
             &self,
             input: &'input str,
-        ) -> Result<Lisp, __lalrpop_util::ParseError<usize, Token<'input>, &'static str>>
+        ) -> Result<Literal, __lalrpop_util::ParseError<usize, Token<'input>, &'static str>>
         {
             let mut __tokens = self.builder.matcher(input);
             let mut __states = vec![0_i8];
@@ -2770,7 +2770,7 @@ mod __parse__Num {
         __states: &mut ::std::vec::Vec<i8>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<()>,
-    ) -> Option<Result<Lisp,__lalrpop_util::ParseError<usize, Token<'input>, &'static str>>>
+    ) -> Option<Result<Literal,__lalrpop_util::ParseError<usize, Token<'input>, &'static str>>>
     {
         let (__pop_states, __symbol, __nonterminal) = match -__action {
             1 => {
@@ -2843,7 +2843,7 @@ mod __parse__Num {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Lisp, usize)
+    ) -> (usize, Literal, usize)
      {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::Variant1(__v), __r) => (__l, __v, __r),
@@ -2854,7 +2854,7 @@ mod __parse__Num {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Vec<Lisp>, usize)
+    ) -> (usize, Vec<Literal>, usize)
      {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::Variant3(__v), __r) => (__l, __v, __r),
@@ -2865,7 +2865,7 @@ mod __parse__Num {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<Lisp>, usize)
+    ) -> (usize, ::std::vec::Vec<Literal>, usize)
      {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::Variant2(__v), __r) => (__l, __v, __r),
@@ -3194,8 +3194,8 @@ pub use self::__parse__Num::NumParser;
 mod __intern_token {
     #![allow(unused_imports)]
     use std::str::FromStr;
-    use parser::ast::Lisp;
-    use parser::ast::list;
+    use data::Literal;
+    use data::list;
     #[allow(unused_extern_crates)]
     extern crate lalrpop_util as __lalrpop_util;
     extern crate regex as __regex;
@@ -3296,8 +3296,8 @@ fn __action0<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Lisp, usize),
-) -> Lisp
+    (_, __0, _): (usize, Literal, usize),
+) -> Literal
 {
     (__0)
 }
@@ -3307,8 +3307,8 @@ fn __action1<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Lisp, usize),
-) -> Lisp
+    (_, __0, _): (usize, Literal, usize),
+) -> Literal
 {
     (__0)
 }
@@ -3318,8 +3318,8 @@ fn __action2<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Lisp, usize),
-) -> Lisp
+    (_, __0, _): (usize, Literal, usize),
+) -> Literal
 {
     (__0)
 }
@@ -3329,8 +3329,8 @@ fn __action3<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Lisp, usize),
-) -> Lisp
+    (_, __0, _): (usize, Literal, usize),
+) -> Literal
 {
     (__0)
 }
@@ -3340,8 +3340,8 @@ fn __action4<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Vec<Lisp>, usize),
-) -> Vec<Lisp>
+    (_, __0, _): (usize, Vec<Literal>, usize),
+) -> Vec<Literal>
 {
     (__0)
 }
@@ -3352,9 +3352,9 @@ fn __action5<
 >(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> Lisp
+) -> Literal
 {
-    Lisp::Num(i32::from_str(__0).unwrap())
+    Literal::Number(u32::from_str(__0).unwrap())
 }
 
 #[allow(unused_variables)]
@@ -3363,9 +3363,9 @@ fn __action6<
 >(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> Lisp
+) -> Literal
 {
-    Lisp::Keyword(__0.to_string())
+    Literal::Keyword(__0.to_string())
 }
 
 #[allow(unused_variables)]
@@ -3374,9 +3374,9 @@ fn __action7<
 >(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
-    (_, __0, _): (usize, Vec<Lisp>, usize),
+    (_, __0, _): (usize, Vec<Literal>, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> Lisp
+) -> Literal
 {
     list(__0)
 }
@@ -3386,8 +3386,8 @@ fn __action8<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Lisp, usize),
-) -> Lisp
+    (_, __0, _): (usize, Literal, usize),
+) -> Literal
 {
     __0
 }
@@ -3397,8 +3397,8 @@ fn __action9<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Lisp, usize),
-) -> Lisp
+    (_, __0, _): (usize, Literal, usize),
+) -> Literal
 {
     __0
 }
@@ -3408,8 +3408,8 @@ fn __action10<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Lisp, usize),
-) -> Lisp
+    (_, __0, _): (usize, Literal, usize),
+) -> Literal
 {
     __0
 }
@@ -3419,8 +3419,8 @@ fn __action11<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, ::std::vec::Vec<Lisp>, usize),
-) -> Vec<Lisp>
+    (_, __0, _): (usize, ::std::vec::Vec<Literal>, usize),
+) -> Vec<Literal>
 {
     __0
 }
@@ -3432,7 +3432,7 @@ fn __action12<
     input: &'input str,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::vec::Vec<Lisp>
+) -> ::std::vec::Vec<Literal>
 {
     vec![]
 }
@@ -3442,8 +3442,8 @@ fn __action13<
     'input,
 >(
     input: &'input str,
-    (_, v, _): (usize, ::std::vec::Vec<Lisp>, usize),
-) -> ::std::vec::Vec<Lisp>
+    (_, v, _): (usize, ::std::vec::Vec<Literal>, usize),
+) -> ::std::vec::Vec<Literal>
 {
     v
 }
@@ -3453,8 +3453,8 @@ fn __action14<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Lisp, usize),
-) -> ::std::vec::Vec<Lisp>
+    (_, __0, _): (usize, Literal, usize),
+) -> ::std::vec::Vec<Literal>
 {
     vec![__0]
 }
@@ -3464,9 +3464,9 @@ fn __action15<
     'input,
 >(
     input: &'input str,
-    (_, v, _): (usize, ::std::vec::Vec<Lisp>, usize),
-    (_, e, _): (usize, Lisp, usize),
-) -> ::std::vec::Vec<Lisp>
+    (_, v, _): (usize, ::std::vec::Vec<Literal>, usize),
+    (_, e, _): (usize, Literal, usize),
+) -> ::std::vec::Vec<Literal>
 {
     { let mut v = v; v.push(e); v }
 }
@@ -3478,7 +3478,7 @@ fn __action16<
     input: &'input str,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> Vec<Lisp>
+) -> Vec<Literal>
 {
     let __start0 = __lookbehind.clone();
     let __end0 = __lookahead.clone();
@@ -3499,8 +3499,8 @@ fn __action17<
     'input,
 >(
     input: &'input str,
-    __0: (usize, ::std::vec::Vec<Lisp>, usize),
-) -> Vec<Lisp>
+    __0: (usize, ::std::vec::Vec<Literal>, usize),
+) -> Vec<Literal>
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.2.clone();

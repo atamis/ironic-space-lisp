@@ -5,12 +5,12 @@ pub mod isl;
 #[cfg(test)]
 mod tests {
     use parser::isl;
-    use parser::ast::Lisp;
-    use parser::ast::Lisp::Num;
-    use parser::ast::Lisp::Keyword;
-    use parser::ast::list;
+    use data::Literal;
+    use data::Literal::Number;
+    use data::Literal::Keyword;
+    use data::list;
 
-    fn k(s: &str) -> Lisp {
+    fn k(s: &str) -> Literal {
         Keyword(s.to_string())
     }
 
@@ -18,9 +18,9 @@ mod tests {
     fn isl_test_num() {
         let p = isl::NumParser::new();
         assert!(p.parse("22").is_ok());
-        assert_eq!(p.parse("22").unwrap(), Num(22));
+        assert_eq!(p.parse("22").unwrap(), Number(22));
 
-        assert_eq!(p.parse("304032").unwrap(), Num(304032));
+        assert_eq!(p.parse("304032").unwrap(), Number(304032));
     }
 
     #[test]
@@ -55,12 +55,12 @@ mod tests {
         assert_eq!(p.parse("asdf").unwrap(), vec![k("asdf")]);
         assert_eq!(p.parse("asdf qwer").unwrap(), vec![k("asdf"), k("qwer")]);
 
-        assert_eq!(p.parse("1234").unwrap(), vec![Num(1234)]);
-        assert_eq!(p.parse("1234 5678").unwrap(), vec![Num(1234), Num(5678)]);
+        assert_eq!(p.parse("1234").unwrap(), vec![Number(1234)]);
+        assert_eq!(p.parse("1234 5678").unwrap(), vec![Number(1234), Number(5678)]);
 
 
 
-        assert_eq!(p.parse("1234 asdf\n qwer").unwrap(), vec![Num(1234), k("asdf"), k("qwer")]);
+        assert_eq!(p.parse("1234 asdf\n qwer").unwrap(), vec![Number(1234), k("asdf"), k("qwer")]);
     }
 
     #[test]
@@ -72,7 +72,7 @@ mod tests {
         assert_eq!(p.parse("()").unwrap(), list(vec![]));
         assert_eq!(p.parse("(asdf)").unwrap(), list(vec![k("asdf")]));
         assert_eq!(p.parse("(  asdf   )").unwrap(), list(vec![k("asdf")]));
-        assert_eq!(p.parse("(  asdf  1234 )").unwrap(), list(vec![k("asdf"), Num(1234)]));
+        assert_eq!(p.parse("(  asdf  1234 )").unwrap(), list(vec![k("asdf"), Number(1234)]));
 
         assert!(p.parse("(").is_err());
         assert!(p.parse(")").is_err());
@@ -88,7 +88,7 @@ mod tests {
                    list(vec![list(vec![list(vec![list(vec![])])])]));
 
         assert_eq!(p.parse("(test1 (+ 1 2 3 4))").unwrap(),
-                   list(vec![k("test1"), list(vec![k("+"), Num(1), Num(2), Num(3), Num(4)])])
+                   list(vec![k("test1"), list(vec![k("+"), Number(1), Number(2), Number(3), Number(4)])])
         );
     }
 }

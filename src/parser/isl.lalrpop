@@ -1,21 +1,21 @@
 use std::str::FromStr;
-use parser::ast::Lisp;
-use parser::ast::list;
+use data::Literal;
+use data::list;
 
 grammar;
 
-pub Num: Lisp = r"[0-9]+" => Lisp::Num(i32::from_str(<>).unwrap());
+pub Num: Literal = r"[0-9]+" => Literal::Number(u32::from_str(<>).unwrap());
 
 // [a-zA-Z0-9\-!?*+/$<>.]
 // can't start with number
-pub Keyword: Lisp = r"[a-zA-Z\-!?*+/$<>.][a-zA-Z0-9\-!?*+/$<>.]*" => Lisp::Keyword(<>.to_string());
+pub Keyword: Literal = r"[a-zA-Z\-!?*+/$<>.][a-zA-Z0-9\-!?*+/$<>.]*" => Literal::Keyword(<>.to_string());
 
-pub List: Lisp = "(" <Exprs> ")" => list(<>);
+pub List: Literal = "(" <Exprs> ")" => list(<>);
 
-pub Expr: Lisp = {
+pub Expr: Literal = {
     Num => <>,
     Keyword => <>,
     List => <>,
 }
 
-pub Exprs: Vec<Lisp> = <Expr*> => <>;
+pub Exprs: Vec<Literal> = <Expr*> => <>;
