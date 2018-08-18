@@ -65,7 +65,7 @@ impl Literal {
         if let Literal::Keyword(a) = self {
             Ok(a.clone())
         } else {
-            Err(format!("Type error, expected boolean, got {:?}", self).into())
+            Err(format!("Type error, expected keyword, got {:?}", self).into())
         }
     }
 
