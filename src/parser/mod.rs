@@ -1,6 +1,22 @@
-pub mod ast;
 pub mod isl;
 
+use data;
+use errors::*;
+
+pub struct Parser(isl::ExprsParser);
+
+impl Parser {
+    pub fn new() -> Parser {
+        Parser(isl::ExprsParser::new())
+    }
+
+    pub fn parse(&self, input: &str) -> Result<Vec<data::Literal>> {
+        match self.0.parse(input) {
+            Ok(x) => Ok(x),
+            Err(_) => Err("Parse error".into()),
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {

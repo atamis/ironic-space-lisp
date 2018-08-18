@@ -7,6 +7,7 @@ pub mod data;
 mod environment;
 pub mod errors;
 pub mod parser;
+pub mod interpreter;
 
 // std::usize::MAX
 
