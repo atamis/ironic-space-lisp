@@ -38,7 +38,7 @@ fn eval_compound(f: &Literal, rest: &[Literal], v: &Environment) -> Result<Liter
                 .map(|v| v.ensure_number())
                 .collect();
 
-            let ns = ns?;
+            let ns = ns.chain_err(|| "All arguments to + must be numbers")?;
 
             Ok(Literal::Number(ns.iter().fold(0, |sum, n| sum + n)))
         }
