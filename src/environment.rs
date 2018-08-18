@@ -44,8 +44,49 @@ impl Environment {
     }
 
     pub fn push(&mut self) {
-        let mut n = Environment::new();
+        let n = Environment::new();
         let p = mem::replace(self, n);
-        n.parent = Some(Box::new(p));
+        self.parent = Some(Box::new(p));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use data::Literal;
+    use environment::Environment;
+    use std::rc::Rc;
+
+    #[test]
+    fn test_environment() {
+        let n = |x| Rc::new(Literal::Number(x));
+        let mut e = Environment::new();
+
+        let s1 = "test1".to_string();
+        let s11 = "test1".to_string();
+
+        let s2 = "test2".to_string();
+        let s21 = "test2".to_string();
+
+        assert!(e.get(&s1).is_err());
+
+        e.put(s1, n(0));
+
+        assert_eq!(e.get(&s11).unwrap(), n(0));
+
+        e.push();
+
+        assert_eq!(e.get(&s11).unwrap(), n(0));
+
+        e.put(s2, n(1));
+
+        assert_eq!(e.get(&s21).unwrap(), n(1));
+
+        assert!(e.pop().is_ok());
+
+        assert_eq!(e.get(&s11).unwrap(), n(0));
+        assert!(e.get(&s21).is_err());
+
+        assert!(e.pop().is_err());
+
     }
 }
