@@ -6,8 +6,8 @@ use errors::*;
 
 #[derive(Debug, PartialEq)]
 pub struct Def {
-    name: Keyword,
-    value: AST,
+    pub name: Keyword,
+    pub value: AST,
 }
 
 #[derive(Debug, PartialEq)]
@@ -35,7 +35,7 @@ pub enum AST {
 }
 
 
-fn parse(e: &Literal) -> Result<AST> {
+pub fn parse(e: &Literal) -> Result<AST> {
     match e {
         Literal::List(ref vec) => {
             if let Some(( first, rest )) = vec.split_first() {
