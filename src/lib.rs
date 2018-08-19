@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate error_chain;
 extern crate lalrpop_util;
+extern crate im;
 
 pub mod builtin;
 pub mod data;
@@ -20,7 +21,7 @@ pub mod vm {
     use data;
     use data::Address;
     use data::Literal;
-    use environment::Environment;
+    use environment::EnvStack;
     use errors::*;
 
     pub struct Bytecode {
@@ -123,7 +124,7 @@ pub mod vm {
         frames: Vec<data::Address>,
         stack: Vec<data::Literal>,
         builtin: builtin::Builtin,
-        environment: Environment,
+        environment: EnvStack,
     }
 
     impl VM {
@@ -133,7 +134,7 @@ pub mod vm {
                 frames: vec![(0, 0)],
                 stack: vec![],
                 builtin: builtin::Builtin::new(),
-                environment: Environment::new(),
+                environment: EnvStack::new(),
             }
         }
 
@@ -296,7 +297,7 @@ pub mod vm {
                 .pop()
                 .ok_or("Attempted to pop stack for value for store")?;
 
-            self.environment.put(keyword, Rc::new(value));
+            self.environment.insert(keyword, Rc::new(value));
 
             Ok(())
         }
