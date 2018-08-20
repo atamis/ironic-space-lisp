@@ -79,7 +79,7 @@ mod tests {
 
         assert_eq!(*root.get(&s11).unwrap(), n(0));
 
-        let mut l1 = root.update(s2, n(1));
+        let l1 = root.update(s2, n(1));
 
         assert_eq!(*l1.get(&s21).unwrap(), n(1));
 
@@ -93,7 +93,7 @@ mod tests {
     fn test_env_stack() {
         let n = |x| Rc::new(Literal::Number(x));
 
-        let root = EnvStack::new();
+        let mut root = EnvStack::new();
 
         let s1 = "test1".to_string();
         let s11 = "test1".to_string();
