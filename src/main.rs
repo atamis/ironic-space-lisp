@@ -1,12 +1,12 @@
 extern crate ironic_space_lisp;
 
+use ironic_space_lisp::ast;
 use ironic_space_lisp::builtin::ADD;
 use ironic_space_lisp::builtin::PRINT;
 use ironic_space_lisp::data;
 use ironic_space_lisp::errors::*;
-use ironic_space_lisp::vm;
 use ironic_space_lisp::parser::Parser;
-use ironic_space_lisp::ast;
+use ironic_space_lisp::vm;
 
 fn main() {
     if let Err(ref e) = run() {
@@ -87,13 +87,15 @@ fn run() -> Result<()> {
     println!("{:?}", vm);
     println!("{:?}", r);
 
-    println!("{:?}",
-             ironic_space_lisp::str_to_ast(
-                 "
+    println!(
+        "{:?}",
+        ironic_space_lisp::str_to_ast(
+            "
 (def test 0)
 (let (asdf 1) (do () test ))
 "
-             )?);
+        )?
+    );
 
     Ok(())
 }

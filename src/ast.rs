@@ -55,22 +55,15 @@ pub fn parse(e: &Literal) -> Result<AST> {
 fn parse_compound(first: &Literal, rest: &[Literal]) -> Result<AST> {
     let r = if let Literal::Keyword(s) = first {
         match s.as_ref() {
-            "if"     => parse_if(first, rest)
-                .context("Parsing let expr"),
-            "def"    => parse_def_expr(first, rest)
-                .context("Parsing def expr"),
-            "let"    => parse_let(first, rest)
-                .context("Parsing let expr"),
-            "do"     => parse_do(first, rest)
-                .context("Parsing do expr"),
-            "lambda" => parse_lambda(first, rest)
-                .context("Parsing lambda expr"),
-            _ => parse_application(first, rest)
-                .context("Parsing application expr"),
+            "if" => parse_if(first, rest).context("Parsing let expr"),
+            "def" => parse_def_expr(first, rest).context("Parsing def expr"),
+            "let" => parse_let(first, rest).context("Parsing let expr"),
+            "do" => parse_do(first, rest).context("Parsing do expr"),
+            "lambda" => parse_lambda(first, rest).context("Parsing lambda expr"),
+            _ => parse_application(first, rest).context("Parsing application expr"),
         }
     } else {
-        parse_application(first, rest)
-            .context("Parsing application expr")
+        parse_application(first, rest).context("Parsing application expr")
     }?;
 
     Ok(r)
@@ -105,7 +98,6 @@ fn parse_def_partial(v: &[Literal]) -> Result<Def> {
     Ok(Def { name, value: v })
 }
 
-
 fn parse_if(first: &Literal, rest: &[Literal]) -> Result<AST> {
     if rest.len() != 3 {
         return Err(err_msg("malformed if expr, (if pred then else)"));
@@ -119,7 +111,7 @@ fn parse_if(first: &Literal, rest: &[Literal]) -> Result<AST> {
         .collect();
 
     // These shouldn't fail, based on the length test above.
-    let els = asts.pop() .ok_or(err_msg("If requires else clause"))?;
+    let els = asts.pop().ok_or(err_msg("If requires else clause"))?;
     let then = asts.pop().ok_or(err_msg("If requires then clause"))?;
     let pred = asts.pop().ok_or(err_msg("If requires predicate"))?;
 
@@ -134,13 +126,14 @@ fn parse_def_expr(first: &Literal, rest: &[Literal]) -> Result<AST> {
 fn parse_let(first: &Literal, rest: &[Literal]) -> Result<AST> {
     let mut def_literals = rest
         .get(0)
-        .ok_or(err_msg("let requires def list as first term (let (defs+) body)"))?
-        .ensure_list()
+        .ok_or(err_msg(
+            "let requires def list as first term (let (defs+) body)",
+        ))?.ensure_list()
         .context("Parsing list of defs")?;
 
-    let body_literal = rest
-        .get(1)
-        .ok_or(err_msg("let requires body as second term (let (defs+) body)"))?;
+    let body_literal = rest.get(1).ok_or(err_msg(
+        "let requires body as second term (let (defs+) body)",
+    ))?;
 
     if rest.len() != 2 {
         return Err(err_msg("Malformed let, (let (defs+) body)"));
@@ -172,16 +165,15 @@ fn parse_let(first: &Literal, rest: &[Literal]) -> Result<AST> {
 }
 
 fn parse_do(first: &Literal, rest: &[Literal]) -> Result<AST> {
-    Ok(AST::Do(rest.iter()
-            .map(parse)
-            .collect::<Result<_>>()?))
+    Ok(AST::Do(rest.iter().map(parse).collect::<Result<_>>()?))
 }
 
 fn parse_lambda(first: &Literal, rest: &[Literal]) -> Result<AST> {
     let args = rest
         .get(0)
-        .ok_or(err_msg("lambda requires an argument list, (lambda (args*) body)"))?
-        .ensure_list()?
+        .ok_or(err_msg(
+            "lambda requires an argument list, (lambda (args*) body)",
+        ))?.ensure_list()?
         .iter()
         .map(Literal::ensure_keyword)
         .collect::<Result<_>>()?;

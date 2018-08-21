@@ -24,11 +24,10 @@ pub fn str_to_ast(s: &str) -> errors::Result<Vec<ast::AST>> {
     let asts = lits
         .iter()
         .enumerate()
-        .map(|( i, lit )|{
+        .map(|(i, lit)| {
             let a = ast::parse(&lit).context(format!("While parsing literal #{:}", i))?;
             Ok(a)
-        })
-        .collect();
+        }).collect();
     asts
 }
 
@@ -66,8 +65,14 @@ pub mod vm {
         }
 
         pub fn addr(&self, a: Address) -> Result<Op> {
-            let chunk = self.chunks.get(a.0).ok_or(format_err!("Invalid chunk address: {:?}", a))?;
-            let op = chunk.ops.get(a.1).ok_or(err_msg("Invalid operation address"))?;
+            let chunk = self
+                .chunks
+                .get(a.0)
+                .ok_or(format_err!("Invalid chunk address: {:?}", a))?;
+            let op = chunk
+                .ops
+                .get(a.1)
+                .ok_or(err_msg("Invalid operation address"))?;
             Ok(op.clone())
         }
 
@@ -157,7 +162,10 @@ pub mod vm {
         }
 
         fn pcounter(&mut self) -> Result<Address> {
-            let pc = self.frames.last_mut().ok_or(err_msg("Stack empty, no counter"))?;
+            let pc = self
+                .frames
+                .last_mut()
+                .ok_or(err_msg("Stack empty, no counter"))?;
             let a = *pc;
 
             data::address_inc(pc);
@@ -201,13 +209,14 @@ pub mod vm {
                     // TODO: This should only happen when chunk lookup fails
                     // Fix this when real error states are implemented.
                     if let Some(f) = self.builtin.lookup(pc) {
-                        f(&mut self.stack).context(format_err!("while executing builtin at {:?}", pc))?;
+                        f(&mut self.stack)
+                            .context(format_err!("while executing builtin at {:?}", pc))?;
                         self.frames.pop();
                         return Ok(());
                     }
                     // This is required because we can't return a context directly
                     Err(e).context("builtin lookup failed")?;
-                    return Ok(()) // this never exeuctes
+                    return Ok(()); // this never exeuctes
                 }
             };
 
@@ -217,14 +226,10 @@ pub mod vm {
                 Op::Return => self.op_return().context("Executing operation return")?,
                 Op::Call => self.op_call().context("Executing operation call")?,
                 Op::Jump => self.op_jump().context("Executing operation jump")?,
-                Op::JumpCond => self
-                    .op_jumpcond()
-                    .context("Executing operation jumpcond")?,
+                Op::JumpCond => self.op_jumpcond().context("Executing operation jumpcond")?,
                 Op::Load => self.op_load().context("Executing operation load")?,
                 Op::Store => self.op_store().context("Executing operation store")?,
-                Op::PushEnv => self
-                    .op_pushenv()
-                    .context("Executing operation pushenv")?,
+                Op::PushEnv => self.op_pushenv().context("Executing operation pushenv")?,
                 Op::PopEnv => self.op_popenv().context("Executing operation popenv")?,
                 Op::Dup => self.op_dup().context("Executing operation dup")?,
             })
@@ -270,8 +275,9 @@ pub mod vm {
             let cond = self
                 .stack
                 .pop()
-                .ok_or(err_msg("Attempted to pop stack for conditional for if zero"))?
-                .ensure_bool()?;
+                .ok_or(err_msg(
+                    "Attempted to pop stack for conditional for if zero",
+                ))?.ensure_bool()?;
 
             let then = self
                 .stack

@@ -53,13 +53,9 @@ impl Interpreter {
                     .context("Evaluating predicate for if")?;
 
                 if pv.truthy() {
-                    Ok(self
-                        .env_eval(then, env)
-                        .context("Evaluating then for if")?)
+                    Ok(self.env_eval(then, env).context("Evaluating then for if")?)
                 } else {
-                    Ok(self
-                        .env_eval(els, env)
-                        .context("Evaluating else for if")?)
+                    Ok(self.env_eval(els, env).context("Evaluating else for if")?)
                 }
             }
             AST::Def(ref def) => {
@@ -93,9 +89,10 @@ impl Interpreter {
     }
 
     fn put_def(&self, env: &mut Env, def: &Def) -> Result<Literal> {
-        let res = self
-            .env_eval(&def.value, env)
-            .context(format_err!("While evaluating def value for {:}", def.name.clone()))?;
+        let res = self.env_eval(&def.value, env).context(format_err!(
+            "While evaluating def value for {:}",
+            def.name.clone()
+        ))?;
         env.insert(def.name.clone(), Rc::new(res.clone()));
         Ok(res)
     }

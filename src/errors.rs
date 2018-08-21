@@ -1,9 +1,9 @@
+use failure;
 #[allow(unused_imports)]
 use failure::Error;
-use failure;
 
-pub use failure::ResultExt;
 pub use failure::err_msg;
+pub use failure::ResultExt;
 
 pub type Result<T> = failure::_core::prelude::v1::Result<T, Error>;
 
