@@ -2,7 +2,7 @@
 #![allow(unknown_lints)]
 
 #[macro_use]
-extern crate error_chain;
+extern crate failure;
 extern crate im;
 extern crate lalrpop_util;
 
@@ -50,8 +50,8 @@ pub mod vm {
         }
 
         pub fn addr(&self, a: Address) -> Result<Op> {
-            let chunk = self.chunks.get(a.0).ok_or("Invalid chunk address")?;
-            let op = chunk.ops.get(a.1).ok_or("Invalid operation address")?;
+            let chunk = self.chunks.get(a.0).ok_or(format_err!("Invalid chunk address: {:?}", a))?;
+            let op = chunk.ops.get(a.1).ok_or(err_msg("Invalid operation address"))?;
             Ok(op.clone())
         }
 
@@ -141,7 +141,7 @@ pub mod vm {
         }
 
         fn pcounter(&mut self) -> Result<Address> {
-            let pc = self.frames.last_mut().ok_or("Stack empty, no counter")?;
+            let pc = self.frames.last_mut().ok_or(err_msg("Stack empty, no counter"))?;
             let a = *pc;
 
             data::address_inc(pc);
@@ -155,7 +155,7 @@ pub mod vm {
                     return self
                         .stack
                         .pop()
-                        .ok_or_else(|| "Frames empty, but no value to return".into());
+                        .ok_or(err_msg("Frames empty, but no value to return"));
                 }
 
                 if print {
@@ -170,7 +170,7 @@ pub mod vm {
             let pc: &mut data::Address = self
                 .frames
                 .last_mut()
-                .ok_or("Frames empty, no way to jump")?;
+                .ok_or(err_msg("Frames empty, no way to jump"))?;
 
             *pc = addr;
             Ok(())
@@ -185,30 +185,33 @@ pub mod vm {
                     // TODO: This should only happen when chunk lookup fails
                     // Fix this when real error states are implemented.
                     if let Some(f) = self.builtin.lookup(pc) {
-                        f(&mut self.stack)?;
+                        f(&mut self.stack).context(format_err!("while executing builtin at {:?}", pc))?;
                         self.frames.pop();
                         return Ok(());
                     }
-                    return Err(e).chain_err(|| "builtin lookup failed");
+                    // This is required because we can't return a context directly
+                    Err(e).context("builtin lookup failed")?;
+                    return Ok(()) // this never exeuctes
                 }
             };
 
-            match op {
-                Op::Lit(l) => self.op_lit(l).chain_err(|| "Executing operation literal"),
-                Op::Return => self.op_return().chain_err(|| "Executing operation return"),
-                Op::Call => self.op_call().chain_err(|| "Executing operation call"),
-                Op::Jump => self.op_jump().chain_err(|| "Executing operation jump"),
+            // https://users.rust-lang.org/t/announcing-failure/13895/18
+            Ok(match op {
+                Op::Lit(l) => self.op_lit(l).context("Executing operation literal")?,
+                Op::Return => self.op_return().context("Executing operation return")?,
+                Op::Call => self.op_call().context("Executing operation call")?,
+                Op::Jump => self.op_jump().context("Executing operation jump")?,
                 Op::JumpCond => self
                     .op_jumpcond()
-                    .chain_err(|| "Executing operation jumpcond"),
-                Op::Load => self.op_load().chain_err(|| "Executing operation load"),
-                Op::Store => self.op_store().chain_err(|| "Executing operation store"),
+                    .context("Executing operation jumpcond")?,
+                Op::Load => self.op_load().context("Executing operation load")?,
+                Op::Store => self.op_store().context("Executing operation store")?,
                 Op::PushEnv => self
                     .op_pushenv()
-                    .chain_err(|| "Executing operation pushenv"),
-                Op::PopEnv => self.op_popenv().chain_err(|| "Executing operation popenv"),
-                Op::Dup => self.op_dup().chain_err(|| "Executing operation dup"),
-            }
+                    .context("Executing operation pushenv")?,
+                Op::PopEnv => self.op_popenv().context("Executing operation popenv")?,
+                Op::Dup => self.op_dup().context("Executing operation dup")?,
+            })
         }
 
         fn op_lit(&mut self, l: data::Literal) -> Result<()> {
@@ -219,7 +222,7 @@ pub mod vm {
         fn op_return(&mut self) -> Result<()> {
             self.frames
                 .pop()
-                .ok_or("Attempted to return on empty stack")?;
+                .ok_or(err_msg("Attempted to return on empty stack"))?;
             Ok(())
         }
 
@@ -227,13 +230,13 @@ pub mod vm {
             let a = self
                 .stack
                 .pop()
-                .ok_or("Attempted to pop data stack for jump")?;
+                .ok_or(err_msg("Attempted to pop data stack for jump"))?;
 
             if let Literal::Address(addr) = a {
                 self.frames.push(addr);
                 Ok(())
             } else {
-                Err("attempted to jump to non-address".into())
+                Err(err_msg("attempted to jump to non-address"))
             }
         }
 
@@ -241,7 +244,7 @@ pub mod vm {
             let address = self
                 .stack
                 .pop()
-                .ok_or("Attempted to pop stack for address")?
+                .ok_or(err_msg("Attempted to pop stack for address"))?
                 .ensure_address()?;
 
             self.jump(address)
@@ -251,19 +254,19 @@ pub mod vm {
             let cond = self
                 .stack
                 .pop()
-                .ok_or("Attempted to pop stack for conditional for if zero")?
+                .ok_or(err_msg("Attempted to pop stack for conditional for if zero"))?
                 .ensure_bool()?;
 
             let then = self
                 .stack
                 .pop()
-                .ok_or("Attepmted to pop stack for address for if true")?
+                .ok_or(err_msg("Attepmted to pop stack for address for if true"))?
                 .ensure_address()?;
 
             let els = self
                 .stack
                 .pop()
-                .ok_or("Attepmted to pop stack for address for if false")?
+                .ok_or(err_msg("Attepmted to pop stack for address for if false"))?
                 .ensure_address()?;
 
             if cond {
@@ -277,7 +280,7 @@ pub mod vm {
             let keyword = self
                 .stack
                 .pop()
-                .ok_or("Attempted to pop stack for keyword for load")?
+                .ok_or(err_msg("Attempted to pop stack for keyword for load"))?
                 .ensure_keyword()?;
 
             let mut val = self.environment.get(&keyword)?;
@@ -292,12 +295,12 @@ pub mod vm {
             let keyword = self
                 .stack
                 .pop()
-                .ok_or("Attempted to pop stack for keyword for store")?
+                .ok_or(err_msg("Attempted to pop stack for keyword for store"))?
                 .ensure_keyword()?;
             let value = self
                 .stack
                 .pop()
-                .ok_or("Attempted to pop stack for value for store")?;
+                .ok_or(err_msg("Attempted to pop stack for value for store"))?;
 
             self.environment.insert(keyword, Rc::new(value))?;
 
@@ -315,7 +318,7 @@ pub mod vm {
             let v = self
                 .stack
                 .last()
-                .ok_or("Attmempted to dup empty stack")?
+                .ok_or(err_msg("Attmempted to dup empty stack"))?
                 .clone();
             self.stack.push(v);
             Ok(())

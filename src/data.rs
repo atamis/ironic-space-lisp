@@ -48,7 +48,7 @@ impl Literal {
         if let Literal::Number(n) = self {
             Ok(*n)
         } else {
-            Err(format!("Type error, expected Number, got {:?}", self).into())
+            Err(format_err!("Type error, expected Number, got {:?}", self))
         }
     }
 
@@ -56,7 +56,7 @@ impl Literal {
         if let Literal::Address(a) = self {
             Ok(*a)
         } else {
-            Err(format!("Type error, expected Address, got {:?}", self).into())
+            Err(format_err!("Type error, expected Address, got {:?}", self))
         }
     }
 
@@ -64,7 +64,7 @@ impl Literal {
         if let Literal::Boolean(a) = self {
             Ok(*a)
         } else {
-            Err(format!("Type error, expected boolean, got {:?}", self).into())
+            Err(format_err!("Type error, expected boolean, got {:?}", self))
         }
     }
 
@@ -72,7 +72,7 @@ impl Literal {
         if let Literal::Keyword(a) = self {
             Ok(a.clone())
         } else {
-            Err(format!("Type error, expected keyword, got {:?}", self).into())
+            Err(format_err!("Type error, expected keyword, got {:?}", self))
         }
     }
 
@@ -80,7 +80,7 @@ impl Literal {
         if let Literal::List(ref v) = self {
             Ok(Rc::clone(v))
         } else {
-            Err(format!("Type error, expected list, got {:?}", self).into())
+            Err(format_err!("Type error, expected list, got {:?}", self))
         }
     }
 }

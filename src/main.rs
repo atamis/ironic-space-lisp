@@ -10,13 +10,13 @@ fn main() {
     if let Err(ref e) = run() {
         println!("error: {}", e);
 
-        for e in e.iter().skip(1) {
+        for e in e.iter_causes() {
             println!("caused by: {}", e);
         }
 
         // The backtrace is not always generated. Try to run this example
         // with `RUST_BACKTRACE=1`.
-        if let Some(backtrace) = e.backtrace() {
+        if let Some(backtrace) = Some(e.backtrace()) {
             println!("backtrace: {:?}", backtrace);
         }
 
@@ -35,7 +35,7 @@ fn code() -> vm::Bytecode {
         Dup,
         Lit(Literal::Address(PRINT)),
         Call,
-        //Lit(Literal::Address((3, 0))),
+        //Lit(Literal::Address((4, 0))),
         //Call,
         Return,
     ];
@@ -80,7 +80,7 @@ fn run() -> Result<()> {
 
     let r = vm
         .step_until_value(false)
-        .chain_err(|| "Execute hardcoded program")?;
+        .context("Execute hardcoded program")?;
 
     println!("{:?}", vm);
     println!("{:?}", r);

@@ -16,7 +16,8 @@ impl Parser {
     pub fn parse(&self, input: &str) -> Result<Vec<data::Literal>> {
         match self.0.parse(input) {
             Ok(x) => Ok(x),
-            Err(_) => Err("Parse error".into()),
+            // TODO: not this
+            Err(_) => Err(err_msg("Parse error")),
         }
     }
 }

@@ -42,7 +42,7 @@ impl Interpreter {
             AST::Var(k) => {
                 let r = env
                     .get(k)
-                    .chain_err(|| format!("While accessing var {:}", k))?;
+                    .ok_or(format_err!("While accessing var {:}", k))?;
 
                 // This code ends up cloning twice, and I don't know how to do it better.
                 Ok((**r).clone())
@@ -50,20 +50,20 @@ impl Interpreter {
             AST::If { pred, then, els } => {
                 let pv = self
                     .env_eval(pred, env)
-                    .chain_err(|| "Evaluating predicate for if")?;
+                    .context("Evaluating predicate for if")?;
 
                 if pv.truthy() {
                     Ok(self
                         .env_eval(then, env)
-                        .chain_err(|| "Evaluating then for if")?)
+                        .context("Evaluating then for if")?)
                 } else {
                     Ok(self
                         .env_eval(els, env)
-                        .chain_err(|| "Evaluating else for if")?)
+                        .context("Evaluating else for if")?)
                 }
             }
             AST::Def(ref def) => {
-                let res = self.put_def(env, def).chain_err(|| "Evaluating def ")?;
+                let res = self.put_def(env, def).context("Evaluating def")?;
                 Ok(res)
             }
             AST::Let { defs, body } => {
@@ -71,12 +71,12 @@ impl Interpreter {
 
                 for d in defs {
                     self.put_def(&mut let_env, d)
-                        .chain_err(|| "Evalutaing bindings for let")?;
+                        .context("Evalutaing bindings for let")?;
                 }
 
                 let body_val = self
                     .env_eval(body, &mut let_env)
-                    .chain_err(|| "Evaluting let body")?;
+                    .context("Evaluting let body")?;
 
                 Ok(body_val)
             }
@@ -85,17 +85,17 @@ impl Interpreter {
                     .iter()
                     .map(|e| self.env_eval(e, env))
                     .collect::<Result<_>>()
-                    .chain_err(|| "Evaluating do sub-expressions")?;
-                Ok(vals.pop().chain_err(|| "do expressions can't be empty")?)
+                    .context("Evaluating do sub-expressions")?;
+                Ok(vals.pop().ok_or(err_msg("do expressions can't be empty"))?)
             }
-            _ => Err("Not implemented".into()),
+            _ => Err(err_msg("Not implemented")),
         }
     }
 
     fn put_def(&self, env: &mut Env, def: &Def) -> Result<Literal> {
         let res = self
             .env_eval(&def.value, env)
-            .chain_err(|| format!("While evaluating def value for {:}", def.name.clone()))?;
+            .context(format_err!("While evaluating def value for {:}", def.name.clone()))?;
         env.insert(def.name.clone(), Rc::new(res.clone()));
         Ok(res)
     }

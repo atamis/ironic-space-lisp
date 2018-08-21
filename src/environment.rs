@@ -21,7 +21,7 @@ impl EnvStack {
     pub fn insert(&mut self, k: String, v: Rc<data::Literal>) -> Result<()> {
         self.envs
             .last_mut()
-            .ok_or("No envs to insert into")?
+            .ok_or(err_msg("No envs to insert into"))?
             .insert(k, v);
         Ok(())
     }
@@ -34,12 +34,12 @@ impl EnvStack {
     pub fn get(&self, k: &str) -> Result<Rc<data::Literal>> {
         match self.peek()?.get(k) {
             Some(r) => Ok(Rc::clone(r)),
-            None => Err(format!("Binding not found for {:}", k).into()),
+            None => Err(format_err!("Binding not found for {:}", k)),
         }
     }
 
     pub fn peek(&self) -> Result<&Env> {
-        self.envs.last().ok_or_else(|| "Env stack empty".into())
+        self.envs.last().ok_or(err_msg("Env stack empty"))
     }
 
     pub fn push(&mut self) {
@@ -54,7 +54,7 @@ impl EnvStack {
     pub fn pop(&mut self) -> Result<()> {
         self.envs
             .pop()
-            .ok_or("Attempted to pop empty environment stack")?;
+            .ok_or(err_msg("Attempted to pop empty environment stack"))?;
         Ok(())
     }
 }

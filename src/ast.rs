@@ -41,13 +41,13 @@ pub fn parse(e: &Literal) -> Result<AST> {
             if let Some((first, rest)) = vec.split_first() {
                 parse_compound(first, rest)
             } else {
-                Err("empty list not valid".into())
+                Err(err_msg("empty list not valid"))
             }
         }
         Literal::Keyword(k) => Ok(AST::Var(k.clone())),
         Literal::Boolean(_) => Ok(AST::Value(e.clone())),
         Literal::Number(_) => Ok(AST::Value(e.clone())),
-        Literal::Address(_) => Err("Address literals not supported".into()),
+        Literal::Address(_) => Err(err_msg("Address literals not supported")),
     }
 }
 
@@ -56,7 +56,7 @@ fn parse_compound(first: &Literal, rest: &[Literal]) -> Result<AST> {
         match s.as_ref() {
             "if" => {
                 if rest.len() != 3 {
-                    return Err("malformed if expr, (if pred then else)".into());
+                    return Err(err_msg("malformed if expr, (if pred then else)"));
                 }
 
                 let mut asts: Vec<Rc<AST>> = rest.iter()
@@ -67,9 +67,9 @@ fn parse_compound(first: &Literal, rest: &[Literal]) -> Result<AST> {
                     .collect();
 
                 // These shouldn't fail, based on the length test above.
-                let els = asts.pop().ok_or("If requires else clause")?;
-                let then = asts.pop().ok_or("If requires then clause")?;
-                let pred = asts.pop().ok_or("If requires predicate")?;
+                let els = asts.pop() .ok_or(err_msg("If requires else clause"))?;
+                let then = asts.pop().ok_or(err_msg("If requires then clause"))?;
+                let pred = asts.pop().ok_or(err_msg("If requires predicate"))?;
 
                 Ok(AST::If { pred, then, els })
             }
@@ -80,23 +80,23 @@ fn parse_compound(first: &Literal, rest: &[Literal]) -> Result<AST> {
             "let" => {
                 let mut def_literals = rest
                     .get(0)
-                    .ok_or("let requires def list as first term (let (defs+) body)")?
+                    .ok_or(err_msg("let requires def list as first term (let (defs+) body)"))?
                     .ensure_list()?;
 
                 let body_literal = rest
                     .get(1)
-                    .ok_or("let requires body as second term (let (defs+) body)")?;
+                    .ok_or(err_msg("let requires body as second term (let (defs+) body)"))?;
 
                 if rest.len() != 2 {
-                    return Err("Malformed let, (let (defs+) body)".into());
+                    return Err(err_msg("Malformed let, (let (defs+) body)"));
                 }
 
                 if def_literals.len() == 0 {
-                    return Err("empty list of let bindings is not allowed".into());
+                    return Err(err_msg("empty list of let bindings is not allowed"));
                 }
 
                 if def_literals.len() % 2 != 0 {
-                    return Err("in let, def list must be even".into());
+                    return Err(err_msg("in let, def list must be even"));
                 }
 
                 let body = Rc::new(parse(body_literal)?);
@@ -109,7 +109,7 @@ fn parse_compound(first: &Literal, rest: &[Literal]) -> Result<AST> {
                     defs.push(parse_def_partial(&def_literals)?);
                     def_literals = &def_literals
                         .get(2..)
-                        .ok_or("Error slicing defs, not enough def terms")?;
+                        .ok_or(err_msg("Error slicing defs, not enough def terms"))?;
                 }
 
                 Ok(AST::Let { defs, body })
@@ -118,7 +118,7 @@ fn parse_compound(first: &Literal, rest: &[Literal]) -> Result<AST> {
             "lambda" => {
                 let args = rest
                     .get(0)
-                    .ok_or("lambda requires an argument list, (lambda (args*) body)")?
+                    .ok_or(err_msg("lambda requires an argument list, (lambda (args*) body)"))?
                     .ensure_list()?
                     .iter()
                     .map(Literal::ensure_keyword)
@@ -126,31 +126,31 @@ fn parse_compound(first: &Literal, rest: &[Literal]) -> Result<AST> {
 
                 let body = rest
                     .get(1)
-                    .ok_or("lambda requires body, (lambda (args*) body)")?;
+                    .ok_or(err_msg("lambda requires body, (lambda (args*) body)"))?;
                 let body = Rc::new(parse(body)?);
 
                 Ok(AST::Lambda { args, body })
             }
             _ => {
-                let f = Rc::new(parse(first).chain_err(|| "Function AST in application")?);
+                let f = Rc::new(parse(first).context("Function AST in application")?);
 
                 let args = rest
                     .iter()
                     .map(parse)
                     .collect::<Result<_>>()
-                    .chain_err(|| "Arguments to application")?;
+                    .context("Arguments to application")?;
 
                 Ok(AST::Application { f, args })
             }
         }
     } else {
-        Err("Not implemented".into())
+        Err(err_msg("Not implemented"))
     }
 }
 
 fn parse_def_single(v: &[Literal]) -> Result<Def> {
     if v.len() > 2 {
-        return Err("Excessive items after def".into());
+        return Err(err_msg("Excessive items after def"));
     }
 
     match parse_def_partial(v) {
@@ -161,7 +161,7 @@ fn parse_def_single(v: &[Literal]) -> Result<Def> {
 
 fn parse_def_partial(v: &[Literal]) -> Result<Def> {
     if v.len() < 2 {
-        return Err("Insufficient terms for def".into());
+        return Err(err_msg("Insufficient terms for def"));
     }
 
     let name;
@@ -169,10 +169,10 @@ fn parse_def_partial(v: &[Literal]) -> Result<Def> {
     if let Literal::Keyword(ref s) = v[0] {
         name = s.clone();
     } else {
-        return Err("first term of def must be keyword".into());
+        return Err(err_msg("first term of def must be keyword"));
     }
 
-    let v = parse(&v[1]).chain_err(|| "Second term of def must be valid AST")?;
+    let v = parse(&v[1]).context("Second term of def must be valid AST")?;
 
     Ok(Def { name, value: v })
 }

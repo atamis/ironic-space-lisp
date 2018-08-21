@@ -32,11 +32,11 @@ impl Builtin {
     fn add(s: &mut Vec<Literal>) -> Result<()> {
         let a = s
             .pop()
-            .ok_or("Popping number for add builtin")?
+            .ok_or(err_msg("Popping number for add builtin"))?
             .ensure_number()?;
         let b = s
             .pop()
-            .ok_or("Popping number for add builtin")?
+            .ok_or(err_msg("Popping number for add builtin"))?
             .ensure_number()?;
 
         s.push(Literal::Number(a + b));
@@ -45,7 +45,7 @@ impl Builtin {
     }
 
     fn print(s: &mut Vec<Literal>) -> Result<()> {
-        let v = s.pop().ok_or("Popping value for print builtin")?;
+        let v = s.pop().ok_or(err_msg("Popping value for print builtin"))?;
 
         println!("{:?}", v);
 
