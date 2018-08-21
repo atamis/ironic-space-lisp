@@ -16,6 +16,22 @@ pub mod parser;
 
 // std::usize::MAX
 
+pub fn str_to_ast(s: &str) -> errors::Result<Vec<ast::AST>> {
+    use errors::*;
+
+    let p = parser::Parser::new();
+    let lits = p.parse(s)?;
+    let asts = lits
+        .iter()
+        .enumerate()
+        .map(|( i, lit )|{
+            let a = ast::parse(&lit).context(format!("While parsing literal #{:}", i))?;
+            Ok(a)
+        })
+        .collect();
+    asts
+}
+
 pub mod vm {
     use std::fmt;
     use std::rc::Rc;

@@ -51,101 +51,29 @@ pub fn parse(e: &Literal) -> Result<AST> {
     }
 }
 
+// TODO: break these parsers out into functions and make better error messages.
 fn parse_compound(first: &Literal, rest: &[Literal]) -> Result<AST> {
-    if let Literal::Keyword(s) = first {
+    let r = if let Literal::Keyword(s) = first {
         match s.as_ref() {
-            "if" => {
-                if rest.len() != 3 {
-                    return Err(err_msg("malformed if expr, (if pred then else)"));
-                }
-
-                let mut asts: Vec<Rc<AST>> = rest.iter()
-                    .map(|l| parse(l))
-                    .collect::<Result<Vec<AST>>>()? // make sure there are no parse errors
-                    .into_iter()
-                    .map(Rc::new)
-                    .collect();
-
-                // These shouldn't fail, based on the length test above.
-                let els = asts.pop() .ok_or(err_msg("If requires else clause"))?;
-                let then = asts.pop().ok_or(err_msg("If requires then clause"))?;
-                let pred = asts.pop().ok_or(err_msg("If requires predicate"))?;
-
-                Ok(AST::If { pred, then, els })
-            }
-            "def" => {
-                let def = parse_def_single(rest)?;
-                Ok(AST::Def(Rc::new(def)))
-            }
-            "let" => {
-                let mut def_literals = rest
-                    .get(0)
-                    .ok_or(err_msg("let requires def list as first term (let (defs+) body)"))?
-                    .ensure_list()?;
-
-                let body_literal = rest
-                    .get(1)
-                    .ok_or(err_msg("let requires body as second term (let (defs+) body)"))?;
-
-                if rest.len() != 2 {
-                    return Err(err_msg("Malformed let, (let (defs+) body)"));
-                }
-
-                if def_literals.len() == 0 {
-                    return Err(err_msg("empty list of let bindings is not allowed"));
-                }
-
-                if def_literals.len() % 2 != 0 {
-                    return Err(err_msg("in let, def list must be even"));
-                }
-
-                let body = Rc::new(parse(body_literal)?);
-
-                let mut defs = Vec::with_capacity(def_literals.len() / 2);
-
-                let mut def_literals = &def_literals[..];
-
-                while !def_literals.is_empty() {
-                    defs.push(parse_def_partial(&def_literals)?);
-                    def_literals = &def_literals
-                        .get(2..)
-                        .ok_or(err_msg("Error slicing defs, not enough def terms"))?;
-                }
-
-                Ok(AST::Let { defs, body })
-            }
-            "do" => Ok(AST::Do(rest.iter().map(parse).collect::<Result<_>>()?)),
-            "lambda" => {
-                let args = rest
-                    .get(0)
-                    .ok_or(err_msg("lambda requires an argument list, (lambda (args*) body)"))?
-                    .ensure_list()?
-                    .iter()
-                    .map(Literal::ensure_keyword)
-                    .collect::<Result<_>>()?;
-
-                let body = rest
-                    .get(1)
-                    .ok_or(err_msg("lambda requires body, (lambda (args*) body)"))?;
-                let body = Rc::new(parse(body)?);
-
-                Ok(AST::Lambda { args, body })
-            }
-            _ => {
-                let f = Rc::new(parse(first).context("Function AST in application")?);
-
-                let args = rest
-                    .iter()
-                    .map(parse)
-                    .collect::<Result<_>>()
-                    .context("Arguments to application")?;
-
-                Ok(AST::Application { f, args })
-            }
+            "if"     => parse_if(first, rest)
+                .context("Parsing let expr"),
+            "def"    => parse_def_expr(first, rest)
+                .context("Parsing def expr"),
+            "let"    => parse_let(first, rest)
+                .context("Parsing let expr"),
+            "do"     => parse_do(first, rest)
+                .context("Parsing do expr"),
+            "lambda" => parse_lambda(first, rest)
+                .context("Parsing lambda expr"),
+            _ => parse_application(first, rest)
+                .context("Parsing application expr"),
         }
     } else {
-        Err(err_msg("Not implemented"))
-    }
+        parse_application(first, rest)
+            .context("Parsing application expr")
+    }?;
+
+    Ok(r)
 }
 
 fn parse_def_single(v: &[Literal]) -> Result<Def> {
@@ -175,6 +103,107 @@ fn parse_def_partial(v: &[Literal]) -> Result<Def> {
     let v = parse(&v[1]).context("Second term of def must be valid AST")?;
 
     Ok(Def { name, value: v })
+}
+
+
+fn parse_if(first: &Literal, rest: &[Literal]) -> Result<AST> {
+    if rest.len() != 3 {
+        return Err(err_msg("malformed if expr, (if pred then else)"));
+    }
+
+    let mut asts: Vec<Rc<AST>> = rest.iter()
+        .map(|l| parse(l))
+        .collect::<Result<Vec<AST>>>()? // make sure there are no parse errors
+        .into_iter()
+        .map(Rc::new)
+        .collect();
+
+    // These shouldn't fail, based on the length test above.
+    let els = asts.pop() .ok_or(err_msg("If requires else clause"))?;
+    let then = asts.pop().ok_or(err_msg("If requires then clause"))?;
+    let pred = asts.pop().ok_or(err_msg("If requires predicate"))?;
+
+    Ok(AST::If { pred, then, els })
+}
+
+fn parse_def_expr(first: &Literal, rest: &[Literal]) -> Result<AST> {
+    let def = parse_def_single(rest)?;
+    Ok(AST::Def(Rc::new(def)))
+}
+
+fn parse_let(first: &Literal, rest: &[Literal]) -> Result<AST> {
+    let mut def_literals = rest
+        .get(0)
+        .ok_or(err_msg("let requires def list as first term (let (defs+) body)"))?
+        .ensure_list()
+        .context("Parsing list of defs")?;
+
+    let body_literal = rest
+        .get(1)
+        .ok_or(err_msg("let requires body as second term (let (defs+) body)"))?;
+
+    if rest.len() != 2 {
+        return Err(err_msg("Malformed let, (let (defs+) body)"));
+    }
+
+    if def_literals.len() == 0 {
+        return Err(err_msg("empty list of let bindings is not allowed"));
+    }
+
+    if def_literals.len() % 2 != 0 {
+        return Err(err_msg("in let, def list must be even"));
+    }
+
+    let body = Rc::new(parse(body_literal).context("While parsing body of let")?);
+
+    let mut defs = Vec::with_capacity(def_literals.len() / 2);
+
+    let mut def_literals = &def_literals[..];
+
+    // TODO: currently can't report def index
+    while !def_literals.is_empty() {
+        defs.push(parse_def_partial(&def_literals).context("Parsing defs in let")?);
+        def_literals = &def_literals
+            .get(2..)
+            .ok_or(err_msg("Error slicing defs, not enough def terms"))?;
+    }
+
+    Ok(AST::Let { defs, body })
+}
+
+fn parse_do(first: &Literal, rest: &[Literal]) -> Result<AST> {
+    Ok(AST::Do(rest.iter()
+            .map(parse)
+            .collect::<Result<_>>()?))
+}
+
+fn parse_lambda(first: &Literal, rest: &[Literal]) -> Result<AST> {
+    let args = rest
+        .get(0)
+        .ok_or(err_msg("lambda requires an argument list, (lambda (args*) body)"))?
+        .ensure_list()?
+        .iter()
+        .map(Literal::ensure_keyword)
+        .collect::<Result<_>>()?;
+
+    let body = rest
+        .get(1)
+        .ok_or(err_msg("lambda requires body, (lambda (args*) body)"))?;
+    let body = Rc::new(parse(body)?);
+
+    Ok(AST::Lambda { args, body })
+}
+
+fn parse_application(first: &Literal, rest: &[Literal]) -> Result<AST> {
+    let f = Rc::new(parse(first).context("Function AST in application")?);
+
+    let args = rest
+        .iter()
+        .map(parse)
+        .collect::<Result<_>>()
+        .context("Arguments to application")?;
+
+    Ok(AST::Application { f, args })
 }
 
 #[cfg(test)]

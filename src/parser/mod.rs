@@ -3,7 +3,10 @@ pub mod isl;
 
 use data;
 use errors::*;
-
+use failure::Error;
+use lalrpop_util;
+use std::fmt::Debug;
+use std::fmt::Display;
 
 pub struct Parser(isl::ExprsParser);
 
@@ -14,17 +17,16 @@ impl Parser {
     }
 
     pub fn parse(&self, input: &str) -> Result<Vec<data::Literal>> {
-        match self.0.parse(input) {
-            Ok(x) => Ok(x),
-            // TODO: not this
-            Err(_) => Err(err_msg("Parse error")),
-        }
+        self.0.parse(input)
+            .map_err(Parser::wrap_err)
     }
-}
 
-impl Default for Parser {
-    fn default() -> Self {
-        Self::new()
+    fn wrap_err<A, B, C>(e: lalrpop_util::ParseError<A, B, C>) -> Error
+    where A: Display + Debug,
+          B: Display + Debug,
+          C: Display + Debug,
+    {
+        format_err!("ParseError: {:?}", e)
     }
 }
 
