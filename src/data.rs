@@ -37,7 +37,6 @@ impl fmt::Debug for Literal {
 }
 
 impl Literal {
-
     pub fn truthy(&self) -> bool {
         match self {
             Literal::Boolean(false) => false,

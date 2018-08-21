@@ -1,6 +1,6 @@
-use std::convert::From;
 #[allow(unused_imports)]
 use error_chain;
+use std::convert::From;
 
 use data;
 use std::rc;

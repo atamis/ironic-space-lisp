@@ -1,5 +1,5 @@
-use std::rc::Rc;
 use im::hashmap::HashMap;
+use std::rc::Rc;
 
 use data;
 use errors::*;
@@ -7,19 +7,22 @@ use errors::*;
 pub type Env = HashMap<String, Rc<data::Literal>>;
 
 #[derive(Debug)]
-pub struct EnvStack{
-    envs: Vec<Env>
+pub struct EnvStack {
+    envs: Vec<Env>,
 }
 
 impl EnvStack {
     pub fn new() -> EnvStack {
         EnvStack {
-            envs: vec![Env::new()]
+            envs: vec![Env::new()],
         }
     }
 
     pub fn insert(&mut self, k: String, v: Rc<data::Literal>) -> Result<()> {
-        self.envs.last_mut().ok_or("No envs to insert into")?.insert(k, v);
+        self.envs
+            .last_mut()
+            .ok_or("No envs to insert into")?
+            .insert(k, v);
         Ok(())
     }
 
@@ -49,7 +52,9 @@ impl EnvStack {
     }
 
     pub fn pop(&mut self) -> Result<()> {
-        self.envs.pop().ok_or("Attempted to pop empty environment stack")?;
+        self.envs
+            .pop()
+            .ok_or("Attempted to pop empty environment stack")?;
         Ok(())
     }
 }

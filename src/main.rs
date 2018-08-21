@@ -85,7 +85,6 @@ fn run() -> Result<()> {
     println!("{:?}", vm);
     println!("{:?}", r);
 
-
     //println!("{:?}", parser::expr("(test asdf asdf asdf ( asdf  qwerqwer ) )"));
     //println!("{:?}", parser::tokens("(( ((( asdf asdf asdf)))) aa\n asdf    "));
     //println!("{:?}", parser::expr(vec![parser::Token::Open]));

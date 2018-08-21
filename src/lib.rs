@@ -3,16 +3,16 @@
 
 #[macro_use]
 extern crate error_chain;
-extern crate lalrpop_util;
 extern crate im;
+extern crate lalrpop_util;
 
+pub mod ast;
 pub mod builtin;
 pub mod data;
 mod environment;
 pub mod errors;
-pub mod parser;
 pub mod interpreter;
-pub mod ast;
+pub mod parser;
 
 // std::usize::MAX
 
@@ -36,7 +36,6 @@ pub mod vm {
         pub ops: Vec<Op>,
     }
 
-
     impl fmt::Debug for Bytecode {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             write!(f, "Bytecode {{compiled code}}")
@@ -46,7 +45,7 @@ pub mod vm {
     impl Bytecode {
         pub fn new(v: Vec<Vec<Op>>) -> Bytecode {
             Bytecode {
-                chunks: v.into_iter().map(|c| Chunk {ops: c}).collect()
+                chunks: v.into_iter().map(|c| Chunk { ops: c }).collect(),
             }
         }
 
@@ -72,7 +71,7 @@ pub mod vm {
                 }
             }
 
-            for ( chunk_idx, chunk ) in self.chunks.iter().enumerate() {
+            for (chunk_idx, chunk) in self.chunks.iter().enumerate() {
                 println!("################ CHUNK #{:?} ################", chunk_idx);
                 for (op_idx, op) in chunk.ops.iter().enumerate() {
                     let a = (chunk_idx, op_idx);

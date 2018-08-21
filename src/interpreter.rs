@@ -1,10 +1,10 @@
 use std::rc::Rc;
 
-use data::Literal;
-use ast::AST;
 use ast::Def;
-use errors::*;
+use ast::AST;
+use data::Literal;
 use environment::Env;
+use errors::*;
 
 #[derive(Default)]
 pub struct Interpreter {
@@ -14,14 +14,12 @@ pub struct Interpreter {
 impl Interpreter {
     pub fn new() -> Interpreter {
         Interpreter {
-            global: Interpreter::default_environment()
+            global: Interpreter::default_environment(),
         }
     }
 
     pub fn with_env(env: Env) -> Interpreter {
-        Interpreter {
-            global: env
-        }
+        Interpreter { global: env }
     }
 
     fn default_environment() -> Env {
@@ -42,30 +40,33 @@ impl Interpreter {
         match a {
             AST::Value(l) => Ok(l.clone()),
             AST::Var(k) => {
-                let r = env.get(k)
+                let r = env
+                    .get(k)
                     .chain_err(|| format!("While accessing var {:}", k))?;
 
                 // This code ends up cloning twice, and I don't know how to do it better.
                 Ok((**r).clone())
-            },
-            AST::If {pred, then, els} => {
-                let pv = self.env_eval(pred, env)
+            }
+            AST::If { pred, then, els } => {
+                let pv = self
+                    .env_eval(pred, env)
                     .chain_err(|| "Evaluating predicate for if")?;
 
                 if pv.truthy() {
-                    Ok(self.env_eval(then, env)
-                       .chain_err(|| "Evaluating then for if")?)
+                    Ok(self
+                        .env_eval(then, env)
+                        .chain_err(|| "Evaluating then for if")?)
                 } else {
-                    Ok(self.env_eval(els, env)
-                       .chain_err(|| "Evaluating else for if")?)
+                    Ok(self
+                        .env_eval(els, env)
+                        .chain_err(|| "Evaluating else for if")?)
                 }
-            },
+            }
             AST::Def(ref def) => {
-                let res = self.put_def(env, def)
-                    .chain_err(|| "Evaluating def ")?;
+                let res = self.put_def(env, def).chain_err(|| "Evaluating def ")?;
                 Ok(res)
-            },
-            AST::Let {defs, body} => {
+            }
+            AST::Let { defs, body } => {
                 let mut let_env = env.clone();
 
                 for d in defs {
@@ -73,43 +74,40 @@ impl Interpreter {
                         .chain_err(|| "Evalutaing bindings for let")?;
                 }
 
-                let body_val = self.env_eval(body, &mut let_env)
+                let body_val = self
+                    .env_eval(body, &mut let_env)
                     .chain_err(|| "Evaluting let body")?;
 
                 Ok(body_val)
-            },
+            }
             AST::Do(asts) => {
-                let mut vals: Vec<Literal> = asts.iter()
+                let mut vals: Vec<Literal> = asts
+                    .iter()
                     .map(|e| self.env_eval(e, env))
                     .collect::<Result<_>>()
                     .chain_err(|| "Evaluating do sub-expressions")?;
-                Ok(
-                    vals.pop()
-                        .chain_err(|| "do expressions can't be empty")?
-                )
+                Ok(vals.pop().chain_err(|| "do expressions can't be empty")?)
             }
             _ => Err("Not implemented".into()),
         }
     }
 
     fn put_def(&self, env: &mut Env, def: &Def) -> Result<Literal> {
-        let res = self.env_eval(&def.value, env)
+        let res = self
+            .env_eval(&def.value, env)
             .chain_err(|| format!("While evaluating def value for {:}", def.name.clone()))?;
         env.insert(def.name.clone(), Rc::new(res.clone()));
         Ok(res)
     }
 }
 
-
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use ast;
     use data::Literal;
-    use parser::Parser;
     use errors::*;
+    use parser::Parser;
 
     fn pi(i: &mut Interpreter, s: &str) -> Result<Literal> {
         let p = Parser::new();
