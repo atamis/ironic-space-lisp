@@ -1,6 +1,4 @@
 use std::convert::From;
-#[allow(unused_attributes)]
-#[macro_use]
 #[allow(unused_imports)]
 use error_chain;
 

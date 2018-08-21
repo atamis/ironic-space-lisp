@@ -6,6 +6,7 @@ use ast::Def;
 use errors::*;
 use environment::Env;
 
+#[derive(Default)]
 pub struct Interpreter {
     pub global: Env,
 }

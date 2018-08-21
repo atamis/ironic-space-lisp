@@ -104,7 +104,7 @@ fn parse_compound(first: &Literal, rest: &[Literal]) -> Result<AST> {
                 let mut def_literals = &def_literals[..];
 
 
-                while def_literals.len() > 0 {
+                while !def_literals.is_empty() {
                     defs.push(parse_def_partial(&def_literals)?);
                     def_literals = &def_literals.get(2..).ok_or("Error slicing defs, not enough def terms")?;
                 }

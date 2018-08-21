@@ -23,11 +23,12 @@ impl EnvStack {
         Ok(())
     }
 
-    pub fn easy_insert(&mut self, k: &str, v: data::Literal) {
-        self.insert(k.to_string(), Rc::new(v));
+    #[allow(dead_code)]
+    pub fn easy_insert(&mut self, k: &str, v: data::Literal) -> Result<()> {
+        self.insert(k.to_string(), Rc::new(v))
     }
 
-    pub fn get(&self, k: &String) -> Result<Rc<data::Literal>> {
+    pub fn get(&self, k: &str) -> Result<Rc<data::Literal>> {
         match self.peek()?.get(k) {
             Some(r) => Ok(Rc::clone(r)),
             None => Err(format!("Binding not found for {:}", k).into()),
@@ -35,7 +36,7 @@ impl EnvStack {
     }
 
     pub fn peek(&self) -> Result<&Env> {
-        self.envs.last().ok_or("Env stack empty".into())
+        self.envs.last().ok_or_else(|| "Env stack empty".into())
     }
 
     pub fn push(&mut self) {

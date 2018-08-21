@@ -4,12 +4,12 @@ use data::Address;
 use data::Literal;
 use errors::*;
 
-pub static ADD: Address = (usize::MAX - 0, 0);
+pub static ADD: Address = (usize::MAX, 0);
 pub static PRINT: Address = (usize::MAX - 1, 0);
 
 pub type BuiltinFn = Fn(&mut Vec<Literal>) -> Result<()>;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Builtin;
 
 // https://github.com/sfackler/rust-phf
@@ -23,8 +23,8 @@ impl Builtin {
         let c = addr.0;
         // Rust has no match pinning
         match c {
-            _ if c == ADD.0 => return Some(Box::new(Builtin::add)),
-            _ if c == PRINT.0 => return Some(Box::new(Builtin::print)),
+            _ if c == ADD.0 => Some(Box::new(Builtin::add)),
+            _ if c == PRINT.0 => Some(Box::new(Builtin::print)),
             _ => None,
         }
     }
@@ -47,7 +47,7 @@ impl Builtin {
     fn print(s: &mut Vec<Literal>) -> Result<()> {
         let v = s.pop().ok_or("Popping value for print builtin")?;
 
-        print!("{:?}\n", v);
+        println!("{:?}", v);
 
         Ok(())
     }

@@ -1,9 +1,12 @@
+#[allow(clippy)]
 pub mod isl;
 
 use data;
 use errors::*;
 
+
 pub struct Parser(isl::ExprsParser);
+
 
 impl Parser {
     pub fn new() -> Parser {
@@ -17,6 +20,13 @@ impl Parser {
         }
     }
 }
+
+impl Default for Parser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 
 #[cfg(test)]
 mod tests {

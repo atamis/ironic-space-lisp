@@ -1,3 +1,6 @@
+// because clippy
+#![allow(unknown_lints)]
+
 #[macro_use]
 extern crate error_chain;
 extern crate lalrpop_util;
@@ -70,7 +73,7 @@ pub mod vm {
             }
 
             for ( chunk_idx, chunk ) in self.chunks.iter().enumerate() {
-                print!("################ CHUNK #{:?} ################\n", chunk_idx);
+                println!("################ CHUNK #{:?} ################", chunk_idx);
                 for (op_idx, op) in chunk.ops.iter().enumerate() {
                     let a = (chunk_idx, op_idx);
 
@@ -79,7 +82,7 @@ pub mod vm {
                     if let Op::Lit(l) = op {
                         print!("\t{:?}", l);
                     }
-                    print!("\n")
+                    println!()
                 }
             }
         }
@@ -130,7 +133,7 @@ pub mod vm {
     impl VM {
         pub fn new(code: Bytecode) -> VM {
             VM {
-                code: code,
+                code,
                 frames: vec![(0, 0)],
                 stack: vec![],
                 builtin: builtin::Builtin::new(),
@@ -140,7 +143,7 @@ pub mod vm {
 
         fn pcounter(&mut self) -> Result<Address> {
             let pc = self.frames.last_mut().ok_or("Stack empty, no counter")?;
-            let a = pc.clone();
+            let a = *pc;
 
             data::address_inc(pc);
 
@@ -149,11 +152,11 @@ pub mod vm {
 
         pub fn step_until_value(&mut self, print: bool) -> Result<data::Literal> {
             loop {
-                if self.frames.len() == 0 {
+                if self.frames.is_empty() {
                     return self
                         .stack
                         .pop()
-                        .ok_or("Frames empty, but no value to return".into());
+                        .ok_or_else(|| "Frames empty, but no value to return".into());
                 }
 
                 if print {
@@ -171,7 +174,7 @@ pub mod vm {
                 .ok_or("Frames empty, no way to jump")?;
 
             *pc = addr;
-            return Ok(());
+            Ok(())
         }
 
         pub fn single_step(&mut self) -> Result<()> {
@@ -297,7 +300,7 @@ pub mod vm {
                 .pop()
                 .ok_or("Attempted to pop stack for value for store")?;
 
-            self.environment.insert(keyword, Rc::new(value));
+            self.environment.insert(keyword, Rc::new(value))?;
 
             Ok(())
         }
