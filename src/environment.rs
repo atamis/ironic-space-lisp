@@ -109,19 +109,19 @@ mod tests {
 
         assert!(root.get(&s1).is_err());
 
-        root.insert(s1, n(0));
+        root.insert(s1, n(0)).unwrap();
 
         assert_eq!(root.get(&s11).unwrap(), n(0));
 
         root.push();
 
-        root.insert(s2, n(1));
+        root.insert(s2, n(1)).unwrap();
 
         assert_eq!(root.get(&s21).unwrap(), n(1));
 
         assert_eq!(root.get(&s11).unwrap(), n(0));
 
-        root.pop();
+        root.pop().unwrap();
 
         assert_eq!(root.get(&s11).unwrap(), n(0));
         assert!(root.get(&s21).is_err());

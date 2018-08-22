@@ -1,11 +1,9 @@
 extern crate ironic_space_lisp;
 
-use ironic_space_lisp::ast;
 use ironic_space_lisp::builtin::ADD;
 use ironic_space_lisp::builtin::PRINT;
 use ironic_space_lisp::data;
 use ironic_space_lisp::errors::*;
-use ironic_space_lisp::parser::Parser;
 use ironic_space_lisp::vm;
 
 fn main() {

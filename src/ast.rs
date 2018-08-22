@@ -35,6 +35,45 @@ pub enum AST {
     },
 }
 
+pub trait ASTVisitor<R> {
+    fn visit(&mut self, a: &AST) -> Result<R> {
+        let r = match a {
+            AST::Value(l) => self.value_expr(l).context("Visiting value expr"),
+            AST::If { pred, then, els } => {
+                self.if_expr(pred, then, els).context("Visiting if expr")
+            }
+            AST::Def(def) => self.def_expr(def).context("Visiting def expr"),
+            AST::Let { defs, body } => self.let_expr(defs, body).context("Fixing let expr"),
+            AST::Do(asts) => self.do_expr(asts).context("Visiting do expr"),
+            AST::Lambda { args, body } => {
+                self.lambda_expr(args, body).context("Visiting lambda expr")
+            }
+            AST::Var(k) => self.var_expr(k).context("Vising var expr"),
+            AST::Application { f, args } => self
+                .application_expr(f, args)
+                .context("Visiting application expr"),
+        }?;
+
+        Ok(r)
+    }
+
+    fn value_expr(&mut self, l: &Literal) -> Result<R>;
+
+    fn if_expr(&mut self, pred: &Rc<AST>, then: &Rc<AST>, els: &Rc<AST>) -> Result<R>;
+
+    fn def_expr(&mut self, def: &Rc<Def>) -> Result<R>;
+
+    fn let_expr(&mut self, defs: &Vec<Def>, body: &Rc<AST>) -> Result<R>;
+
+    fn do_expr(&mut self, exprs: &Vec<AST>) -> Result<R>;
+
+    fn lambda_expr(&mut self, args: &Vec<Keyword>, body: &Rc<AST>) -> Result<R>;
+
+    fn var_expr(&mut self, k: &Keyword) -> Result<R>;
+
+    fn application_expr(&mut self, f: &Rc<AST>, args: &Vec<AST>) -> Result<R>;
+}
+
 pub fn parse(e: &Literal) -> Result<AST> {
     match e {
         Literal::List(ref vec) => {
@@ -98,7 +137,7 @@ fn parse_def_partial(v: &[Literal]) -> Result<Def> {
     Ok(Def { name, value: v })
 }
 
-fn parse_if(first: &Literal, rest: &[Literal]) -> Result<AST> {
+fn parse_if(_first: &Literal, rest: &[Literal]) -> Result<AST> {
     if rest.len() != 3 {
         return Err(err_msg("malformed if expr, (if pred then else)"));
     }
@@ -118,13 +157,13 @@ fn parse_if(first: &Literal, rest: &[Literal]) -> Result<AST> {
     Ok(AST::If { pred, then, els })
 }
 
-fn parse_def_expr(first: &Literal, rest: &[Literal]) -> Result<AST> {
+fn parse_def_expr(_first: &Literal, rest: &[Literal]) -> Result<AST> {
     let def = parse_def_single(rest)?;
     Ok(AST::Def(Rc::new(def)))
 }
 
-fn parse_let(first: &Literal, rest: &[Literal]) -> Result<AST> {
-    let mut def_literals = rest
+fn parse_let(_first: &Literal, rest: &[Literal]) -> Result<AST> {
+    let def_literals = rest
         .get(0)
         .ok_or(err_msg(
             "let requires def list as first term (let (defs+) body)",
@@ -164,11 +203,11 @@ fn parse_let(first: &Literal, rest: &[Literal]) -> Result<AST> {
     Ok(AST::Let { defs, body })
 }
 
-fn parse_do(first: &Literal, rest: &[Literal]) -> Result<AST> {
+fn parse_do(_first: &Literal, rest: &[Literal]) -> Result<AST> {
     Ok(AST::Do(rest.iter().map(parse).collect::<Result<_>>()?))
 }
 
-fn parse_lambda(first: &Literal, rest: &[Literal]) -> Result<AST> {
+fn parse_lambda(_first: &Literal, rest: &[Literal]) -> Result<AST> {
     let args = rest
         .get(0)
         .ok_or(err_msg(

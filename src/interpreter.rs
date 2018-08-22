@@ -1,7 +1,9 @@
 use std::rc::Rc;
 
+use ast::ASTVisitor;
 use ast::Def;
 use ast::AST;
+use data::Keyword;
 use data::Literal;
 use environment::Env;
 use errors::*;
@@ -9,6 +11,73 @@ use errors::*;
 #[derive(Default)]
 pub struct Interpreter {
     pub global: Env,
+}
+
+impl ASTVisitor<Literal> for Env {
+    fn value_expr(&mut self, l: &Literal) -> Result<Literal> {
+        Ok(l.clone())
+    }
+
+    fn if_expr(&mut self, pred: &Rc<AST>, then: &Rc<AST>, els: &Rc<AST>) -> Result<Literal> {
+        let pv = self.visit(pred).context("Evaluating predicate for if")?;
+
+        if pv.truthy() {
+            Ok(self.visit(then).context("Evaluating then for if")?)
+        } else {
+            Ok(self.visit(els).context("Evaluating else for if")?)
+        }
+    }
+
+    fn def_expr(&mut self, def: &Rc<Def>) -> Result<Literal> {
+        let res = put_def(self, def).context("Evaluating def")?;
+
+        Ok(res)
+    }
+
+    fn let_expr(&mut self, defs: &Vec<Def>, body: &Rc<AST>) -> Result<Literal> {
+        let mut let_env = self.clone();
+
+        for d in defs {
+            // TODO binding index
+            put_def(&mut let_env, d).context("Evalutaing bindings for let")?;
+        }
+
+        let body_val = let_env.visit(body).context("Evaluting let body")?;
+
+        Ok(body_val)
+    }
+
+    fn do_expr(&mut self, exprs: &Vec<AST>) -> Result<Literal> {
+        let mut vals: Vec<Literal> = exprs
+            .iter()
+            .map(|e| self.visit(e))
+            .collect::<Result<_>>()
+            .context("Evaluating do sub-expressions")?;
+        Ok(vals.pop().ok_or(err_msg("do expressions can't be empty"))?)
+    }
+
+    fn lambda_expr(&mut self, _args: &Vec<Keyword>, _body: &Rc<AST>) -> Result<Literal> {
+        Err(err_msg("Not implemented"))
+    }
+
+    fn var_expr(&mut self, k: &Keyword) -> Result<Literal> {
+        let r = self.get(k).ok_or(format_err!("While access var {:}", k))?;
+
+        Ok((**r).clone())
+    }
+
+    fn application_expr(&mut self, _f: &Rc<AST>, _args: &Vec<AST>) -> Result<Literal> {
+        Err(err_msg("Not implemented"))
+    }
+}
+
+fn put_def(env: &mut Env, def: &Def) -> Result<Literal> {
+    let res = env.visit(&def.value).context(format_err!(
+        "While evaluating def value for {:}",
+        def.name.clone()
+    ))?;
+    env.insert(def.name.clone(), Rc::new(res.clone()));
+    Ok(res)
 }
 
 impl Interpreter {
@@ -37,64 +106,7 @@ impl Interpreter {
     }
 
     pub fn env_eval(&self, a: &AST, env: &mut Env) -> Result<Literal> {
-        match a {
-            AST::Value(l) => Ok(l.clone()),
-            AST::Var(k) => {
-                let r = env
-                    .get(k)
-                    .ok_or(format_err!("While accessing var {:}", k))?;
-
-                // This code ends up cloning twice, and I don't know how to do it better.
-                Ok((**r).clone())
-            }
-            AST::If { pred, then, els } => {
-                let pv = self
-                    .env_eval(pred, env)
-                    .context("Evaluating predicate for if")?;
-
-                if pv.truthy() {
-                    Ok(self.env_eval(then, env).context("Evaluating then for if")?)
-                } else {
-                    Ok(self.env_eval(els, env).context("Evaluating else for if")?)
-                }
-            }
-            AST::Def(ref def) => {
-                let res = self.put_def(env, def).context("Evaluating def")?;
-                Ok(res)
-            }
-            AST::Let { defs, body } => {
-                let mut let_env = env.clone();
-
-                for d in defs {
-                    self.put_def(&mut let_env, d)
-                        .context("Evalutaing bindings for let")?;
-                }
-
-                let body_val = self
-                    .env_eval(body, &mut let_env)
-                    .context("Evaluting let body")?;
-
-                Ok(body_val)
-            }
-            AST::Do(asts) => {
-                let mut vals: Vec<Literal> = asts
-                    .iter()
-                    .map(|e| self.env_eval(e, env))
-                    .collect::<Result<_>>()
-                    .context("Evaluating do sub-expressions")?;
-                Ok(vals.pop().ok_or(err_msg("do expressions can't be empty"))?)
-            }
-            _ => Err(err_msg("Not implemented")),
-        }
-    }
-
-    fn put_def(&self, env: &mut Env, def: &Def) -> Result<Literal> {
-        let res = self.env_eval(&def.value, env).context(format_err!(
-            "While evaluating def value for {:}",
-            def.name.clone()
-        ))?;
-        env.insert(def.name.clone(), Rc::new(res.clone()));
-        Ok(res)
+        env.visit(a)
     }
 }
 
@@ -103,7 +115,6 @@ mod tests {
     use super::*;
     use ast;
     use data::Literal;
-    use errors::*;
     use parser::Parser;
 
     fn pi(i: &mut Interpreter, s: &str) -> Result<Literal> {
