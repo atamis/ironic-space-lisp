@@ -21,14 +21,15 @@ pub fn str_to_ast(s: &str) -> errors::Result<Vec<ast::AST>> {
 
     let p = parser::Parser::new();
     let lits = p.parse(s)?;
-    let asts = lits
+    let asts: Vec<ast::AST> = lits
         .iter()
         .enumerate()
         .map(|(i, lit)| {
             let a = ast::parse(&lit).context(format!("While parsing literal #{:}", i))?;
             Ok(a)
-        }).collect();
-    asts
+        }).collect::<Result<_>>()?;
+    ast::passes::unbound::pass_default(asts.as_ref())?;
+    Ok(asts)
 }
 
 pub mod vm {
