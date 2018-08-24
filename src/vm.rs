@@ -74,7 +74,7 @@ impl Bytecode {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum Op {
     Lit(data::Literal),
     Return,
@@ -241,6 +241,9 @@ impl VM {
         self.jump(address)
     }
 
+
+    // Currently, this doesn't always consume 3 stack items.
+    // This may need to change.
     fn op_jumpcond(&mut self) -> Result<()> {
         let cond = self
             .stack
@@ -316,3 +319,144 @@ impl VM {
         Ok(())
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_bytecode_errors() {
+        let empty = Bytecode::new(vec![]);
+        assert!(empty.addr((0, 0)).is_err());
+
+        let single = Bytecode::new(vec![vec![Op::Return]]);
+        let maybe_ret = single.addr((0, 0));
+        assert!(maybe_ret.is_ok());
+        assert_eq!(maybe_ret.unwrap(), Op::Return);
+        assert!(single.addr((0, 1)).is_err());
+        assert!(single.addr((1, 0)).is_err());
+    }
+
+    #[test]
+    fn test_pcounter() {
+        let single = Bytecode::new(vec![vec![Op::Return]]);
+
+        let mut vm = VM::new(single);
+
+        let a = vm.pcounter();
+        assert!(a.is_ok());
+        assert_eq!(a.unwrap(), (0, 0));
+
+        let b = vm.pcounter();
+        assert!(b.is_ok());
+        assert_eq!(b.unwrap(), (0, 1));
+
+        vm.frames.pop().unwrap();
+
+        assert!(vm.pcounter().is_err());
+    }
+
+    #[test]
+    fn test_jump() {
+        let single = Bytecode::new(vec![vec![Op::Return]]);
+        let mut vm = VM::new(single);
+
+        vm.jump((5, 5)).unwrap();
+        assert_eq!(*vm.frames.last().unwrap(), (5, 5));
+    }
+
+    #[test]
+    fn test_op_lit() {
+        let empty = Bytecode::new(vec![vec![]]);
+        let mut vm = VM::new(empty);
+
+        vm.op_lit(Literal::Number(0)).unwrap();
+        assert_eq!(*vm.stack.last().unwrap(), Literal::Number(0))
+    }
+
+    #[test]
+    fn test_op_return() {
+        let empty = Bytecode::new(vec![vec![]]);
+        let mut vm = VM::new(empty);
+
+        vm.op_lit(Literal::Number(0)).unwrap();
+        vm.op_return().unwrap();
+        assert!(vm.frames.is_empty());
+    }
+
+    #[test]
+    fn test_op_call() {
+        let empty = Bytecode::new(vec![vec![]]);
+        let mut vm = VM::new(empty);
+
+        vm.op_lit(Literal::Number(0)).unwrap();
+        assert!(vm.op_call().is_err());
+        assert!(vm.stack.is_empty()); // only going to test this once
+
+        vm.op_lit(Literal::Address((0, 0))).unwrap();
+        assert!(vm.op_call().is_ok());
+        assert_eq!(*vm.frames.last().unwrap(), (0, 0));
+        assert_eq!(vm.frames.len(), 2)
+    }
+
+    #[test]
+    fn test_op_jump() {
+        let empty = Bytecode::new(vec![vec![]]);
+        let mut vm = VM::new(empty);
+
+        vm.op_lit(Literal::Number(0)).unwrap();
+        assert!(vm.op_jump().is_err());
+
+        vm.op_lit(Literal::Address((5, 5))).unwrap();
+        assert!(vm.op_jump().is_ok());
+        assert_eq!(*vm.frames.last().unwrap(), (5, 5));
+    }
+
+    #[test]
+    fn test_jumpcond_then() {
+        let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+
+        vm.op_lit(Literal::Address((6, 0))).unwrap();
+        vm.op_lit(Literal::Address((5, 0))).unwrap();
+        vm.op_lit(Literal::Boolean(true)).unwrap();
+        assert!(vm.op_jumpcond().is_ok());
+        assert_eq!(*vm.frames.last().unwrap(), (5, 0));
+    }
+
+    #[test]
+    fn test_jumpcond_else() {
+        let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+
+        vm.op_lit(Literal::Address((6, 0))).unwrap();
+        vm.op_lit(Literal::Address((5, 0))).unwrap();
+        vm.op_lit(Literal::Boolean(false)).unwrap();
+        assert!(vm.op_jumpcond().is_ok());
+        assert_eq!(*vm.frames.last().unwrap(), (6, 0));
+    }
+
+    #[test]
+    fn test_jumpcond_errors() {
+        let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+
+        vm.op_lit(Literal::Number(0)).unwrap();
+        vm.op_lit(Literal::Address((5, 0))).unwrap();
+        vm.op_lit(Literal::Boolean(false)).unwrap();
+        assert!(vm.op_jumpcond().is_err());
+
+        let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+
+        vm.op_lit(Literal::Address((6, 0))).unwrap();
+        vm.op_lit(Literal::Number(0)).unwrap();
+        vm.op_lit(Literal::Boolean(false)).unwrap();
+        assert!(vm.op_jumpcond().is_err());
+
+        let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+
+        vm.op_lit(Literal::Address((6, 0))).unwrap();
+        vm.op_lit(Literal::Address((5, 0))).unwrap();
+        vm.op_lit(Literal::Number(1)).unwrap();
+        assert!(vm.op_jumpcond().is_err());
+    }
+}
+
