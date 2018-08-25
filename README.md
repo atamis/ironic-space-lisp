@@ -6,20 +6,20 @@ much harder to get exploited.
 
 ## Plan
 
-strings -> sexprs -> AST -> "bytecode" -> VM -> scheduler
+strings &rarr; sexprs &rarr; AST &rarr; "bytecode" &rarr; VM &rarr; scheduler
 
-Currently working on "bytecode" -> VM.
+Currently working on "bytecode" &rarr; VM.
 
-### strings -> sexprs
+### strings &rarr; sexprs
 
 Parse raw strings into raw lisp datums, called `Literal`s.
 
-### sexprs -> AST
+### sexprs &rarr; AST
 
 Parse special forms to make subsequent operations easier. Also run some AST
 passes, like searching for unbound vars.
 
-### AST -> "bytecode"
+### AST &rarr; "bytecode"
 
 Convert prefix to infix, and all code into opcodes.
 
@@ -33,12 +33,12 @@ Potentially more compilations steps here to make code generation easier. In
 particular, a pre-state where jumps and conditional jumps are relative rather
 than absolute.
 
-### "bytecode" -> VM
+### "bytecode" &rarr; VM
 
 VM runs the "bytecode" in its own environment. Because the "bytecode" is
 concatenative postfix, can easy run single or batched steps.
 
-### VM -> scheduler
+### VM &rarr; scheduler
 
 Run multiple VMs on multiple threads in an N:M model with preemptive scheduling.
 
