@@ -458,5 +458,67 @@ mod tests {
         vm.op_lit(Literal::Number(1)).unwrap();
         assert!(vm.op_jumpcond().is_err());
     }
+
+    #[test]
+    fn test_op_load() {
+        let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+
+        assert!( vm.environment.get("test").is_err() );
+        vm.environment.insert("test".to_string(), Rc::new(Literal::Number(0))).unwrap();
+        assert_eq!( *vm.environment.get("test").unwrap(), Literal::Number(0) );
+        vm.op_lit(Literal::Keyword("test".to_string())).unwrap();
+        vm.op_load().unwrap();
+        assert_eq!(*vm.stack.last().unwrap(), Literal::Number(0));
+    }
+
+    #[test]
+    fn test_op_store() {
+        let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+
+        assert!(vm.environment.get("test").is_err());
+        vm.op_lit(Literal::Number(0)).unwrap();
+        vm.op_lit(Literal::Keyword("test".to_string())).unwrap();
+        vm.op_store().unwrap();
+        assert_eq!(*vm.environment.get("test").unwrap(), Literal::Number(0));
+    }
+
+    #[test]
+    fn test_op_pushenv_popenv() {
+        let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+
+        vm.environment.insert("test1".to_string(), Rc::new(Literal::Number(0))).unwrap();
+        assert!(vm.environment.get("test2").is_err());
+
+        vm.op_pushenv().unwrap();
+
+        assert_eq!(*vm.environment.get("test1").unwrap(), Literal::Number(0));
+
+        vm.environment.insert("test2".to_string(), Rc::new(Literal::Number(1))).unwrap();
+        assert_eq!(*vm.environment.get("test2").unwrap(), Literal::Number(1));
+        vm.op_lit(Literal::Keyword("test1".to_string())).unwrap();
+        vm.op_load().unwrap();
+        assert_eq!(*vm.stack.last().unwrap(), Literal::Number(0));
+
+
+        vm.op_popenv().unwrap();
+        assert_eq!(*vm.environment.get("test1").unwrap(), Literal::Number(0));
+        assert!(vm.environment.get("test2").is_err());
+
+    }
+
+    #[test]
+    fn test_op_dup() {
+        let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+        vm.op_lit(Literal::Number(0)).unwrap();
+        vm.op_dup().unwrap();
+
+        assert_eq!(*vm.stack.last().unwrap(), Literal::Number(0));
+        vm.stack.pop().unwrap();
+        assert_eq!(*vm.stack.last().unwrap(), Literal::Number(0));
+
+        vm.stack.pop().unwrap(); // empty the stack
+
+        assert!(vm.op_dup().is_err());
+    }
 }
 
