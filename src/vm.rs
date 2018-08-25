@@ -146,7 +146,10 @@ impl VM {
     }
 
     fn pc_peek(&self) -> Result<Op> {
-        let pc = self.frames.last().ok_or(err_msg("Stack empty, no counter"))?;
+        let pc = self
+            .frames
+            .last()
+            .ok_or(err_msg("Stack empty, no counter"))?;
 
         self.code.addr(*pc)
     }
@@ -175,22 +178,26 @@ impl VM {
         let mut c = max;
         loop {
             // peek next op
-            let op = self.pc_peek().context("Peeking pc while executing until cost")?;
+            let op = self
+                .pc_peek()
+                .context("Peeking pc while executing until cost")?;
 
             // check cost
             if c < op.cost() {
-                return Ok(None)
+                return Ok(None);
             }
 
             // execute single step
-            self.single_step().context("Executing until cost exceeds max")?;
+            self.single_step()
+                .context("Executing until cost exceeds max")?;
 
             // check return
             if self.frames.is_empty() {
-                return Ok(Some(self
-                    .stack
-                    .pop()
-                    .ok_or(err_msg("Frames empty, but no value to return"))?));
+                return Ok(Some(
+                    self.stack
+                        .pop()
+                        .ok_or(err_msg("Frames empty, but no value to return"))?,
+                ));
             }
 
             // decr cost
@@ -283,7 +290,6 @@ impl VM {
         self.jump(address)
     }
 
-
     // Currently, this doesn't always consume 3 stack items.
     // This may need to change.
     fn op_jumpcond(&mut self) -> Result<()> {
@@ -361,7 +367,6 @@ impl VM {
         Ok(())
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -505,9 +510,11 @@ mod tests {
     fn test_op_load() {
         let mut vm = VM::new(Bytecode::new(vec![vec![]]));
 
-        assert!( vm.environment.get("test").is_err() );
-        vm.environment.insert("test".to_string(), Rc::new(Literal::Number(0))).unwrap();
-        assert_eq!( *vm.environment.get("test").unwrap(), Literal::Number(0) );
+        assert!(vm.environment.get("test").is_err());
+        vm.environment
+            .insert("test".to_string(), Rc::new(Literal::Number(0)))
+            .unwrap();
+        assert_eq!(*vm.environment.get("test").unwrap(), Literal::Number(0));
         vm.op_lit(Literal::Keyword("test".to_string())).unwrap();
         vm.op_load().unwrap();
         assert_eq!(*vm.stack.last().unwrap(), Literal::Number(0));
@@ -528,24 +535,26 @@ mod tests {
     fn test_op_pushenv_popenv() {
         let mut vm = VM::new(Bytecode::new(vec![vec![]]));
 
-        vm.environment.insert("test1".to_string(), Rc::new(Literal::Number(0))).unwrap();
+        vm.environment
+            .insert("test1".to_string(), Rc::new(Literal::Number(0)))
+            .unwrap();
         assert!(vm.environment.get("test2").is_err());
 
         vm.op_pushenv().unwrap();
 
         assert_eq!(*vm.environment.get("test1").unwrap(), Literal::Number(0));
 
-        vm.environment.insert("test2".to_string(), Rc::new(Literal::Number(1))).unwrap();
+        vm.environment
+            .insert("test2".to_string(), Rc::new(Literal::Number(1)))
+            .unwrap();
         assert_eq!(*vm.environment.get("test2").unwrap(), Literal::Number(1));
         vm.op_lit(Literal::Keyword("test1".to_string())).unwrap();
         vm.op_load().unwrap();
         assert_eq!(*vm.stack.last().unwrap(), Literal::Number(0));
 
-
         vm.op_popenv().unwrap();
         assert_eq!(*vm.environment.get("test1").unwrap(), Literal::Number(0));
         assert!(vm.environment.get("test2").is_err());
-
     }
 
     #[test]
@@ -568,18 +577,18 @@ mod tests {
         let mut ret = VM::new(Bytecode::new(vec![vec![Op::Return]]));
         assert!(ret.step_until_value(false).is_err());
 
-        let mut ret = VM::new(Bytecode::new(vec![vec![Op::Lit(Literal::Number(0)), Op::Return]]));
+        let mut ret = VM::new(Bytecode::new(vec![vec![
+            Op::Lit(Literal::Number(0)),
+            Op::Return,
+        ]]));
 
         assert_eq!(ret.step_until_value(false).unwrap(), Literal::Number(0));
-
 
         // lol
         /*let mut never = VM::new(Bytecode::new(vec![vec![Op::Lit(Literal::Address((0, 0))),
                                                       Op::Jump,
                                                       Op::Return]]));
         assert_never_terminates!(never.step_until_value(false));*/
-
-
 
         let mut empty = VM::new(Bytecode::new(vec![vec![]]));
         assert!(ret.step_until_value(false).is_err());
@@ -588,7 +597,10 @@ mod tests {
 
     #[test]
     fn test_step_until_cost() {
-        let mut ret = VM::new(Bytecode::new(vec![vec![Op::Lit(Literal::Number(0)), Op::Return]]));
+        let mut ret = VM::new(Bytecode::new(vec![vec![
+            Op::Lit(Literal::Number(0)),
+            Op::Return,
+        ]]));
 
         let res = ret.step_until_cost(0);
         println!("{:?}", res);
@@ -605,15 +617,15 @@ mod tests {
 
         assert!(res.is_err());
 
-
-        let mut ret = VM::new(Bytecode::new(vec![vec![Op::Lit(Literal::Number(0)), Op::Return]]));
+        let mut ret = VM::new(Bytecode::new(vec![vec![
+            Op::Lit(Literal::Number(0)),
+            Op::Return,
+        ]]));
 
         // Partial
         let res = ret.step_until_cost(7);
 
         assert!(res.is_ok());
         assert!(res.unwrap().is_none());
-
     }
 }
-
