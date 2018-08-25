@@ -43,27 +43,12 @@ impl Bytecode {
     }
 
     pub fn dissassemble(&self) {
-        fn dissassemble_op(o: &Op) -> &'static str {
-            match o {
-                Op::Lit(_) => "Lit",
-                Op::Return => "Return",
-                Op::Call => "Call",
-                Op::Jump => "Jump",
-                Op::JumpCond => "JumpCond",
-                Op::Load => "Load",
-                Op::Store => "Store",
-                Op::PushEnv => "PushEnv",
-                Op::PopEnv => "PopEnv",
-                Op::Dup => "Dup",
-            }
-        }
-
         for (chunk_idx, chunk) in self.chunks.iter().enumerate() {
             println!("################ CHUNK #{:?} ################", chunk_idx);
             for (op_idx, op) in chunk.ops.iter().enumerate() {
                 let a = (chunk_idx, op_idx);
 
-                print!("\t{:?}\t{:}", a, dissassemble_op(&op));
+                print!("\t{:?}\t{:}", a, op.dissassemble());
 
                 if let Op::Lit(l) = op {
                     print!("\t{:?}", l);
@@ -88,6 +73,27 @@ pub enum Op {
     PushEnv,
     PopEnv,
     Dup,
+}
+
+impl Op {
+    fn dissassemble(&self) -> &'static str {
+        match self {
+            Op::Lit(_) => "Lit",
+            Op::Return => "Return",
+            Op::Call => "Call",
+            Op::Jump => "Jump",
+            Op::JumpCond => "JumpCond",
+            Op::Load => "Load",
+            Op::Store => "Store",
+            Op::PushEnv => "PushEnv",
+            Op::PopEnv => "PopEnv",
+            Op::Dup => "Dup",
+        }
+    }
+
+    fn cost(&self) -> usize {
+        10
+    }
 }
 
 impl fmt::Debug for Op {
@@ -139,6 +145,12 @@ impl VM {
         Ok(a)
     }
 
+    fn pc_peek(&self) -> Result<Op> {
+        let pc = self.frames.last().ok_or(err_msg("Stack empty, no counter"))?;
+
+        self.code.addr(*pc)
+    }
+
     pub fn step_until_value(&mut self, print: bool) -> Result<data::Literal> {
         loop {
             if self.frames.is_empty() {
@@ -153,6 +165,36 @@ impl VM {
             }
 
             self.single_step()?;
+        }
+    }
+
+    // Returns Err if an error is encountered
+    // Ok(None) if the resource pool was exhausted
+    // Ok(Some(_)) if there was a top level return.
+    pub fn step_until_cost(&mut self, max: usize) -> Result<Option<data::Literal>> {
+        let mut c = max;
+        loop {
+            // peek next op
+            let op = self.pc_peek().context("Peeking pc while executing until cost")?;
+
+            // check cost
+            if c < op.cost() {
+                return Ok(None)
+            }
+
+            // execute single step
+            self.single_step().context("Executing until cost exceeds max")?;
+
+            // check return
+            if self.frames.is_empty() {
+                return Ok(Some(self
+                    .stack
+                    .pop()
+                    .ok_or(err_msg("Frames empty, but no value to return"))?));
+            }
+
+            // decr cost
+            c -= op.cost()
         }
     }
 
@@ -542,6 +584,36 @@ mod tests {
         let mut empty = VM::new(Bytecode::new(vec![vec![]]));
         assert!(ret.step_until_value(false).is_err());
         assert!(empty.single_step().is_err());
+    }
+
+    #[test]
+    fn test_step_until_cost() {
+        let mut ret = VM::new(Bytecode::new(vec![vec![Op::Lit(Literal::Number(0)), Op::Return]]));
+
+        let res = ret.step_until_cost(0);
+        println!("{:?}", res);
+
+        assert!(res.is_ok());
+        assert!(res.unwrap().is_none());
+
+        let res = ret.step_until_cost(50);
+
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap().unwrap(), Literal::Number(0));
+
+        let res = ret.step_until_cost(50);
+
+        assert!(res.is_err());
+
+
+        let mut ret = VM::new(Bytecode::new(vec![vec![Op::Lit(Literal::Number(0)), Op::Return]]));
+
+        // Partial
+        let res = ret.step_until_cost(7);
+
+        assert!(res.is_ok());
+        assert!(res.unwrap().is_none());
+
     }
 }
 
