@@ -1,22 +1,25 @@
 # ironic-space-lisp
 
-Weird VM-lisp in Rust.
+Weird VM-lisp in Rust. It's inspired by Erlang, Clojure and Scheme. It's
+architected on the assertion that if you never jump into input-based code, it's
+much harder to get exploited.
 
 ## Plan
 
-lisp strings -> AST -> simplified AST -> "bytecode" -> VM -> scheduler
+strings -> sexprs -> AST -> "bytecode" -> VM -> scheduler
 
-Currentlying working on "bytecode" -> VM.
+Currently working on "bytecode" -> VM.
 
-### lisp strings -> AST
+### strings -> sexprs
 
-Use some kind of parser library
+Parse raw strings into raw lisp datums, called `Literal`s.
 
-### AST -> simplified AST
+### sexprs -> AST
 
-"Undo" all the sugar
+Parse special forms to make subsequent operations easier. Also run some AST
+passes, like searching for unbound vars.
 
-### simplified AST -> "bytecode"
+### AST -> "bytecode"
 
 Convert prefix to infix, and all code into opcodes.
 
@@ -26,11 +29,23 @@ this converts to infix and makes it real "bytecode".
 "bytecode" because it's not really bytecode, it's a weird enum mix of literals
 and opcodes.
 
+Potentially more compilations steps here to make code generation easier. In
+particular, a pre-state where jumps and conditional jumps are relative rather
+than absolute.
+
 ### "bytecode" -> VM
 
 VM runs the "bytecode" in its own environment. Because the "bytecode" is
-concatenative infix, can easy run single or batched steps.
+concatenative postfix, can easy run single or batched steps.
 
 ### VM -> scheduler
 
 Run multiple VMs on multiple threads in an N:M model with preemptive scheduling.
+
+
+## Reuse
+
+The parser can be used to implement the perenial `parse` function. Additionally,
+I implemented an interpreter for macro use. The interpreter could be used to
+implement an `eval` function, but the language should be easily self-hosted,
+so it's probably better to put that in the preamble.
