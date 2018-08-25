@@ -520,5 +520,28 @@ mod tests {
 
         assert!(vm.op_dup().is_err());
     }
+
+    #[test]
+    fn test_step_until() {
+        let mut ret = VM::new(Bytecode::new(vec![vec![Op::Return]]));
+        assert!(ret.step_until_value(false).is_err());
+
+        let mut ret = VM::new(Bytecode::new(vec![vec![Op::Lit(Literal::Number(0)), Op::Return]]));
+
+        assert_eq!(ret.step_until_value(false).unwrap(), Literal::Number(0));
+
+
+        // lol
+        /*let mut never = VM::new(Bytecode::new(vec![vec![Op::Lit(Literal::Address((0, 0))),
+                                                      Op::Jump,
+                                                      Op::Return]]));
+        assert_never_terminates!(never.step_until_value(false));*/
+
+
+
+        let mut empty = VM::new(Bytecode::new(vec![vec![]]));
+        assert!(ret.step_until_value(false).is_err());
+        assert!(empty.single_step().is_err());
+    }
 }
 
