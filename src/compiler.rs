@@ -64,7 +64,11 @@ impl ASTVisitor<IrChunk> for Compiler {
     }
 
     fn def_expr(&mut self, def: &Rc<Def>) -> Result<IrChunk> {
-        self.visit_def(def)
+        let mut chunk = self.visit_def(def)?;
+
+        chunk.append(&mut self.var_expr(&def.name)?);
+
+        Ok(chunk)
     }
 
     fn let_expr(&mut self, defs: &Vec<Def>, body: &Rc<AST>) -> Result<IrChunk> {
@@ -87,10 +91,14 @@ impl ASTVisitor<IrChunk> for Compiler {
     fn do_expr(&mut self, exprs: &Vec<AST>) -> Result<IrChunk> {
         let mut chunk = vec![];
 
-        for e in exprs {
+        for (idx, e) in exprs.iter().enumerate() {
             let mut e_chunk = self.visit(e)?;
             chunk.append(&mut e_chunk);
-            chunk.push(IrOp::Pop);
+
+            // pop every interstitial value except the last
+            if idx != (exprs.len() - 1) {
+                chunk.push(IrOp::Pop);
+            }
         }
 
         Ok(chunk)
@@ -219,6 +227,19 @@ mod tests {
         compile(&a)
     }
 
+    fn run(s: &'static str) -> Result<Literal> {
+        let asts = str_to_ast(s)?;
+        let ast = AST::Do(asts);
+
+        let ir = compile(&ast)?;
+
+        let code = pack_start(&ir)?;
+
+        let mut vm = VM::new(code);
+
+        vm.step_until_cost(10000).map(Option::unwrap)
+    }
+
     //#[test]
     fn test_value() {
         assert_eq!(t("3").unwrap(), vec![IrOp::Lit(Literal::Number(3))]);
@@ -235,5 +256,26 @@ mod tests {
         println!("{:?}", vm.step_until_value(true));
 
         assert!(false);
+    }
+
+    #[test]
+    fn test_values() {
+        assert_eq!(run("4").unwrap(), Literal::Number(4));
+        assert_eq!(run("5").unwrap(), Literal::Number(5));
+    }
+
+    #[test]
+    fn test_def() {
+        assert_eq!(run("(def test 5) test").unwrap(), Literal::Number(5));
+        assert_eq!(
+            run("(def test 5) test (def asdf 0) asdf").unwrap(),
+            Literal::Number(0)
+        );
+    }
+
+    #[test]
+    fn test_let() {
+        assert_eq!(run("(let (x 1 y 2) x)").unwrap(), Literal::Number(1));
+        assert_eq!(run("(let (x 1 y 2) y)").unwrap(), Literal::Number(2));
     }
 }
