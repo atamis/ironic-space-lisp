@@ -298,21 +298,21 @@ impl VM {
             .pop()
             .ok_or(err_msg(
                 "Attempted to pop stack for conditional for if zero",
-            ))?.ensure_bool()?;
+            ))?;
 
         let then = self
             .stack
             .pop()
-            .ok_or(err_msg("Attepmted to pop stack for address for if true"))?
+            .ok_or(err_msg("Attempted to pop stack for address for if true"))?
             .ensure_address()?;
 
         let els = self
             .stack
             .pop()
-            .ok_or(err_msg("Attepmted to pop stack for address for if false"))?
+            .ok_or(err_msg("Attempted to pop stack for address for if false"))?
             .ensure_address()?;
 
-        if cond {
+        if cond.truthy() {
             self.jump(then)
         } else {
             self.jump(els)
