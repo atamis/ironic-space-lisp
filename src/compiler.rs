@@ -1,5 +1,7 @@
+//! Compile `AST`s to `Bytecode`.
 use std::rc::Rc;
 
+use ast::passes::function_lifter;
 use ast::ASTVisitor;
 use ast::Def;
 use ast::AST;
@@ -12,6 +14,12 @@ use vm::Op;
 
 pub type IrChunk = Vec<IrOp>;
 
+/// Intermediate operation representation.
+///
+/// As an intermediate representation, it's largely flat, except for `JumpCond`, which
+/// represents its potential jump targets as pointers to other IrChunks. Functions
+/// are handled by `ast::passes::function_lifter` and `pack_compile_lifted` rather
+/// represented in IrOp.
 #[derive(Debug, PartialEq)]
 pub enum IrOp {
     Lit(Literal),
@@ -31,6 +39,9 @@ pub enum IrOp {
     Pop,
 }
 
+/// Empty struct that implements `ASTVisitor<IrChunk>`.
+///
+/// See `ASTVisitor<IrChunk>` and `ast::ASTVisitor` for information.
 pub struct Compiler;
 
 impl Compiler {
@@ -105,7 +116,9 @@ impl ASTVisitor<IrChunk> for Compiler {
     }
 
     fn lambda_expr(&mut self, _args: &Vec<Keyword>, _body: &Rc<AST>) -> Result<IrChunk> {
-        Err(err_msg("Not implemented"))
+        Err(err_msg(
+            "Not implemented: run the function lifter pass first",
+        ))
     }
 
     fn var_expr(&mut self, k: &Keyword) -> Result<IrChunk> {
@@ -129,17 +142,66 @@ impl ASTVisitor<IrChunk> for Compiler {
     }
 }
 
+/// Compiles a raw `AST` into n IrChunk. See `Compiler` for implementation.
 pub fn compile(a: &AST) -> Result<IrChunk> {
     let mut c = Compiler {};
     c.visit(a)
 }
 
+// Allocate an empty chunk and return its idx.
+// This could be much more sophisticated, but isn't.
 fn alloc_chunk(code: &mut Bytecode) -> usize {
     let idx = code.chunks.len();
     code.chunks.push(Chunk { ops: vec![] });
     idx
 }
 
+/// Compile and pack a `LiftedAST` into a new bytecode.
+pub fn pack_compile_lifted(last: &function_lifter::LiftedAST) -> Result<Bytecode> {
+    let mut code = Bytecode::new(vec![]);
+
+    // allocate chunks first
+    for (id, function) in last.fr.functions.iter().enumerate() {
+        let chunk = alloc_chunk(&mut code);
+        if id != chunk {
+            panic!("id chunk missalignment");
+        }
+    }
+
+    // load functions into the chunks
+    for (id, function) in last.fr.functions.iter().enumerate() {
+        let chunk = id;
+
+        let mut ir = compile(&function.body)?;
+
+        ir.push(IrOp::PopEnv);
+        ir.push(IrOp::Return);
+
+        let mut arg_ir: IrChunk = function
+            .args
+            .iter()
+            .map(|k| vec![IrOp::Lit(Literal::Keyword(k.clone())), IrOp::Store])
+            .flat_map(|x| x)
+            .collect();
+
+        arg_ir.insert(0, IrOp::PushEnv);
+        arg_ir.append(&mut ir);
+
+        pack(&arg_ir, &mut code, chunk, 0)?;
+    }
+
+    // function 0 is a dummy function in FunctionRegistry, so stick the root there.
+    code.chunks[0].ops.clear();
+
+    let mut root_ir = compile(&last.root)?;
+    root_ir.push(IrOp::Return);
+
+    pack(&root_ir, &mut code, 0, 0)?;
+
+    Ok(code)
+}
+
+/// Pack an `IrChunk` into a new `Bytecode` and return it.
 pub fn pack_start(ir: &IrChunk) -> Result<Bytecode> {
     let mut code = Bytecode::new(vec![vec![]]);
 
@@ -158,6 +220,7 @@ pub fn pack_start(ir: &IrChunk) -> Result<Bytecode> {
     Ok(code)
 }
 
+/// Pack an `IrChunk` into bytecode at a particular chunk and op index. Returns ending op index.
 pub fn pack(ir: &IrChunk, code: &mut Bytecode, chunk_idx: usize, op_idx: usize) -> Result<usize> {
     let mut op_idx = op_idx;
 
@@ -277,5 +340,41 @@ mod tests {
     fn test_let() {
         assert_eq!(run("(let (x 1 y 2) x)").unwrap(), Literal::Number(1));
         assert_eq!(run("(let (x 1 y 2) y)").unwrap(), Literal::Number(2));
+    }
+
+    fn lifted_compile(s: &'static str) -> Bytecode {
+        let ast = AST::Do(str_to_ast(s).unwrap());
+        let last = function_lifter::lift_functions(&ast).unwrap();
+
+        pack_compile_lifted(&last).unwrap()
+    }
+
+    #[test]
+    fn test_pack_compile_lifted() {
+        let code = lifted_compile("(def x (lambda () 5)) (x)");
+
+        let mut vm = VM::new(code);
+
+        assert_eq!(vm.step_until_cost(10000).unwrap(), Some(Literal::Number(5)));
+    }
+
+    #[test]
+    fn test_pack_compile_lifted_arguments() {
+        let code = lifted_compile("(def x (lambda (y z) z)) (x 5 6)");
+
+        let mut vm = VM::new(code);
+
+        assert_eq!(vm.step_until_cost(10000).unwrap(), Some(Literal::Number(6)));
+    }
+
+    #[test]
+    fn test_pack_compile_lifted_env() {
+        let code = lifted_compile("(def x (lambda (y) y)) (let (y 4) (do (x 5) y))");
+
+        code.dissassemble();
+
+        let mut vm = VM::new(code);
+
+        assert_eq!(vm.step_until_cost(10000).unwrap(), Some(Literal::Number(4)));
     }
 }
