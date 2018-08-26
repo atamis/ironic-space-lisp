@@ -1,10 +1,13 @@
 // because clippy
 #![allow(unknown_lints)]
+// because bench
+#![feature(test)]
 
 #[macro_use]
 extern crate failure;
 extern crate im;
 extern crate lalrpop_util;
+extern crate test;
 
 pub mod ast;
 pub mod builtin;

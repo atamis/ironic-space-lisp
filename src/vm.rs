@@ -11,13 +11,14 @@ use environment::EnvStack;
 use errors::*;
 
 /// Holds `Chunk`s of bytecode. See `Bytecode::addr` for its primary use.
+#[derive(Clone)]
 pub struct Bytecode {
     pub chunks: Vec<Chunk>,
 }
 
 
 /// A `Vec` of operations
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Chunk {
     pub ops: Vec<Op>,
 }
@@ -457,6 +458,7 @@ impl VM {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test::Bencher;
 
     #[test]
     fn test_bytecode_errors() {
@@ -726,5 +728,30 @@ mod tests {
 
         assert!(res.is_ok());
         assert!(res.unwrap().is_none());
+    }
+
+    #[bench]
+    fn bench_nested_envs(b: &mut Bencher) {
+        use ast::AST;
+        use compiler::compile;
+        use compiler::pack_start;
+        use str_to_ast;
+
+        let s = "(let (x 0) (let (y 1) (let (z 2) x)))";
+        let asts = str_to_ast(s).unwrap();
+        let ast = AST::Do(asts);
+
+        let ir = compile(&ast).unwrap();
+
+        let code = pack_start(&ir).unwrap();
+
+        code.dissassemble();
+
+        let mut vm = VM::new(code);
+
+        b.iter(|| {
+            vm.frames.push((0, 0));
+            vm.step_until_cost(10000).unwrap().unwrap();
+        } )
     }
 }
