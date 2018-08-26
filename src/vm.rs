@@ -79,6 +79,7 @@ pub enum Op {
     PushEnv,
     PopEnv,
     Dup,
+    Pop,
 }
 
 impl Op {
@@ -94,6 +95,7 @@ impl Op {
             Op::PushEnv => "PushEnv",
             Op::PopEnv => "PopEnv",
             Op::Dup => "Dup",
+            Op::Pop => "Pop",
         }
     }
 
@@ -115,6 +117,7 @@ impl fmt::Debug for Op {
             Op::PushEnv => write!(f, "oPuE"),
             Op::PopEnv => write!(f, "oPoE"),
             Op::Dup => write!(f, "oD"),
+            Op::Pop => write!(f, "oP"),
         }
     }
 }
@@ -257,6 +260,7 @@ impl VM {
             Op::PushEnv => self.op_pushenv().context("Executing operation pushenv")?,
             Op::PopEnv => self.op_popenv().context("Executing operation popenv")?,
             Op::Dup => self.op_dup().context("Executing operation dup")?,
+            Op::Pop => self.op_pop().context("Executing operation pop")?,
         })
     }
 
@@ -370,6 +374,11 @@ impl VM {
             .ok_or(err_msg("Attmempted to dup empty stack"))?
             .clone();
         self.stack.push(v);
+        Ok(())
+    }
+
+    fn op_pop(&mut self) -> Result<()> {
+        self.stack.pop().ok_or(err_msg("Attempted to pop empty stack"))?;
         Ok(())
     }
 }
@@ -578,6 +587,17 @@ mod tests {
         vm.stack.pop().unwrap(); // empty the stack
 
         assert!(vm.op_dup().is_err());
+    }
+
+    #[test]
+    fn test_op_pop() {
+        let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+        vm.op_lit(Literal::Number(0)).unwrap();
+        vm.op_pop().unwrap();
+
+        assert_eq!(vm.stack.len(), 0);
+
+        assert!(vm.op_pop().is_err());
     }
 
     #[test]
