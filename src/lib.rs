@@ -8,6 +8,7 @@ extern crate lalrpop_util;
 
 pub mod ast;
 pub mod builtin;
+pub mod compiler;
 pub mod data;
 pub mod environment;
 pub mod errors;
