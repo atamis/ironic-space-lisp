@@ -1,3 +1,4 @@
+//! Pass to lift functions out of the `AST` and into a function registry.
 use std::rc::Rc;
 
 use ast::ASTVisitor;
@@ -7,12 +8,17 @@ use data::Keyword;
 use data::Literal;
 use errors::*;
 
+/// Represents a function as a list of arguments and an `AST` node.
 #[derive(Debug, PartialEq)]
 pub struct ASTFunction {
-    args: Vec<Keyword>,
-    body: Rc<AST>,
+    pub args: Vec<Keyword>,
+    pub body: Rc<AST>,
 }
 
+/// Extracts functions from `a` to form a `LiftedAST`.
+///
+/// Note that this manipulates or otherwise copies all the nodes
+/// in the AST, and can result in significant memory allocation.
 pub fn lift_functions(a: &AST) -> Result<LiftedAST> {
     let mut fr = FunctionRegistry::new();
     let root = fr.visit(a)?;
@@ -20,13 +26,23 @@ pub fn lift_functions(a: &AST) -> Result<LiftedAST> {
     Ok(LiftedAST { fr, root })
 }
 
+/// Represents a registry of functions for some `AST`.
+///
+/// Stored as a vector of `ASTFunctions` where the index of the function
+/// in the vector is assumed to be its future address in the form `(idx, 0)`.
+/// This is a naive method of function registry to go with the naive code
+/// packer in `compiler::pack_compile_lifted`.
 pub struct FunctionRegistry {
-    functions: Vec<ASTFunction>,
+    pub functions: Vec<ASTFunction>,
 }
 
+/// An AST with its functions lifted out.
+///
+/// Includes a `root` AST, and a registry containing all the functions
+/// lifted out. The first function is a dummy function.
 pub struct LiftedAST {
-    root: AST,
-    fr: FunctionRegistry,
+    pub root: AST,
+    pub fr: FunctionRegistry,
 }
 
 impl FunctionRegistry {
@@ -39,6 +55,7 @@ impl FunctionRegistry {
         }
     }
 
+    /// Insert a function into the registry and return its index.
     pub fn add_function(&mut self, f: ASTFunction) -> usize {
         let idx = self.functions.len();
         self.functions.push(f);
