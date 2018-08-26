@@ -1,3 +1,11 @@
+//! AST definition, AST parser, and the `ASTVisitor` utility trait.
+//!
+//! This AST specifies some special forms. The construction of the
+//! `data::Literal` values makes matching them properly difficulty,
+//! and providing meaningful errors harder. This simplifies the
+//! error reporting, an offers an easy way of traversing the AST,
+//! the `ASTVisitor` trait.
+
 use std::rc::Rc;
 
 use data::Keyword;
@@ -6,12 +14,14 @@ use errors::*;
 
 pub mod passes;
 
+/// Represents a "definition", either a local binding or a top level definition.
 #[derive(Debug, PartialEq)]
 pub struct Def {
     pub name: Keyword,
     pub value: AST,
 }
 
+/// Representation of Lisp code in terms of special forms and applications.
 #[derive(Debug, PartialEq)]
 pub enum AST {
     Value(Literal),
@@ -37,7 +47,12 @@ pub enum AST {
     },
 }
 
+/// Traverse an AST, optionally producing a value alongside errors.
 pub trait ASTVisitor<R> {
+    /// Dispatch an `AST`, and add error context.
+    ///
+    /// This doesn't recurse itself, but relies on implementations
+    /// to call `visit` again as necessary.
     fn visit(&mut self, a: &AST) -> Result<R> {
         let r = match a {
             AST::Value(l) => self.value_expr(l).context("Visiting value expr"),
@@ -76,6 +91,7 @@ pub trait ASTVisitor<R> {
     fn application_expr(&mut self, f: &Rc<AST>, args: &Vec<AST>) -> Result<R>;
 }
 
+/// Parse raw sexprs (`data::Literal`) into an AST.
 pub fn parse(e: &Literal) -> Result<AST> {
     match e {
         Literal::List(ref vec) => {

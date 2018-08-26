@@ -1,3 +1,5 @@
+//! Bytecode definition and VM for bytecode execution.
+
 use std::fmt;
 use std::rc::Rc;
 
@@ -8,10 +10,13 @@ use data::Literal;
 use environment::EnvStack;
 use errors::*;
 
+/// Holds `Chunk`s of bytecode. See `Bytecode::addr` for its primary use.
 pub struct Bytecode {
     pub chunks: Vec<Chunk>,
 }
 
+
+/// A `Vec` of operations
 #[derive(Debug)]
 pub struct Chunk {
     pub ops: Vec<Op>,
@@ -45,6 +50,7 @@ impl Bytecode {
         }
     }
 
+    /// Indexes into the chunks to find the indicated operation.
     pub fn addr(&self, a: Address) -> Result<Op> {
         let chunk = self
             .chunks
@@ -57,6 +63,7 @@ impl Bytecode {
         Ok(op.clone())
     }
 
+    /// Prints a plain text disassembly of all the chunks to STDOUT.
     pub fn dissassemble(&self) {
         for (chunk_idx, chunk) in self.chunks.iter().enumerate() {
             println!("################ CHUNK #{:?} ################", chunk_idx);
@@ -65,24 +72,63 @@ impl Bytecode {
     }
 }
 
+/// Basic operations (or instructions).
+///
+/// Manually implements `Debug` to provide short 2-3 character names.
 #[derive(Clone, PartialEq)]
 pub enum Op {
+    /// Pushes a literal datum to the stack.
     Lit(data::Literal),
+
+    /// Pop the frame stack to return from a function.
+    ///
+    /// Note that returning from the top level function terminates the VM and provides an ultimate return value.
     Return,
+
+    /// Push an address to the frame stack to call a function.
+    ///
+    /// `<addr>`
     Call,
+
+    /// Unconditional jump to an address
     Jump,
-    // <else> <then> <pred>
-    // If pred is true, jump to then, otherwise jump to else
+    /// Conditionally jump to one of two addresses. This is pretty inconvenient to use by hand.
+    /// If pred is true, jump to then, otherwise jump to else
+    ///
+    /// `<else then pred>`
+    ///
+    /// Where else and then are addresses and pred is a boolean.
     JumpCond,
+
+    /// Load a value from the environment
+    ///
+    /// `<keyword>`
     Load,
+
+    /// Store a value from the stack in the environment.
+    ///
+    /// `<value keyword>`
     Store,
+
+    /// Push an Environment onto the environment stack (see the `environment` module).
     PushEnv,
+
+    /// Pop an environment from the stack.
     PopEnv,
+
+    /// Duplicates the top item of the stack.
+    ///
+    /// `<item>`
     Dup,
+
+    /// Pop an item from the stack.
+    ///
+    /// `<item>`
     Pop,
 }
 
 impl Op {
+    /// A nice human readable name for the `Bytecode::dissassemble` method.
     fn dissassemble(&self) -> &'static str {
         match self {
             Op::Lit(_) => "Lit",
@@ -99,6 +145,7 @@ impl Op {
         }
     }
 
+    /// The "cost" of executing an operation in terms of some abstract resource.
     fn cost(&self) -> usize {
         10
     }
@@ -122,6 +169,9 @@ impl fmt::Debug for Op {
     }
 }
 
+/// A non-reusable bytecode VM.
+///
+/// Keeps track of data stack, frame stack, environment stack, and the code.
 #[derive(Debug)]
 pub struct VM {
     code: Bytecode,
@@ -132,6 +182,7 @@ pub struct VM {
 }
 
 impl VM {
+    /// Create a VM loaded with the provided code. Program counter is initially `(0, 0)`.
     pub fn new(code: Bytecode) -> VM {
         VM {
             code,
@@ -163,6 +214,10 @@ impl VM {
         self.code.addr(*pc)
     }
 
+    /// Step until a "top-level" return, which is when the frame stack is empty.
+    /// At this point, the stack is popped and returned. A failure to pop a value
+    /// is treated as an error state. Propagates errors from `single_step`. If
+    /// `print` is `true`, print the VM state on every state.
     pub fn step_until_value(&mut self, print: bool) -> Result<data::Literal> {
         loop {
             if self.frames.is_empty() {
@@ -180,9 +235,15 @@ impl VM {
         }
     }
 
-    // Returns Err if an error is encountered
-    // Ok(None) if the resource pool was exhausted
-    // Ok(Some(_)) if there was a top level return.
+    /// Step until a resource is consumed. Each operation executed decrements a counter
+    /// initially set to `max`. As with `step_until_value`, the lack of a return value
+    /// is treated as an error.
+    ///
+    /// Returns `Err` if an error is encountered
+    ///
+    /// `Ok(None)` if the resource pool was exhausted
+    ///
+    /// `Ok(Some(_))` if there was a top level return.
     pub fn step_until_cost(&mut self, max: usize) -> Result<Option<data::Literal>> {
         let mut c = max;
         loop {
@@ -214,6 +275,8 @@ impl VM {
         }
     }
 
+    /// Manually jump the VM to an address. This returns an `Err` if the frame
+    /// stack is empty.
     pub fn jump(&mut self, addr: data::Address) -> Result<()> {
         let pc: &mut data::Address = self
             .frames
@@ -224,6 +287,12 @@ impl VM {
         Ok(())
     }
 
+    /// Execute a single operation. Returns an `Err` if an error was encountered,
+    /// or `Ok(())` if it was successful. No particular attempt has been made to make
+    /// `Err`s survivable, but no particular attempt has been made to prevent further
+    /// execution. No attempt has been made to attempt to maintain operation arity in
+    /// error states. See `fn op_*` for raw implementations, an the documentation for `Op`
+    /// for high level descriptions of the operations.
     pub fn single_step(&mut self) -> Result<()> {
         let pc = self.pcounter()?;
         // TODO: maybe don't look up program chunk first?
@@ -247,6 +316,8 @@ impl VM {
         self.exec_op(op)
     }
 
+    /// Execute a single operation, ignoring any already loaded code and ignoring the
+    /// program counter. See `single_step` for more details.
     pub fn exec_op(&mut self, op: Op) -> Result<()> {
         // https://users.rust-lang.org/t/announcing-failure/13895/18
         Ok(match op {

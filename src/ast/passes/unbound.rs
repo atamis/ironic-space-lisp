@@ -1,4 +1,3 @@
-
 use ast::ASTVisitor;
 use ast::Def;
 use ast::AST;
