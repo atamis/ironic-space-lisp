@@ -17,6 +17,21 @@ pub struct Chunk {
     pub ops: Vec<Op>,
 }
 
+impl Chunk {
+    pub fn dissassemble(&self, chunk_idx: usize) {
+        for (op_idx, op) in self.ops.iter().enumerate() {
+            let a = (chunk_idx, op_idx);
+
+            print!("\t{:?}\t{:}", a, op.dissassemble());
+
+            if let Op::Lit(l) = op {
+                print!("\t{:?}", l);
+            }
+            println!()
+        }
+    }
+}
+
 impl fmt::Debug for Bytecode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Bytecode {{compiled code}}")
@@ -45,16 +60,7 @@ impl Bytecode {
     pub fn dissassemble(&self) {
         for (chunk_idx, chunk) in self.chunks.iter().enumerate() {
             println!("################ CHUNK #{:?} ################", chunk_idx);
-            for (op_idx, op) in chunk.ops.iter().enumerate() {
-                let a = (chunk_idx, op_idx);
-
-                print!("\t{:?}\t{:}", a, op.dissassemble());
-
-                if let Op::Lit(l) = op {
-                    print!("\t{:?}", l);
-                }
-                println!()
-            }
+            chunk.dissassemble(chunk_idx);
         }
     }
 }
@@ -498,12 +504,14 @@ mod tests {
         vm.op_lit(Literal::Boolean(false)).unwrap();
         assert!(vm.op_jumpcond().is_err());
 
-        let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+
+        // Now uses Literal::truthy, which is defined for all values.
+        /*let mut vm = VM::new(Bytecode::new(vec![vec![]]));
 
         vm.op_lit(Literal::Address((6, 0))).unwrap();
         vm.op_lit(Literal::Address((5, 0))).unwrap();
         vm.op_lit(Literal::Number(1)).unwrap();
-        assert!(vm.op_jumpcond().is_err());
+        assert!(vm.op_jumpcond().is_err());*/
     }
 
     #[test]
