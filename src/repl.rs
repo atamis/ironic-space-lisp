@@ -46,7 +46,7 @@ pub fn eval(vm: &mut vm::VM, s: &str) -> Result<()> {
 
     let code = compiler::pack_compile_lifted(&last)?;
 
-    vm.reset(code);
+    vm.import_jump(&code);
 
     let val = vm.step_until_cost(10000)?;
 

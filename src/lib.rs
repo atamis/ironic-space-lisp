@@ -23,7 +23,6 @@ pub mod vm;
 // std::usize::MAX
 
 pub fn str_to_ast(s: &str) -> errors::Result<ast::AST> {
-
     let p = parser::Parser::new();
     let lits = p.parse(s)?;
     let asts = ast::parse_multi(&lits)?;

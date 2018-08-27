@@ -11,14 +11,14 @@ use environment::EnvStack;
 use errors::*;
 
 /// Holds `Chunk`s of bytecode. See `Bytecode::addr` for its primary use.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Bytecode {
     pub chunks: Vec<Chunk>,
 }
 
 
 /// A `Vec` of operations
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Chunk {
     pub ops: Vec<Op>,
 }
@@ -70,6 +70,32 @@ impl Bytecode {
             println!("################ CHUNK #{:?} ################", chunk_idx);
             chunk.dissassemble(chunk_idx);
         }
+    }
+
+    pub fn import(&mut self, code: &Bytecode) -> Address {
+        let new_chunk_idx = self.chunks.len();
+
+        let mut new_chunks: Vec<Chunk> = code
+            .chunks
+            .iter()
+            .cloned()
+            .map(|chunk| {
+                Chunk {
+                    ops: chunk
+                        .ops
+                        .iter()
+                        .map(|op| {
+                            match op {
+                                Op::Lit(Literal::Address((a1, a2))) => Op::Lit(Literal::Address((a1 + new_chunk_idx, *a2))),
+                                x => x.clone(),
+                            }
+                        }).collect(),
+                }
+            }).collect();
+
+        self.chunks.append(&mut new_chunks);
+
+        (new_chunk_idx, 0)
     }
 }
 
@@ -293,6 +319,12 @@ impl VM {
         self.code = code;
         self.stack = vec![];
         self.frames = vec![(0, 0)];
+    }
+
+    pub fn import_jump(&mut self, code: &Bytecode) -> Address {
+        let a = self.code.import(code);
+        self.frames.push(a);
+        a
     }
 
     /// Execute a single operation. Returns an `Err` if an error was encountered,
@@ -759,5 +791,37 @@ mod tests {
             vm.frames.push((0, 0));
             vm.step_until_cost(10000).unwrap().unwrap();
         } )
+    }
+
+    #[test]
+    fn test_bytecode_import() {
+        let a = |a1, a2| Op::Lit(Literal::Address((a1, a2)));
+
+        let mut b1 = Bytecode::new(
+            vec![
+                vec![a(0, 0), a(1, 3)],
+                vec![a(1, 0), a(0, 3)],
+            ],
+        );
+
+        let b2 = Bytecode::new(
+            vec![
+                vec![a(0, 0), a(1, 3)],
+                vec![a(1, 0), a(0, 3)],
+            ],
+        );
+
+        let b3 = Bytecode::new(
+            vec![
+                vec![a(0, 0), a(1, 3)],
+                vec![a(1, 0), a(0, 3)],
+                vec![a(2, 0), a(3, 3)],
+                vec![a(3, 0), a(2, 3)],
+            ],
+        );
+
+        b1.import(&b2);
+
+        assert_eq!(b1, b3);
     }
 }
