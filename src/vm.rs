@@ -175,11 +175,11 @@ impl fmt::Debug for Op {
 /// Keeps track of data stack, frame stack, environment stack, and the code.
 #[derive(Debug)]
 pub struct VM {
-    code: Bytecode,
+    pub code: Bytecode,
     frames: Vec<data::Address>,
     stack: Vec<data::Literal>,
     builtin: builtin::Builtin,
-    environment: EnvStack,
+    pub environment: EnvStack,
 }
 
 impl VM {

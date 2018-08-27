@@ -17,6 +17,7 @@ pub mod environment;
 pub mod errors;
 pub mod interpreter;
 pub mod parser;
+pub mod repl;
 pub mod vm;
 
 // std::usize::MAX
@@ -33,6 +34,5 @@ pub fn str_to_ast(s: &str) -> errors::Result<Vec<ast::AST>> {
             let a = ast::parse(&lit).context(format!("While parsing literal #{:}", i))?;
             Ok(a)
         }).collect::<Result<_>>()?;
-    ast::passes::unbound::pass_default(asts.as_ref())?;
     Ok(asts)
 }

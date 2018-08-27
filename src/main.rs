@@ -4,6 +4,7 @@ use ironic_space_lisp::builtin::ADD;
 use ironic_space_lisp::builtin::PRINT;
 use ironic_space_lisp::data;
 use ironic_space_lisp::errors::*;
+use ironic_space_lisp::repl;
 use ironic_space_lisp::vm;
 
 fn main() {
@@ -85,15 +86,7 @@ fn run() -> Result<()> {
     println!("{:?}", vm);
     println!("{:?}", r);
 
-    println!(
-        "{:?}",
-        ironic_space_lisp::str_to_ast(
-            "
-(def test 0)
-(let (asdf 1) (do () test ))
-"
-        )?
-    );
+    repl::repl();
 
     Ok(())
 }

@@ -17,11 +17,10 @@ pub fn pass_default(asts: &[AST]) -> Result<()> {
     asts.iter().map(|a| hs.visit(a)).collect()
 }
 
-pub fn pass(a: &AST, _env: Env) -> Result<()> {
-    // TODO
-    let mut hs = hashset::HashSet::new();
+pub fn pass(asts: &[AST], env: &Env) -> Result<()> {
+    let mut hs: KeywordSet = env.keys().map(|s| s.clone()).collect();
 
-    hs.visit(a)
+    asts.iter().map(|a| hs.visit(a)).collect()
 }
 
 impl ASTVisitor<()> for KeywordSet {
