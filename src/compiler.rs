@@ -26,7 +26,7 @@ pub enum IrOp {
     Lit(Literal),
     Return,
     Call,
-    Jump(Rc<IrChunk>),
+    Jump,
     JumpCond {
         pred: Rc<IrChunk>,
         then: Rc<IrChunk>,
@@ -189,6 +189,7 @@ pub fn pack_compile_lifted(last: &function_lifter::LiftedAST) -> Result<Bytecode
         arg_ir.insert(0, IrOp::PushEnv);
         arg_ir.append(&mut ir);
 
+        tail_call_optimization(&mut arg_ir);
         pack(&arg_ir, &mut code, chunk, 0)?;
     }
 
@@ -201,6 +202,18 @@ pub fn pack_compile_lifted(last: &function_lifter::LiftedAST) -> Result<Bytecode
     pack(&root_ir, &mut code, 0, 0)?;
 
     Ok(code)
+}
+
+fn tail_call_optimization(chunk: &mut IrChunk) {
+    let len = chunk.len();
+    if len >= 3
+        && chunk[len - 3] == IrOp::Call
+        && chunk[len - 2] == IrOp::PopEnv
+        && chunk[len - 1] == IrOp::Return
+    {
+        chunk[len - 3] = IrOp::PopEnv;
+        chunk[len - 2] = IrOp::Jump;
+    }
 }
 
 /// Pack an `IrChunk` into a new `Bytecode` and return it.
@@ -242,16 +255,21 @@ pub fn pack(
             IrOp::PopEnv => Op::PopEnv,
             IrOp::Dup => Op::Dup,
             IrOp::Pop => Op::Pop,
-            IrOp::JumpCond {pred, then, els} => {
+            IrOp::Jump => Op::Jump,
+            IrOp::JumpCond { pred, then, els } => {
                 let els_idx = alloc_chunk(code);
                 pack(els, code, els_idx, 0)?;
 
                 let then_idx = alloc_chunk(code);
                 pack(then, code, then_idx, 0)?;
 
-                code.chunks[chunk_idx].ops.push(Op::Lit(Literal::Address((els_idx, 0))));
+                code.chunks[chunk_idx]
+                    .ops
+                    .push(Op::Lit(Literal::Address((els_idx, 0))));
                 op_idx += 1;
-                code.chunks[chunk_idx].ops.push(Op::Lit(Literal::Address((then_idx, 0))));
+                code.chunks[chunk_idx]
+                    .ops
+                    .push(Op::Lit(Literal::Address((then_idx, 0))));
                 op_idx += 1;
 
                 op_idx = pack(pred, code, chunk_idx, op_idx)?;
@@ -263,13 +281,6 @@ pub fn pack(
                 code.chunks[then_idx].ops.append(&mut ret_code);
 
                 Op::JumpCond
-            },
-            IrOp::Jump(sub) => {
-                let sub_idx = alloc_chunk(code);
-                pack(sub, code, sub_idx, 0)?;
-                code.chunks[chunk_idx].ops.push(Op::Lit(Literal::Address((sub_idx, 0))));
-                op_idx += 1;
-                Op::Jump
             }
             //_ => { return Err(err_msg("not implemented"))},
         };
@@ -371,5 +382,20 @@ mod tests {
         assert_eq!(vm.step_until_cost(10000).unwrap(), Some(Literal::Number(4)));
 
         assert!(vm.stack.is_empty());
+    }
+
+    #[test]
+    fn test_infinite_recursion() {
+        let code = lifted_compile("(def x (lambda () (x))) (x)");
+
+        code.dissassemble();
+
+        let mut vm = VM::new(code);
+
+        assert_eq!(vm.step_until_cost(10000).unwrap(), None);
+
+        println!("{:?}", vm);
+
+        assert!(false);
     }
 }

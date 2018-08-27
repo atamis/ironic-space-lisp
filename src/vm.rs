@@ -793,6 +793,30 @@ mod tests {
         } )
     }
 
+    #[bench]
+    fn bench_infinite_recursion(b: &mut Bencher) {
+        use compiler;
+        use ast::passes::function_lifter;
+        use str_to_ast;
+
+        let s = "(def x (lambda () (x))) (x)";
+        let ast = str_to_ast(s).unwrap();
+
+        let last = function_lifter::lift_functions(&ast).unwrap();
+
+        let code = compiler::pack_compile_lifted(&last).unwrap();
+
+        code.dissassemble();
+
+        let mut vm = VM::new(code);
+
+        b.iter(|| {
+            vm.frames.clear();
+            vm.frames.push((0, 0));
+            vm.step_until_cost(10000).unwrap();
+        } )
+    }
+
     #[test]
     fn test_bytecode_import() {
         let a = |a1, a2| Op::Lit(Literal::Address((a1, a2)));
