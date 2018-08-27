@@ -10,16 +10,23 @@ use std::fmt::Display;
 
 pub struct Parser(isl::ExprsParser);
 
+impl Default for Parser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+
 impl Parser {
     pub fn new() -> Parser {
         Parser(isl::ExprsParser::new())
     }
 
     pub fn parse(&self, input: &str) -> Result<Vec<data::Literal>> {
-        self.0.parse(input).map_err(Parser::wrap_err)
+        self.0.parse(input).map_err(|e| Parser::wrap_err(&e))
     }
 
-    fn wrap_err<A, B, C>(e: lalrpop_util::ParseError<A, B, C>) -> Error
+    fn wrap_err<A, B, C>(e: &lalrpop_util::ParseError<A, B, C>) -> Error
     where
         A: Display + Debug,
         B: Display + Debug,

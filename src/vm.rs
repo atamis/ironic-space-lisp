@@ -56,11 +56,11 @@ impl Bytecode {
         let chunk = self
             .chunks
             .get(a.0)
-            .ok_or(format_err!("Invalid chunk address: {:?}", a))?;
+            .ok_or_else(|| format_err!("Invalid chunk address: {:?}", a))?;
         let op = chunk
             .ops
             .get(a.1)
-            .ok_or(err_msg("Invalid operation address"))?;
+            .ok_or_else(|| err_msg("Invalid operation address"))?;
         Ok(op.clone())
     }
 
@@ -198,7 +198,7 @@ impl VM {
         let pc = self
             .frames
             .last_mut()
-            .ok_or(err_msg("Stack empty, no counter"))?;
+            .ok_or_else(|| err_msg("Stack empty, no counter"))?;
         let a = *pc;
 
         data::address_inc(pc);
@@ -210,7 +210,7 @@ impl VM {
         let pc = self
             .frames
             .last()
-            .ok_or(err_msg("Stack empty, no counter"))?;
+            .ok_or_else(|| err_msg("Stack empty, no counter"))?;
 
         self.code.addr(*pc)
     }
@@ -225,7 +225,7 @@ impl VM {
                 return self
                     .stack
                     .pop()
-                    .ok_or(err_msg("Frames empty, but no value to return"));
+                    .ok_or_else(|| err_msg("Frames empty, but no value to return"));
             }
 
             if print {
@@ -267,7 +267,7 @@ impl VM {
                 return Ok(Some(
                     self.stack
                         .pop()
-                        .ok_or(err_msg("Frames empty, but no value to return"))?,
+                        .ok_or_else(|| err_msg("Frames empty, but no value to return"))?,
                 ));
             }
 
@@ -282,7 +282,7 @@ impl VM {
         let pc: &mut data::Address = self
             .frames
             .last_mut()
-            .ok_or(err_msg("Frames empty, no way to jump"))?;
+            .ok_or_else(|| err_msg("Frames empty, no way to jump"))?;
 
         *pc = addr;
         Ok(())
@@ -328,7 +328,7 @@ impl VM {
     /// program counter. See `single_step` for more details.
     pub fn exec_op(&mut self, op: Op) -> Result<()> {
         // https://users.rust-lang.org/t/announcing-failure/13895/18
-        Ok(match op {
+        match op {
             Op::Lit(l) => self.op_lit(l).context("Executing operation literal")?,
             Op::Return => self.op_return().context("Executing operation return")?,
             Op::Call => self.op_call().context("Executing operation call")?,
@@ -340,7 +340,8 @@ impl VM {
             Op::PopEnv => self.op_popenv().context("Executing operation popenv")?,
             Op::Dup => self.op_dup().context("Executing operation dup")?,
             Op::Pop => self.op_pop().context("Executing operation pop")?,
-        })
+        }
+        Ok(())
     }
 
     fn op_lit(&mut self, l: data::Literal) -> Result<()> {
@@ -351,7 +352,7 @@ impl VM {
     fn op_return(&mut self) -> Result<()> {
         self.frames
             .pop()
-            .ok_or(err_msg("Attempted to return on empty stack"))?;
+            .ok_or_else(|| err_msg("Attempted to return on empty stack"))?;
         Ok(())
     }
 
@@ -359,7 +360,7 @@ impl VM {
         let a = self
             .stack
             .pop()
-            .ok_or(err_msg("Attempted to pop data stack for jump"))?;
+            .ok_or_else(|| err_msg("Attempted to pop data stack for jump"))?;
 
         if let Literal::Address(addr) = a {
             self.frames.push(addr);
@@ -373,7 +374,7 @@ impl VM {
         let address = self
             .stack
             .pop()
-            .ok_or(err_msg("Attempted to pop stack for address"))?
+            .ok_or_else(|| err_msg("Attempted to pop stack for address"))?
             .ensure_address()?;
 
         self.jump(address)
@@ -385,20 +386,20 @@ impl VM {
         let cond = self
             .stack
             .pop()
-            .ok_or(err_msg(
+            .ok_or_else(|| err_msg(
                 "Attempted to pop stack for conditional for if zero",
             ))?;
 
         let then = self
             .stack
             .pop()
-            .ok_or(err_msg("Attempted to pop stack for address for if true"))?
+            .ok_or_else(|| err_msg("Attempted to pop stack for address for if true"))?
             .ensure_address()?;
 
         let els = self
             .stack
             .pop()
-            .ok_or(err_msg("Attempted to pop stack for address for if false"))?
+            .ok_or_else(|| err_msg("Attempted to pop stack for address for if false"))?
             .ensure_address()?;
 
         if cond.truthy() {
@@ -412,7 +413,7 @@ impl VM {
         let keyword = self
             .stack
             .pop()
-            .ok_or(err_msg("Attempted to pop stack for keyword for load"))?
+            .ok_or_else(|| err_msg("Attempted to pop stack for keyword for load"))?
             .ensure_keyword()?;
 
         let mut val = self.environment.get(&keyword)?;
@@ -427,12 +428,12 @@ impl VM {
         let keyword = self
             .stack
             .pop()
-            .ok_or(err_msg("Attempted to pop stack for keyword for store"))?
+            .ok_or_else(|| err_msg("Attempted to pop stack for keyword for store"))?
             .ensure_keyword()?;
         let value = self
             .stack
             .pop()
-            .ok_or(err_msg("Attempted to pop stack for value for store"))?;
+            .ok_or_else(|| err_msg("Attempted to pop stack for value for store"))?;
 
         self.environment.insert(keyword, Rc::new(value))?;
 
@@ -450,14 +451,14 @@ impl VM {
         let v = self
             .stack
             .last()
-            .ok_or(err_msg("Attmempted to dup empty stack"))?
+            .ok_or_else(|| err_msg("Attmempted to dup empty stack"))?
             .clone();
         self.stack.push(v);
         Ok(())
     }
 
     fn op_pop(&mut self) -> Result<()> {
-        self.stack.pop().ok_or(err_msg("Attempted to pop empty stack"))?;
+        self.stack.pop().ok_or_else(|| err_msg("Attempted to pop empty stack"))?;
         Ok(())
     }
 }

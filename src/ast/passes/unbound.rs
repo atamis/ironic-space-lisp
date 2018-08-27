@@ -18,7 +18,7 @@ pub fn pass_default(asts: &[AST]) -> Result<()> {
 }
 
 pub fn pass(asts: &[AST], env: &Env) -> Result<()> {
-    let mut hs: KeywordSet = env.keys().map(|s| s.clone()).collect();
+    let mut hs: KeywordSet = env.keys().cloned().collect();
 
     asts.iter().map(|a| hs.visit(a)).collect()
 }
@@ -41,7 +41,7 @@ impl ASTVisitor<()> for KeywordSet {
         Ok(())
     }
 
-    fn let_expr(&mut self, defs: &Vec<Def>, body: &Rc<AST>) -> Result<()> {
+    fn let_expr(&mut self, defs: &[Def], body: &Rc<AST>) -> Result<()> {
         let mut c = self.clone();
         for d in defs {
             c.insert(d.name.clone());
@@ -50,11 +50,11 @@ impl ASTVisitor<()> for KeywordSet {
         c.visit(body)
     }
 
-    fn do_expr(&mut self, exprs: &Vec<AST>) -> Result<()> {
+    fn do_expr(&mut self, exprs: &[AST]) -> Result<()> {
         exprs.iter().map(|e| self.visit(e)).collect()
     }
 
-    fn lambda_expr(&mut self, args: &Vec<Keyword>, body: &Rc<AST>) -> Result<()> {
+    fn lambda_expr(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<()> {
         let mut c = self.clone();
         for k in args {
             c.insert(k.clone());
@@ -71,7 +71,7 @@ impl ASTVisitor<()> for KeywordSet {
         }
     }
 
-    fn application_expr(&mut self, f: &Rc<AST>, args: &Vec<AST>) -> Result<()> {
+    fn application_expr(&mut self, f: &Rc<AST>, args: &[AST]) -> Result<()> {
         self.visit(f)?;
         args.iter().map(|e| self.visit(e)).collect()
     }

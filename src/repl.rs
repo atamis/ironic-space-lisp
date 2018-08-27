@@ -14,7 +14,7 @@ pub fn repl() {
     let stdin = io::stdin();
     for line in stdin.lock().lines() {
         let line = line.unwrap();
-        let res = eval(&mut vm, line);
+        let res = eval(&mut vm, &line);
 
         if let Err(ref e) = res {
             println!("error: {}", e);
@@ -37,7 +37,7 @@ pub fn repl() {
     }
 }
 
-pub fn eval(vm: &mut vm::VM, s: String) -> Result<()> {
+pub fn eval(vm: &mut vm::VM, s: &str) -> Result<()> {
 
     let ast: Vec<AST> = str_to_ast(&s)?;
 

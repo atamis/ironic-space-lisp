@@ -34,7 +34,7 @@ impl ASTVisitor<Literal> for Env {
         Ok(res)
     }
 
-    fn let_expr(&mut self, defs: &Vec<Def>, body: &Rc<AST>) -> Result<Literal> {
+    fn let_expr(&mut self, defs: &[Def], body: &Rc<AST>) -> Result<Literal> {
         let mut let_env = self.clone();
 
         for d in defs {
@@ -47,26 +47,30 @@ impl ASTVisitor<Literal> for Env {
         Ok(body_val)
     }
 
-    fn do_expr(&mut self, exprs: &Vec<AST>) -> Result<Literal> {
+    fn do_expr(&mut self, exprs: &[AST]) -> Result<Literal> {
         let mut vals: Vec<Literal> = exprs
             .iter()
             .map(|e| self.visit(e))
             .collect::<Result<_>>()
             .context("Evaluating do sub-expressions")?;
-        Ok(vals.pop().ok_or(err_msg("do expressions can't be empty"))?)
+        Ok(vals
+            .pop()
+            .ok_or_else(|| err_msg("do expressions can't be empty"))?)
     }
 
-    fn lambda_expr(&mut self, _args: &Vec<Keyword>, _body: &Rc<AST>) -> Result<Literal> {
+    fn lambda_expr(&mut self, _args: &[Keyword], _body: &Rc<AST>) -> Result<Literal> {
         Err(err_msg("Not implemented"))
     }
 
     fn var_expr(&mut self, k: &Keyword) -> Result<Literal> {
-        let r = self.get(k).ok_or(format_err!("While access var {:}", k))?;
+        let r = self
+            .get(k)
+            .ok_or_else(|| format_err!("While access var {:}", k))?;
 
         Ok((**r).clone())
     }
 
-    fn application_expr(&mut self, _f: &Rc<AST>, _args: &Vec<AST>) -> Result<Literal> {
+    fn application_expr(&mut self, _f: &Rc<AST>, _args: &[AST]) -> Result<Literal> {
         Err(err_msg("Not implemented"))
     }
 }

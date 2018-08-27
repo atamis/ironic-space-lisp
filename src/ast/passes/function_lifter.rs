@@ -32,6 +32,7 @@ pub fn lift_functions(a: &AST) -> Result<LiftedAST> {
 /// in the vector is assumed to be its future address in the form `(idx, 0)`.
 /// This is a naive method of function registry to go with the naive code
 /// packer in `compiler::pack_compile_lifted`.
+#[derive(Default)]
 pub struct FunctionRegistry {
     pub functions: Vec<ASTFunction>,
 }
@@ -87,7 +88,7 @@ impl ASTVisitor<AST> for FunctionRegistry {
         Ok(AST::Def(Rc::new(self.visit_def(def)?)))
     }
 
-    fn let_expr(&mut self, defs: &Vec<Def>, body: &Rc<AST>) -> Result<AST> {
+    fn let_expr(&mut self, defs: &[Def], body: &Rc<AST>) -> Result<AST> {
         let new_defs = defs
             .iter()
             .map(|d| self.visit_def(d))
@@ -99,16 +100,16 @@ impl ASTVisitor<AST> for FunctionRegistry {
         })
     }
 
-    fn do_expr(&mut self, exprs: &Vec<AST>) -> Result<AST> {
+    fn do_expr(&mut self, exprs: &[AST]) -> Result<AST> {
         let new_exprs = exprs.iter().map(|e| self.visit(e)).collect::<Result<_>>()?;
 
         Ok(AST::Do(new_exprs))
     }
 
-    fn lambda_expr(&mut self, args: &Vec<Keyword>, body: &Rc<AST>) -> Result<AST> {
+    fn lambda_expr(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<AST> {
         let new_body = Rc::new(self.visit(body)?);
         let i = self.add_function(ASTFunction {
-            args: args.clone(),
+            args: args.to_vec(),
             body: new_body,
         });
 
@@ -119,7 +120,7 @@ impl ASTVisitor<AST> for FunctionRegistry {
         Ok(AST::Var(k.clone()))
     }
 
-    fn application_expr(&mut self, f: &Rc<AST>, args: &Vec<AST>) -> Result<AST> {
+    fn application_expr(&mut self, f: &Rc<AST>, args: &[AST]) -> Result<AST> {
         Ok(AST::Application {
             f: Rc::new(self.visit(f)?),
             args: args.iter().map(|e| self.visit(e)).collect::<Result<_>>()?,

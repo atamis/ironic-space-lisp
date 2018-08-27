@@ -80,15 +80,15 @@ pub trait ASTVisitor<R> {
 
     fn def_expr(&mut self, def: &Rc<Def>) -> Result<R>;
 
-    fn let_expr(&mut self, defs: &Vec<Def>, body: &Rc<AST>) -> Result<R>;
+    fn let_expr(&mut self, defs: &[Def], body: &Rc<AST>) -> Result<R>;
 
-    fn do_expr(&mut self, exprs: &Vec<AST>) -> Result<R>;
+    fn do_expr(&mut self, exprs: &[AST]) -> Result<R>;
 
-    fn lambda_expr(&mut self, args: &Vec<Keyword>, body: &Rc<AST>) -> Result<R>;
+    fn lambda_expr(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<R>;
 
     fn var_expr(&mut self, k: &Keyword) -> Result<R>;
 
-    fn application_expr(&mut self, f: &Rc<AST>, args: &Vec<AST>) -> Result<R>;
+    fn application_expr(&mut self, f: &Rc<AST>, args: &[AST]) -> Result<R>;
 }
 
 /// Parse raw sexprs (`data::Literal`) into an AST.
@@ -168,9 +168,13 @@ fn parse_if(_first: &Literal, rest: &[Literal]) -> Result<AST> {
         .collect();
 
     // These shouldn't fail, based on the length test above.
-    let els = asts.pop().ok_or(err_msg("If requires else clause"))?;
-    let then = asts.pop().ok_or(err_msg("If requires then clause"))?;
-    let pred = asts.pop().ok_or(err_msg("If requires predicate"))?;
+    let els = asts
+        .pop()
+        .ok_or_else(|| err_msg("If requires else clause"))?;
+    let then = asts
+        .pop()
+        .ok_or_else(|| err_msg("If requires then clause"))?;
+    let pred = asts.pop().ok_or_else(|| err_msg("If requires predicate"))?;
 
     Ok(AST::If { pred, then, els })
 }
@@ -183,14 +187,13 @@ fn parse_def_expr(_first: &Literal, rest: &[Literal]) -> Result<AST> {
 fn parse_let(_first: &Literal, rest: &[Literal]) -> Result<AST> {
     let def_literals = rest
         .get(0)
-        .ok_or(err_msg(
-            "let requires def list as first term (let (defs+) body)",
-        ))?.ensure_list()
+        .ok_or_else(|| err_msg("let requires def list as first term (let (defs+) body)"))?
+        .ensure_list()
         .context("Parsing list of defs")?;
 
-    let body_literal = rest.get(1).ok_or(err_msg(
-        "let requires body as second term (let (defs+) body)",
-    ))?;
+    let body_literal = rest
+        .get(1)
+        .ok_or_else(|| err_msg("let requires body as second term (let (defs+) body)"))?;
 
     if rest.len() != 2 {
         return Err(err_msg("Malformed let, (let (defs+) body)"));
@@ -215,7 +218,7 @@ fn parse_let(_first: &Literal, rest: &[Literal]) -> Result<AST> {
         defs.push(parse_def_partial(&def_literals).context("Parsing defs in let")?);
         def_literals = &def_literals
             .get(2..)
-            .ok_or(err_msg("Error slicing defs, not enough def terms"))?;
+            .ok_or_else(|| err_msg("Error slicing defs, not enough def terms"))?;
     }
 
     Ok(AST::Let { defs, body })
@@ -228,16 +231,15 @@ fn parse_do(_first: &Literal, rest: &[Literal]) -> Result<AST> {
 fn parse_lambda(_first: &Literal, rest: &[Literal]) -> Result<AST> {
     let args = rest
         .get(0)
-        .ok_or(err_msg(
-            "lambda requires an argument list, (lambda (args*) body)",
-        ))?.ensure_list()?
+        .ok_or_else(|| err_msg("lambda requires an argument list, (lambda (args*) body)"))?
+        .ensure_list()?
         .iter()
         .map(Literal::ensure_keyword)
         .collect::<Result<_>>()?;
 
     let body = rest
         .get(1)
-        .ok_or(err_msg("lambda requires body, (lambda (args*) body)"))?;
+        .ok_or_else(|| err_msg("lambda requires body, (lambda (args*) body)"))?;
     let body = Rc::new(parse(body)?);
 
     Ok(AST::Lambda { args, body })

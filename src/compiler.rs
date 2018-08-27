@@ -13,6 +13,7 @@ use vm::Chunk;
 use vm::Op;
 
 pub type IrChunk = Vec<IrOp>;
+pub type IrChunkSlice<'a> = &'a [IrOp];
 
 /// Intermediate operation representation.
 ///
@@ -82,7 +83,7 @@ impl ASTVisitor<IrChunk> for Compiler {
         Ok(chunk)
     }
 
-    fn let_expr(&mut self, defs: &Vec<Def>, body: &Rc<AST>) -> Result<IrChunk> {
+    fn let_expr(&mut self, defs: &[Def], body: &Rc<AST>) -> Result<IrChunk> {
         let mut chunk = vec![IrOp::PushEnv];
 
         for d in defs {
@@ -99,7 +100,7 @@ impl ASTVisitor<IrChunk> for Compiler {
         Ok(chunk)
     }
 
-    fn do_expr(&mut self, exprs: &Vec<AST>) -> Result<IrChunk> {
+    fn do_expr(&mut self, exprs: &[AST]) -> Result<IrChunk> {
         let mut chunk = vec![];
 
         for (idx, e) in exprs.iter().enumerate() {
@@ -115,7 +116,7 @@ impl ASTVisitor<IrChunk> for Compiler {
         Ok(chunk)
     }
 
-    fn lambda_expr(&mut self, _args: &Vec<Keyword>, _body: &Rc<AST>) -> Result<IrChunk> {
+    fn lambda_expr(&mut self, _args: &[Keyword], _body: &Rc<AST>) -> Result<IrChunk> {
         Err(err_msg(
             "Not implemented: run the function lifter pass first",
         ))
@@ -125,7 +126,7 @@ impl ASTVisitor<IrChunk> for Compiler {
         Ok(vec![IrOp::Lit(Literal::Keyword(k.clone())), IrOp::Load])
     }
 
-    fn application_expr(&mut self, f: &Rc<AST>, args: &Vec<AST>) -> Result<IrChunk> {
+    fn application_expr(&mut self, f: &Rc<AST>, args: &[AST]) -> Result<IrChunk> {
         let mut chunk = vec![];
 
         for e in args.iter().rev() {
@@ -161,7 +162,7 @@ pub fn pack_compile_lifted(last: &function_lifter::LiftedAST) -> Result<Bytecode
     let mut code = Bytecode::new(vec![]);
 
     // allocate chunks first
-    for (id, function) in last.fr.functions.iter().enumerate() {
+    for (id, _) in last.fr.functions.iter().enumerate() {
         let chunk = alloc_chunk(&mut code);
         if id != chunk {
             panic!("id chunk missalignment");
@@ -202,7 +203,7 @@ pub fn pack_compile_lifted(last: &function_lifter::LiftedAST) -> Result<Bytecode
 }
 
 /// Pack an `IrChunk` into a new `Bytecode` and return it.
-pub fn pack_start(ir: &IrChunk) -> Result<Bytecode> {
+pub fn pack_start(ir: IrChunkSlice) -> Result<Bytecode> {
     let mut code = Bytecode::new(vec![vec![]]);
 
     let chunk_idx = alloc_chunk(&mut code);
@@ -221,7 +222,12 @@ pub fn pack_start(ir: &IrChunk) -> Result<Bytecode> {
 }
 
 /// Pack an `IrChunk` into bytecode at a particular chunk and op index. Returns ending op index.
-pub fn pack(ir: &IrChunk, code: &mut Bytecode, chunk_idx: usize, op_idx: usize) -> Result<usize> {
+pub fn pack(
+    ir: IrChunkSlice,
+    code: &mut Bytecode,
+    chunk_idx: usize,
+    op_idx: usize,
+) -> Result<usize> {
     let mut op_idx = op_idx;
 
     for ir_op in ir.iter() {

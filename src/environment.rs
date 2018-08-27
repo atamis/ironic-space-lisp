@@ -6,7 +6,7 @@ use errors::*;
 
 pub type Env = HashMap<String, Rc<data::Literal>>;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct EnvStack {
     envs: Vec<Env>,
 }
@@ -21,7 +21,7 @@ impl EnvStack {
     pub fn insert(&mut self, k: String, v: Rc<data::Literal>) -> Result<()> {
         self.envs
             .last_mut()
-            .ok_or(err_msg("No envs to insert into"))?
+            .ok_or_else(|| err_msg("No envs to insert into"))?
             .insert(k, v);
         Ok(())
     }
@@ -39,7 +39,7 @@ impl EnvStack {
     }
 
     pub fn peek(&self) -> Result<&Env> {
-        self.envs.last().ok_or(err_msg("Env stack empty"))
+        self.envs.last().ok_or_else(|| err_msg("Env stack empty"))
     }
 
     pub fn push(&mut self) {
@@ -54,7 +54,7 @@ impl EnvStack {
     pub fn pop(&mut self) -> Result<()> {
         self.envs
             .pop()
-            .ok_or(err_msg("Attempted to pop empty environment stack"))?;
+            .ok_or_else(|| err_msg("Attempted to pop empty environment stack"))?;
         Ok(())
     }
 }
