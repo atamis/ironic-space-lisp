@@ -17,10 +17,11 @@ pub fn pass_default(asts: &[AST]) -> Result<()> {
     asts.iter().map(|a| hs.visit(a)).collect()
 }
 
-pub fn pass(asts: &[AST], env: &Env) -> Result<()> {
+pub fn pass(ast: &AST, env: &Env) -> Result<()> {
     let mut hs: KeywordSet = env.keys().cloned().collect();
 
-    asts.iter().map(|a| hs.visit(a)).collect()
+    hs.visit(ast).context("Pass with specific env")?;
+    Ok(())
 }
 
 impl ASTVisitor<()> for KeywordSet {

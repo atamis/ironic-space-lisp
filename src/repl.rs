@@ -6,7 +6,6 @@ use compiler;
 use ast::passes::unbound;
 use ast::passes::function_lifter;
 use errors::*;
-use ast::AST;
 use str_to_ast;
 
 pub fn repl() {
@@ -39,11 +38,11 @@ pub fn repl() {
 
 pub fn eval(vm: &mut vm::VM, s: &str) -> Result<()> {
 
-    let ast: Vec<AST> = str_to_ast(&s)?;
+    let ast = str_to_ast(&s)?;
 
     unbound::pass(&ast, vm.environment.peek()?).context("Unbound pass in repl")?;
 
-    let last = function_lifter::lift_functions(&AST::Do(ast))?;
+    let last = function_lifter::lift_functions(&ast)?;
 
     let code = compiler::pack_compile_lifted(&last)?;
 

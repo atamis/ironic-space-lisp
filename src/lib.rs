@@ -22,17 +22,11 @@ pub mod vm;
 
 // std::usize::MAX
 
-pub fn str_to_ast(s: &str) -> errors::Result<Vec<ast::AST>> {
-    use errors::*;
+pub fn str_to_ast(s: &str) -> errors::Result<ast::AST> {
 
     let p = parser::Parser::new();
     let lits = p.parse(s)?;
-    let asts: Vec<ast::AST> = lits
-        .iter()
-        .enumerate()
-        .map(|(i, lit)| {
-            let a = ast::parse(&lit).context(format!("While parsing literal #{:}", i))?;
-            Ok(a)
-        }).collect::<Result<_>>()?;
+    let asts = ast::parse_multi(&lits)?;
+
     Ok(asts)
 }

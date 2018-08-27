@@ -91,6 +91,22 @@ pub trait ASTVisitor<R> {
     fn application_expr(&mut self, f: &Rc<AST>, args: &[AST]) -> Result<R>;
 }
 
+pub fn parse_multi(exprs: &[Literal]) -> Result<AST> {
+    let mut asts: Vec<AST> = exprs
+        .iter()
+        .enumerate()
+        .map(|(i, lit)| {
+            let a = parse(&lit).context(format!("While parsing literal #{:}", i))?;
+            Ok(a)
+        }).collect::<Result<_>>()?;
+
+    match asts.len() {
+        1 => Ok(asts.remove(0)),
+        0 => Err(err_msg("Program empty")),
+        _ => Ok(AST::Do(asts)),
+    }
+}
+
 /// Parse raw sexprs (`data::Literal`) into an AST.
 pub fn parse(e: &Literal) -> Result<AST> {
     match e {

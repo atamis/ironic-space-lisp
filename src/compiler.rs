@@ -290,15 +290,8 @@ mod tests {
     use str_to_ast;
     use vm::VM;
 
-    fn t(s: &'static str) -> Result<IrChunk> {
-        let a = str_to_ast(s).unwrap().remove(0);
-
-        compile(&a)
-    }
-
     fn run(s: &'static str) -> Result<Literal> {
-        let asts = str_to_ast(s)?;
-        let ast = AST::Do(asts);
+        let ast = str_to_ast(s)?;
 
         let ir = compile(&ast)?;
 
@@ -307,24 +300,6 @@ mod tests {
         let mut vm = VM::new(code);
 
         vm.step_until_cost(10000).map(Option::unwrap)
-    }
-
-    //#[test]
-    fn test_value() {
-        assert_eq!(t("3").unwrap(), vec![IrOp::Lit(Literal::Number(3))]);
-
-        println!("{:?}", t("(0 1 2 3 4)"));
-        println!("{:?}", t("(def x 0)"));
-        println!("{:?}", t("(let (x 0 y 1) (9 x y))"));
-
-        let code = pack_start(&t("(let (x 2 y 3) (if 0 x y))").unwrap()).unwrap();
-        code.dissassemble();
-
-        let mut vm = VM::new(code);
-
-        println!("{:?}", vm.step_until_value(true));
-
-        assert!(false);
     }
 
     #[test]
@@ -349,7 +324,7 @@ mod tests {
     }
 
     fn lifted_compile(s: &'static str) -> Bytecode {
-        let ast = AST::Do(str_to_ast(s).unwrap());
+        let ast = str_to_ast(s).unwrap();
         let last = function_lifter::lift_functions(&ast).unwrap();
 
         pack_compile_lifted(&last).unwrap()

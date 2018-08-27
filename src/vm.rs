@@ -740,14 +740,12 @@ mod tests {
 
     #[bench]
     fn bench_nested_envs(b: &mut Bencher) {
-        use ast::AST;
         use compiler::compile;
         use compiler::pack_start;
         use str_to_ast;
 
         let s = "(let (x 0) (let (y 1) (let (z 2) x)))";
-        let asts = str_to_ast(s).unwrap();
-        let ast = AST::Do(asts);
+        let ast = str_to_ast(s).unwrap();
 
         let ir = compile(&ast).unwrap();
 
