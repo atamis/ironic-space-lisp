@@ -288,6 +288,13 @@ impl VM {
         Ok(())
     }
 
+    /// Loads new code into the VM, and resets the data and frame stack.
+    pub fn reset(&mut self, code: Bytecode) {
+        self.code = code;
+        self.stack = vec![];
+        self.frames = vec![(0, 0)];
+    }
+
     /// Execute a single operation. Returns an `Err` if an error was encountered,
     /// or `Ok(())` if it was successful. No particular attempt has been made to make
     /// `Err`s survivable, but no particular attempt has been made to prevent further
