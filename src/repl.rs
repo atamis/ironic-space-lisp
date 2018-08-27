@@ -1,5 +1,5 @@
-use std::io;
-use std::io::prelude::*;
+use rustyline::error::ReadlineError;
+use rustyline::Editor;
 
 use vm;
 use compiler;
@@ -7,19 +7,40 @@ use ast::passes::unbound;
 use ast::passes::function_lifter;
 use errors::*;
 use str_to_ast;
+use data;
 
 pub fn repl() {
     let mut vm = vm::VM::new(vm::Bytecode::new(vec![]));
-    let stdin = io::stdin();
-    for line in stdin.lock().lines() {
-        let line = line.unwrap();
-        let res = eval(&mut vm, &line);
+
+    let mut rl = Editor::<()>::new();
+
+    loop {
+        let readline = rl.readline(&format!("{:} >", vm.code.chunks.len()));
+
+        let mut res = Err(err_msg("No relevant matches error"));
+
+        match readline {
+            Ok(line) => {
+                rl.add_history_entry(line.as_ref());
+                res = eval(&mut vm, &line);
+            },
+            Err(ReadlineError::Interrupted) => {
+                break
+            },
+            Err(ReadlineError::Eof) => {
+                break
+            },
+            Err(err) => {
+                println!("Error: {:?}", err);
+            }
+        }
+
 
         if let Err(ref e) = res {
-            println!("error: {}", e);
-
             vm.code.dissassemble();
             println!("{:?}", vm);
+            println!("error: {}", e);
+
 
             for e in e.iter_causes() {
                 println!("caused by: {}", e);
@@ -31,12 +52,15 @@ pub fn repl() {
                 println!("backtrace: {:?}", backtrace);
             }
 
+        } else {
+            println!("{:?}", res.unwrap());
+
         }
 
     }
 }
 
-pub fn eval(vm: &mut vm::VM, s: &str) -> Result<()> {
+pub fn eval(vm: &mut vm::VM, s: &str) -> Result<Option<data::Literal>> {
 
     let ast = str_to_ast(&s)?;
 
@@ -50,7 +74,5 @@ pub fn eval(vm: &mut vm::VM, s: &str) -> Result<()> {
 
     let val = vm.step_until_cost(10000)?;
 
-    println!("{:?}", val);
-
-    Ok(())
+    Ok(val)
 }

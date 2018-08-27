@@ -7,6 +7,7 @@
 extern crate failure;
 extern crate im;
 extern crate lalrpop_util;
+extern crate rustyline;
 extern crate test;
 
 pub mod ast;
