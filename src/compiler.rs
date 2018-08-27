@@ -101,10 +101,11 @@ impl ASTVisitor<IrChunk> for Compiler {
     }
 
     fn do_expr(&mut self, exprs: &[AST]) -> Result<IrChunk> {
-        let mut chunk = vec![];
+        let mut chunk: IrChunk = vec![];
 
-        for (idx, e) in exprs.iter().enumerate() {
-            let mut e_chunk = self.visit(e)?;
+        let e_chunks = self.multi_visit(&exprs).into_iter().flat_map(|e| e);
+
+        for (idx, mut e_chunk) in e_chunks.enumerate() {
             chunk.append(&mut e_chunk);
 
             // pop every interstitial value except the last
@@ -357,5 +358,18 @@ mod tests {
         let mut vm = VM::new(code);
 
         assert_eq!(vm.step_until_cost(10000).unwrap(), Some(Literal::Number(4)));
+    }
+
+    #[test]
+    fn test_do_pops() {
+        let code = lifted_compile("(do 0 1 2 3 4)");
+
+        code.dissassemble();
+
+        let mut vm = VM::new(code);
+
+        assert_eq!(vm.step_until_cost(10000).unwrap(), Some(Literal::Number(4)));
+
+        assert!(vm.stack.is_empty());
     }
 }

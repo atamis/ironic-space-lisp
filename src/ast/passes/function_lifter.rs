@@ -101,7 +101,7 @@ impl ASTVisitor<AST> for FunctionRegistry {
     }
 
     fn do_expr(&mut self, exprs: &[AST]) -> Result<AST> {
-        let new_exprs = exprs.iter().map(|e| self.visit(e)).collect::<Result<_>>()?;
+        let new_exprs = self.multi_visit(exprs)?;
 
         Ok(AST::Do(new_exprs))
     }

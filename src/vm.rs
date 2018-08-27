@@ -203,7 +203,7 @@ impl fmt::Debug for Op {
 pub struct VM {
     pub code: Bytecode,
     frames: Vec<data::Address>,
-    stack: Vec<data::Literal>,
+    pub stack: Vec<data::Literal>,
     builtin: builtin::Builtin,
     pub environment: EnvStack,
 }

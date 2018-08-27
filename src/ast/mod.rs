@@ -74,6 +74,21 @@ pub trait ASTVisitor<R> {
         Ok(r)
     }
 
+    /// Visit multiple asts, tagging each result with indexed context, and collecting it into a result.
+    fn multi_visit(&mut self, asts: &[AST]) -> Result<Vec<R>> {
+        let rs: Vec<R> = asts
+            .iter()
+            .enumerate()
+            .map(|(i, ast)| {
+                let a = self
+                    .visit(ast)
+                    .context(format!("While parsing do expression {:}", i))?;
+                Ok(a)
+            }).collect::<Result<_>>()?;
+
+        Ok(rs)
+    }
+
     fn value_expr(&mut self, l: &Literal) -> Result<R>;
 
     fn if_expr(&mut self, pred: &Rc<AST>, then: &Rc<AST>, els: &Rc<AST>) -> Result<R>;
@@ -86,6 +101,7 @@ pub trait ASTVisitor<R> {
 
     fn lambda_expr(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<R>;
 
+    #[allow(ptr_arg)]
     fn var_expr(&mut self, k: &Keyword) -> Result<R>;
 
     fn application_expr(&mut self, f: &Rc<AST>, args: &[AST]) -> Result<R>;

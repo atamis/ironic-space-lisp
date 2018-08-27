@@ -52,7 +52,8 @@ impl ASTVisitor<()> for KeywordSet {
     }
 
     fn do_expr(&mut self, exprs: &[AST]) -> Result<()> {
-        exprs.iter().map(|e| self.visit(e)).collect()
+        self.multi_visit(exprs)?;
+        Ok(())
     }
 
     fn lambda_expr(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<()> {

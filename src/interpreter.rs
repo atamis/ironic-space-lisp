@@ -48,10 +48,8 @@ impl ASTVisitor<Literal> for Env {
     }
 
     fn do_expr(&mut self, exprs: &[AST]) -> Result<Literal> {
-        let mut vals: Vec<Literal> = exprs
-            .iter()
-            .map(|e| self.visit(e))
-            .collect::<Result<_>>()
+        let mut vals: Vec<Literal> = self
+            .multi_visit(exprs)
             .context("Evaluating do sub-expressions")?;
         Ok(vals
             .pop()
