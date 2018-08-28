@@ -138,4 +138,33 @@ mod tests {
             ])
         );
     }
+
+    #[test]
+    fn isl_test_quotes() {
+        let p = isl::ExprParser::new();
+
+        assert_eq!(
+            p.parse("'(1 2 3 4)").unwrap(),
+            list(vec![
+                k("quote"),
+                list(vec![Number(1), Number(2), Number(3), Number(4)])
+            ])
+        );
+
+        assert_eq!(
+            p.parse("`(1 2 3 4)").unwrap(),
+            list(vec![
+                k("quasiquote"),
+                list(vec![Number(1), Number(2), Number(3), Number(4)])
+            ])
+        );
+
+        assert_eq!(
+            p.parse(",(1 2 3 4)").unwrap(),
+            list(vec![
+                k("unquote"),
+                list(vec![Number(1), Number(2), Number(3), Number(4)])
+            ])
+        );
+    }
 }

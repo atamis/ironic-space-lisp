@@ -12,10 +12,22 @@ pub Keyword: Literal = r"[a-zA-Z\-!?*+/$<>.=][a-zA-Z0-9\-!?*+/$<>.=]*" => Litera
 
 pub List: Literal = "(" <Exprs> ")" => list(<>);
 
-pub Expr: Literal = {
+pub ExprLiteral: Literal = {
     Num => <>,
     Keyword => <>,
     List => <>,
 }
+
+pub QuotedExpr: Literal = "'" <es: Expr> => list(vec![Literal::Keyword("quote".to_string()), es]);
+pub QuasiquotedExpr: Literal = "`" <es: Expr> => list(vec![Literal::Keyword("quasiquote".to_string()), es]);
+pub UnquotedExpr: Literal = "," <es: Expr> => list(vec![Literal::Keyword("unquote".to_string()), es]);
+
+pub Expr: Literal = {
+    ExprLiteral => <>,
+    QuotedExpr => <>,
+    QuasiquotedExpr => <>,
+    UnquotedExpr => <>,
+}
+
 
 pub Exprs: Vec<Literal> = <Expr*> => <>;
