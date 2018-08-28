@@ -819,6 +819,8 @@ mod tests {
         assert_eq!(vm.step_until_cost(10000).unwrap().unwrap(), Literal::Number(2));
     }
 
+    // Benchmarks
+
     #[bench]
     fn bench_nested_envs(b: &mut Bencher) {
         use compiler::compile;
@@ -865,6 +867,51 @@ mod tests {
             vm.step_until_cost(10000).unwrap();
         } );
     }
+
+    #[bench]
+    fn bench_op_lit(b: &mut Bencher) {
+        b.iter(|| { VM::new(Bytecode::new(vec![])).op_lit(Literal::Number(0)).unwrap() })
+    }
+
+    #[bench]
+    fn bench_op_ret(b: &mut Bencher) {
+        b.iter(|| {
+            let mut vm = VM::new(Bytecode::new(vec![]));
+            vm.op_lit(Literal::Number(0)).unwrap();
+            vm.op_return().unwrap();
+        })
+    }
+
+    #[bench]
+    fn bench_op_call(b: &mut Bencher) {
+        b.iter(|| {
+            let mut vm = VM::new(Bytecode::new(vec![]));
+            vm.op_lit(Literal::Address((0, 0))).unwrap();
+            vm.op_call().unwrap();
+        })
+    }
+
+    #[bench]
+    fn bench_op_jump(b: &mut Bencher) {
+        b.iter(|| {
+            let mut vm = VM::new(Bytecode::new(vec![]));
+            vm.op_lit(Literal::Address((0, 0))).unwrap();
+            vm.op_jump().unwrap();
+        })
+    }
+
+    #[bench]
+    fn bench_op_jumpcond(b: &mut Bencher) {
+        b.iter(|| {
+            let mut vm = VM::new(Bytecode::new(vec![]));
+            vm.op_lit(Literal::Address((0, 0))).unwrap();
+            vm.op_lit(Literal::Address((0, 0))).unwrap();
+            vm.op_lit(Literal::Boolean(true)).unwrap();
+            vm.op_jumpcond().unwrap();
+        })
+    }
+
+    // Bytecode
 
     #[test]
     fn test_bytecode_import() {
