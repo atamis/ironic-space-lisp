@@ -6,9 +6,9 @@ grammar;
 
 pub Num: Literal = r"[0-9]+" => Literal::Number(u32::from_str(<>).unwrap());
 
-// [a-zA-Z0-9\-!?*+/$<>.]
+// [a-zA-Z0-9\-!?*+/$<>.=]
 // can't start with number
-pub Keyword: Literal = r"[a-zA-Z\-!?*+/$<>.][a-zA-Z0-9\-!?*+/$<>.]*" => Literal::Keyword(<>.to_string());
+pub Keyword: Literal = r"[a-zA-Z\-!?*+/$<>.=][a-zA-Z0-9\-!?*+/$<>.=]*" => Literal::Keyword(<>.to_string());
 
 pub List: Literal = "(" <Exprs> ")" => list(<>);
 

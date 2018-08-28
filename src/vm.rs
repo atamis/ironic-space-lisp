@@ -3,12 +3,12 @@
 use std::fmt;
 use std::rc::Rc;
 
-use builtin;
 use data;
 use data::Address;
 use data::Literal;
 use environment::EnvStack;
 use errors::*;
+use syscall;
 
 /// Holds `Chunk`s of bytecode. See `Bytecode::addr` for its primary use.
 #[derive(Clone, PartialEq)]
@@ -204,19 +204,24 @@ pub struct VM {
     pub code: Bytecode,
     frames: Vec<data::Address>,
     pub stack: Vec<data::Literal>,
-    builtin: builtin::Builtin,
+    sys: syscall::SyscallRegistry,
     pub environment: EnvStack,
 }
 
 impl VM {
     /// Create a VM loaded with the provided code. Program counter is initially `(0, 0)`.
     pub fn new(code: Bytecode) -> VM {
+        let mut environment = EnvStack::new();
+        let mut sys = syscall::SyscallRegistry::new();
+        for (name, addr) in sys.ingest(&syscall::math::Factory::new()) {
+            environment.insert(name, Rc::new(Literal::Address(addr))).unwrap();
+        }
         VM {
             code,
+            sys,
+            environment,
             frames: vec![(0, 0)],
             stack: vec![],
-            builtin: builtin::Builtin::new(),
-            environment: EnvStack::new(),
         }
     }
 
@@ -275,12 +280,21 @@ impl VM {
         let mut c = max;
         loop {
             // peek next op
-            let op = self
-                .pc_peek()
-                .context("Peeking pc while executing until cost")?;
+            let cost = match self.pc_peek().context("Peeking pc while executing until cost") {
+                Ok(op) => op.cost(),
+                Err(e) => {
+                    let pc = self.frames.last().ok_or_else(|| err_msg("Stack empty, no counter"))?;
+                    if self.sys.contains(*pc)  {
+                        self.sys.cost(*pc)
+                    } else {
+                        Err(e).context("Also failed syscall lookup")?;
+                        0
+                    }
+                }
+            };
 
             // check cost
-            if c < op.cost() {
+            if c < cost {
                 return Ok(None);
             }
 
@@ -298,7 +312,7 @@ impl VM {
             }
 
             // decr cost
-            c -= op.cost()
+            c -= cost;
         }
     }
 
@@ -327,6 +341,26 @@ impl VM {
         a
     }
 
+    fn invoke_syscall(stack: &mut Vec<Literal>, syscall: &syscall::Syscall) -> Result<()> {
+        use syscall::Syscall;
+        match syscall {
+            Syscall::Stack(ref f) => f(stack),
+            Syscall::A1(ref f) => {
+                let a = stack.pop().ok_or_else(|| err_msg("Error popping stack for 1-arity syscall"))?;
+                let v = f(a).context("While executing 1-arity syscall")?;
+                stack.push(v);
+                Ok(())
+            },
+            Syscall::A2(ref f) => {
+                let a = stack.pop().ok_or_else(|| err_msg("Error popping stack for first arg of 2-arity syscall"))?;
+                let b = stack.pop().ok_or_else(|| err_msg("Error popping stack for second arg of 2-arity syscall"))?;
+                let v = f(a, b).context("While executing 2-arity syscall")?;
+                stack.push(v);
+                Ok(())
+            }
+        }
+    }
+
     /// Execute a single operation. Returns an `Err` if an error was encountered,
     /// or `Ok(())` if it was successful. No particular attempt has been made to make
     /// `Err`s survivable, but no particular attempt has been made to prevent further
@@ -341,10 +375,9 @@ impl VM {
             Err(e) => {
                 // TODO: This should only happen when chunk lookup fails
                 // Fix this when real error states are implemented.
-                if let Some(f) = self.builtin.lookup(pc) {
-                    f(&mut self.stack)
-                        .context(format_err!("while executing builtin at {:?}", pc))?;
-                    self.frames.pop();
+                if let Some(ref f) = self.sys.lookup(pc) {
+                    VM::invoke_syscall(&mut self.stack, f).context(format!("Invoking syscall {:?}", pc))?;
+                    self.frames.pop().ok_or_else(|| err_msg("Error popping stack after syscall"))?;
                     return Ok(());
                 }
                 // This is required because we can't return a context directly
@@ -768,6 +801,22 @@ mod tests {
 
         assert!(res.is_ok());
         assert!(res.unwrap().is_none());
+    }
+
+    #[test]
+    fn test_syscalls() {
+        let mut vm = VM::new(Bytecode::new(
+            vec![vec![
+                Op::Lit(Literal::Number(1)),
+                Op::Lit(Literal::Number(1)),
+                Op::Lit(Literal::Keyword("+".to_string())),
+                Op::Load,
+                Op::Call,
+                Op::Return,
+            ]]
+        ));
+
+        assert_eq!(vm.step_until_cost(10000).unwrap().unwrap(), Literal::Number(2));
     }
 
     #[bench]

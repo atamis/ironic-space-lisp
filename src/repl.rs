@@ -54,6 +54,8 @@ pub fn repl() {
 
         } else {
             println!("{:?}", res.unwrap());
+            //println!("{:?}", vm);
+            //vm.code.dissassemble();
 
         }
 

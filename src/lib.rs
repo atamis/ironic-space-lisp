@@ -11,7 +11,6 @@ extern crate rustyline;
 extern crate test;
 
 pub mod ast;
-pub mod builtin;
 pub mod compiler;
 pub mod data;
 pub mod environment;
@@ -19,6 +18,7 @@ pub mod errors;
 pub mod interpreter;
 pub mod parser;
 pub mod repl;
+pub mod syscall;
 pub mod vm;
 
 // std::usize::MAX
