@@ -149,6 +149,7 @@ fn parse_compound(first: &Literal, rest: &[Literal]) -> Result<AST> {
             "let" => parse_let(first, rest).context("Parsing let expr"),
             "do" => parse_do(first, rest).context("Parsing do expr"),
             "lambda" => parse_lambda(first, rest).context("Parsing lambda expr"),
+            "quote" => parse_quote(first, rest).context("Parsing quoted expr"),
             _ => parse_application(first, rest).context("Parsing application expr"),
         }
     } else {
@@ -275,6 +276,15 @@ fn parse_lambda(_first: &Literal, rest: &[Literal]) -> Result<AST> {
     let body = Rc::new(parse(body)?);
 
     Ok(AST::Lambda { args, body })
+}
+
+fn parse_quote(_first: &Literal, rest: &[Literal]) -> Result<AST> {
+    if rest.len() > 1 {
+        Err(err_msg("Inexplicable additional arguments to quoted expression, (quote lit)"))
+    } else {
+        Ok(AST::Value(rest[0].clone()))
+    }
+
 }
 
 fn parse_application(first: &Literal, rest: &[Literal]) -> Result<AST> {
@@ -530,5 +540,12 @@ mod tests {
                 args: vec![],
             }
         )
+    }
+
+    #[test]
+    fn test_quoted() {
+        let p1 = ps("'1").unwrap();
+
+        assert_eq!(p1, AST::Value(Literal::Number(1)));
     }
 }
