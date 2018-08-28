@@ -173,10 +173,13 @@ pub fn pack_compile_lifted(last: &function_lifter::LiftedAST) -> Result<Bytecode
     // load functions into the chunks
     for (id, function) in last.fr.functions.iter().enumerate() {
         let chunk = id;
+        let is_entry = id == last.entry;
 
         let mut ir = compile(&function.body)?;
 
-        ir.push(IrOp::PopEnv);
+        if !is_entry {
+            ir.push(IrOp::PopEnv);
+        }
         ir.push(IrOp::Return);
 
         let mut arg_ir: IrChunk = function
@@ -186,20 +189,26 @@ pub fn pack_compile_lifted(last: &function_lifter::LiftedAST) -> Result<Bytecode
             .flat_map(|x| x)
             .collect();
 
-        arg_ir.insert(0, IrOp::PushEnv);
+        if !is_entry {
+            arg_ir.insert(0, IrOp::PushEnv);
+        }
+
         arg_ir.append(&mut ir);
 
-        tail_call_optimization(&mut arg_ir);
+        if !is_entry {
+            tail_call_optimization(&mut arg_ir);
+        }
+
         pack(&arg_ir, &mut code, chunk, 0)?;
     }
 
     // function 0 is a dummy function in FunctionRegistry, so stick the root there.
-    code.chunks[0].ops.clear();
+    //code.chunks[0].ops.clear();
 
-    let mut root_ir = compile(&last.root)?;
-    root_ir.push(IrOp::Return);
+    //let mut root_ir = compile(&last.root)?;
+    //root_ir.push(IrOp::Return);
 
-    pack(&root_ir, &mut code, 0, 0)?;
+    //pack(&root_ir, &mut code, 0, 0)?;
 
     Ok(code)
 }
@@ -395,7 +404,5 @@ mod tests {
         assert_eq!(vm.step_until_cost(10000).unwrap(), None);
 
         println!("{:?}", vm);
-
-        assert!(false);
     }
 }

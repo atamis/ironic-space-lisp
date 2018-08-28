@@ -814,7 +814,7 @@ mod tests {
             vm.frames.clear();
             vm.frames.push((0, 0));
             vm.step_until_cost(10000).unwrap();
-        } )
+        } );
     }
 
     #[test]

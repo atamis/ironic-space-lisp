@@ -23,7 +23,24 @@ pub fn lift_functions(a: &AST) -> Result<LiftedAST> {
     let mut fr = FunctionRegistry::new();
     let root = fr.visit(a)?;
 
-    Ok(LiftedAST { fr, root })
+    fr.functions[0].body = Rc::new(root);
+
+    Ok(LiftedAST { fr, entry: 0 })
+}
+
+/// An AST with its functions lifted out.
+///
+/// Includes a `root` AST, and a registry containing all the functions
+/// lifted out. The first function is a dummy function.
+pub struct LiftedAST {
+    pub fr: FunctionRegistry,
+    pub entry: usize,
+}
+
+impl LiftedAST {
+    pub fn entry_fn(&self) -> &ASTFunction {
+        &self.fr.functions[self.entry]
+    }
 }
 
 /// Represents a registry of functions for some `AST`.
@@ -35,15 +52,6 @@ pub fn lift_functions(a: &AST) -> Result<LiftedAST> {
 #[derive(Default)]
 pub struct FunctionRegistry {
     pub functions: Vec<ASTFunction>,
-}
-
-/// An AST with its functions lifted out.
-///
-/// Includes a `root` AST, and a registry containing all the functions
-/// lifted out. The first function is a dummy function.
-pub struct LiftedAST {
-    pub root: AST,
-    pub fr: FunctionRegistry,
 }
 
 impl FunctionRegistry {
@@ -163,7 +171,7 @@ mod tests {
         );
 
         assert_eq!(
-            last.root,
+            *last.entry_fn().body,
             AST::Do(vec![AST::Value(Literal::Address((1, 0)))])
         );
     }
@@ -189,7 +197,7 @@ mod tests {
         );
 
         assert_eq!(
-            last.root,
+            *last.entry_fn().body,
             AST::Do(vec![AST::Value(Literal::Address((2, 0)))])
         );
     }
