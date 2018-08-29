@@ -1,5 +1,5 @@
+use im::vector::Vector;
 use std::fmt;
-use std::rc::Rc;
 
 use errors::*;
 
@@ -16,11 +16,11 @@ pub enum Literal {
     Boolean(bool),
     Address(Address),
     Keyword(Keyword),
-    List(Rc<Vec<Literal>>),
+    List(Vector<Literal>),
 }
 
 pub fn list(v: Vec<Literal>) -> Literal {
-    Literal::List(Rc::new(v))
+    Literal::List(v.into_iter().collect())
 }
 
 impl fmt::Debug for Literal {
@@ -76,9 +76,9 @@ impl Literal {
         }
     }
 
-    pub fn ensure_list(&self) -> Result<Rc<Vec<Literal>>> {
+    pub fn ensure_list(&self) -> Result<Vector<Literal>> {
         if let Literal::List(ref v) = self {
-            Ok(Rc::clone(v))
+            Ok(v.clone())
         } else {
             Err(format_err!("Type error, expected list, got {:?}", self))
         }

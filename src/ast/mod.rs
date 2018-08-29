@@ -6,6 +6,7 @@
 //! error reporting, an offers an easy way of traversing the AST,
 //! the `ASTVisitor` trait.
 
+use im::vector::Vector;
 use std::rc::Rc;
 
 use data::Keyword;
@@ -127,10 +128,13 @@ pub fn parse_multi(exprs: &[Literal]) -> Result<AST> {
 pub fn parse(e: &Literal) -> Result<AST> {
     match e {
         Literal::List(ref vec) => {
-            if let Some((first, rest)) = vec.split_first() {
-                parse_compound(first, rest)
-            } else {
-                Err(err_msg("empty list not valid"))
+            match vec.len() {
+                0 => Err(err_msg("empty list not valid")), // TODO
+                1 => parse_compound(&vec[0], Vector::new()),
+                _ => {
+                    let (first, rest) = vec.clone().split_at(1);
+                    parse_compound(&first[0], rest)
+                }
             }
         }
         Literal::Keyword(k) => Ok(AST::Var(k.clone())),
@@ -141,7 +145,7 @@ pub fn parse(e: &Literal) -> Result<AST> {
 }
 
 // TODO: break these parsers out into functions and make better error messages.
-fn parse_compound(first: &Literal, rest: &[Literal]) -> Result<AST> {
+fn parse_compound(first: &Literal, rest: Vector<Literal>) -> Result<AST> {
     let r = if let Literal::Keyword(s) = first {
         match s.as_ref() {
             "if" => parse_if(first, rest).context("Parsing let expr"),
@@ -159,7 +163,7 @@ fn parse_compound(first: &Literal, rest: &[Literal]) -> Result<AST> {
     Ok(r)
 }
 
-fn parse_def_single(v: &[Literal]) -> Result<Def> {
+fn parse_def_single(v: Vector<Literal>) -> Result<Def> {
     if v.len() > 2 {
         return Err(err_msg("Excessive items after def"));
     }
@@ -170,7 +174,7 @@ fn parse_def_single(v: &[Literal]) -> Result<Def> {
     }
 }
 
-fn parse_def_partial(v: &[Literal]) -> Result<Def> {
+fn parse_def_partial(v: Vector<Literal>) -> Result<Def> {
     if v.len() < 2 {
         return Err(err_msg("Insufficient terms for def"));
     }
@@ -188,7 +192,7 @@ fn parse_def_partial(v: &[Literal]) -> Result<Def> {
     Ok(Def { name, value: v })
 }
 
-fn parse_if(_first: &Literal, rest: &[Literal]) -> Result<AST> {
+fn parse_if(_first: &Literal, rest: Vector<Literal>) -> Result<AST> {
     if rest.len() != 3 {
         return Err(err_msg("malformed if expr, (if pred then else)"));
     }
@@ -212,12 +216,12 @@ fn parse_if(_first: &Literal, rest: &[Literal]) -> Result<AST> {
     Ok(AST::If { pred, then, els })
 }
 
-fn parse_def_expr(_first: &Literal, rest: &[Literal]) -> Result<AST> {
+fn parse_def_expr(_first: &Literal, rest: Vector<Literal>) -> Result<AST> {
     let def = parse_def_single(rest)?;
     Ok(AST::Def(Rc::new(def)))
 }
 
-fn parse_let(_first: &Literal, rest: &[Literal]) -> Result<AST> {
+fn parse_let(_first: &Literal, rest: Vector<Literal>) -> Result<AST> {
     let def_literals = rest
         .get(0)
         .ok_or_else(|| err_msg("let requires def list as first term (let (defs+) body)"))?
@@ -232,7 +236,7 @@ fn parse_let(_first: &Literal, rest: &[Literal]) -> Result<AST> {
         return Err(err_msg("Malformed let, (let (defs+) body)"));
     }
 
-    if def_literals.len() == 0 {
+    if def_literals.is_empty() {
         return Err(err_msg("empty list of let bindings is not allowed"));
     }
 
@@ -244,24 +248,30 @@ fn parse_let(_first: &Literal, rest: &[Literal]) -> Result<AST> {
 
     let mut defs = Vec::with_capacity(def_literals.len() / 2);
 
-    let mut def_literals = &def_literals[..];
+    let mut def_literals = def_literals;
 
     // TODO: currently can't report def index
+    // TODO: unfuck
     while !def_literals.is_empty() {
-        defs.push(parse_def_partial(&def_literals).context("Parsing defs in let")?);
-        def_literals = &def_literals
-            .get(2..)
-            .ok_or_else(|| err_msg("Error slicing defs, not enough def terms"))?;
+        defs.push(parse_def_partial(def_literals.clone()).context("Parsing defs in let")?);
+
+        if 2 > def_literals.len() {
+            return Err(err_msg("Error slicing defs, not enough def terms"));
+        }
+        if 2 == def_literals.len() {
+            break;
+        }
+        def_literals = def_literals.split_off(2);
     }
 
     Ok(AST::Let { defs, body })
 }
 
-fn parse_do(_first: &Literal, rest: &[Literal]) -> Result<AST> {
+fn parse_do(_first: &Literal, rest: Vector<Literal>) -> Result<AST> {
     Ok(AST::Do(rest.iter().map(parse).collect::<Result<_>>()?))
 }
 
-fn parse_lambda(_first: &Literal, rest: &[Literal]) -> Result<AST> {
+fn parse_lambda(_first: &Literal, rest: Vector<Literal>) -> Result<AST> {
     let args = rest
         .get(0)
         .ok_or_else(|| err_msg("lambda requires an argument list, (lambda (args*) body)"))?
@@ -278,16 +288,17 @@ fn parse_lambda(_first: &Literal, rest: &[Literal]) -> Result<AST> {
     Ok(AST::Lambda { args, body })
 }
 
-fn parse_quote(_first: &Literal, rest: &[Literal]) -> Result<AST> {
+fn parse_quote(_first: &Literal, rest: Vector<Literal>) -> Result<AST> {
     if rest.len() > 1 {
-        Err(err_msg("Inexplicable additional arguments to quoted expression, (quote lit)"))
+        Err(err_msg(
+            "Inexplicable additional arguments to quoted expression, (quote lit)",
+        ))
     } else {
         Ok(AST::Value(rest[0].clone()))
     }
-
 }
 
-fn parse_application(first: &Literal, rest: &[Literal]) -> Result<AST> {
+fn parse_application(first: &Literal, rest: Vector<Literal>) -> Result<AST> {
     let f = Rc::new(parse(first).context("Function AST in application")?);
 
     let args = rest
@@ -345,24 +356,24 @@ mod tests {
 
     #[test]
     fn test_def_parital() {
-        let p1 = p("test 0").unwrap();
+        let p1 = p("test 0").unwrap().into_iter().collect();
 
         assert_eq!(
-            parse_def_partial(&p1).unwrap(),
+            parse_def_partial(p1).unwrap(),
             Def {
                 name: "test".to_string(),
                 value: AST::Value(Literal::Number(0))
             }
         );
 
-        let p2 = p("0 0").unwrap();
+        let p2 = p("0 0").unwrap().into_iter().collect();
 
-        assert!(parse_def_partial(&p2).is_err());
+        assert!(parse_def_partial(p2).is_err());
 
-        let p3 = p("test 0 asdf").unwrap();
+        let p3 = p("test 0 asdf").unwrap().into_iter().collect();
 
         assert_eq!(
-            parse_def_partial(&p3).unwrap(),
+            parse_def_partial(p3).unwrap(),
             Def {
                 name: "test".to_string(),
                 value: AST::Value(Literal::Number(0))
@@ -373,23 +384,23 @@ mod tests {
     #[test]
     fn test_def_single() {
         // Mostly copied from test_def_partial
-        let p1 = p("test 0").unwrap();
+        let p1 = p("test 0").unwrap().into_iter().collect();
 
         assert_eq!(
-            parse_def_single(&p1).unwrap(),
+            parse_def_single(p1).unwrap(),
             Def {
                 name: "test".to_string(),
                 value: AST::Value(Literal::Number(0))
             }
         );
 
-        let p2 = p("0 0").unwrap();
+        let p2: Vector<Literal> = p("0 0").unwrap().into_iter().collect();
 
-        assert!(parse_def_single(&p2).is_err());
+        assert!(parse_def_single(p2).is_err());
 
-        let p3 = p("test 0 asdf").unwrap();
+        let p3: Vector<Literal> = p("test 0 asdf").unwrap().into_iter().collect();
 
-        assert!(parse_def_single(&p3).is_err());
+        assert!(parse_def_single(p3).is_err());
     }
 
     #[test]
