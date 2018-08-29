@@ -309,6 +309,7 @@ pub fn pack(
 mod tests {
     use super::*;
     use str_to_ast;
+    use test::Bencher;
     use vm::VM;
 
     fn run(s: &'static str) -> Result<Literal> {
@@ -404,5 +405,17 @@ mod tests {
         assert_eq!(vm.step_until_cost(10000).unwrap(), None);
 
         println!("{:?}", vm);
+    }
+
+    #[bench]
+    fn bench_toolchain(b: &mut Bencher) {
+        use test;
+        b.iter(|| {
+            let ast = str_to_ast("(def add1 (lambda (x) (let (y 1) (+ 1 1)))) (add1 5)").unwrap();
+
+            let last = function_lifter::lift_functions(&ast).unwrap();
+
+            test::black_box(pack_compile_lifted(&last).unwrap());
+        })
     }
 }
