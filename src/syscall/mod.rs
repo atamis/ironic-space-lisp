@@ -10,11 +10,15 @@ use std::usize;
 use std::collections::HashMap;
 use std::fmt;
 
+
+
+pub mod math;
+pub mod list;
+
 pub type StackFn = Fn(&mut Vec<Literal>) -> Result<()>;
 pub type A1Fn = Fn(Literal) -> Result<Literal>;
 pub type A2Fn = Fn(Literal, Literal) -> Result<Literal>;
 
-pub mod math;
 
 pub enum Syscall {
     Stack(Box<StackFn>),

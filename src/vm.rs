@@ -213,9 +213,15 @@ impl VM {
     pub fn new(code: Bytecode) -> VM {
         let mut environment = EnvStack::new();
         let mut sys = syscall::SyscallRegistry::new();
+
         for (name, addr) in sys.ingest(&syscall::math::Factory::new()) {
             environment.insert(name, Rc::new(Literal::Address(addr))).unwrap();
         }
+
+        for (name, addr) in sys.ingest(&syscall::list::Factory::new()) {
+            environment.insert(name, Rc::new(Literal::Address(addr))).unwrap();
+        }
+
         VM {
             code,
             sys,
