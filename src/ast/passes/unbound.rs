@@ -46,6 +46,7 @@ impl ASTVisitor<()> for KeywordSet {
         let mut c = self.clone();
         for d in defs {
             c.insert(d.name.clone());
+            c.visit(&d.value)?;
         }
 
         c.visit(body)
@@ -111,7 +112,9 @@ mod tests {
     fn test_def() {
         assert!(p("(def test 0)").is_ok());
         assert!(p("(def test asdf)").is_err());
-        assert!(p("(def test test)").is_err());
+        // Recursive definition
+        // TODO: maybe try to differentiate between post-binding access?
+        //assert!(p("(def test test)").is_err());
 
         assert!(p("(def test 0) test").is_ok())
     }
@@ -120,6 +123,8 @@ mod tests {
     fn test_let() {
         assert!(p("(let (test 0) asdf)").is_err());
         assert!(p("(let (test 0) test)").is_ok());
+        assert!(p("(let (test 1) (let (asdf test) asdf))").is_ok());
+        assert!(p("(let (test 1) (let (asdf nottest) asdf))").is_err());
     }
 
     #[test]
