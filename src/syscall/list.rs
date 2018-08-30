@@ -24,6 +24,7 @@ impl SyscallFactory for Factory {
             ("cdr", Syscall::A1(Box::new(cdr))),
             ("first", Syscall::A1(Box::new(car))),
             ("rest", Syscall::A1(Box::new(cdr))),
+            ("empty?", Syscall::A1(Box::new(empty))),
         ])
     }
 }
@@ -32,6 +33,7 @@ fn len(a: Literal) -> Result<Literal> {
     Ok(Literal::Number(a.ensure_list()?.len() as u32))
 }
 
+// improper lists banned BTFO
 fn cons(a: Literal, b: Literal) -> Result<Literal> {
     let mut lst = b.ensure_list()?;
     lst.push_front(a);
@@ -59,6 +61,10 @@ fn cdr(a: Literal) -> Result<Literal> {
         }
     }
 
+}
+
+fn empty(a: Literal) -> Result<Literal> {
+    Ok(Literal::Boolean(a.ensure_list()?.is_empty()))
 }
 
 
@@ -103,6 +109,16 @@ mod tests {
             cdr(list(vec![Literal::Number(1)])).unwrap(),
             list(Vec::new())
         );
+    }
+
+
+    #[test]
+    fn test_empty() {
+        let lst = list(vec![]);
+        assert_eq!(empty(lst).unwrap(), Literal::Boolean(true));
+
+        let lst = list(vec![Literal::Number(1)]);
+        assert_eq!(empty(lst).unwrap(), Literal::Boolean(false));
     }
 
 }
