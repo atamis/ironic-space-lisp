@@ -1,9 +1,9 @@
 extern crate clap;
 extern crate ironic_space_lisp;
 
+use clap::{App, Arg, SubCommand};
 use ironic_space_lisp::errors::*;
 use ironic_space_lisp::repl;
-use clap::{ App, SubCommand, Arg };
 
 use std::fs::File;
 use std::io::prelude::*;
@@ -18,12 +18,12 @@ fn inspect(filename: &str) -> Result<()> {
     println!("Code:\n {:}", contents);
 
     {
-        use ironic_space_lisp::vm;
-        use ironic_space_lisp::parser;
         use ironic_space_lisp::ast;
-        use ironic_space_lisp::compiler;
-        use ironic_space_lisp::ast::passes::unbound;
         use ironic_space_lisp::ast::passes::function_lifter;
+        use ironic_space_lisp::ast::passes::unbound;
+        use ironic_space_lisp::compiler;
+        use ironic_space_lisp::parser;
+        use ironic_space_lisp::vm;
 
         let vm = vm::VM::new(vm::Bytecode::new(vec![]));
 
@@ -55,7 +55,6 @@ fn inspect(filename: &str) -> Result<()> {
         let code = compiler::pack_compile_lifted(&last).context("Packing lifted ast")?;
 
         code.dissassemble();
-
     }
 
     Ok(())
@@ -84,30 +83,26 @@ fn run() -> Result<()> {
         .version("v0.1.0")
         .author("Andrew Amis <atamiser@gmail.com>")
         .about("Rust implementation of the Ironic Space Lisp runtime")
-        .subcommand(SubCommand::with_name("repl")
-                    .about("Live read and evaluate ISL"))
-        .subcommand(SubCommand::with_name("inspect")
-                    .about("Inspect the parsing of some ISL code")
-                    .arg(Arg::with_name("file").required(true)))
-        .get_matches();
-
+        .subcommand(SubCommand::with_name("repl").about("Live read and evaluate ISL"))
+        .subcommand(
+            SubCommand::with_name("inspect")
+                .about("Inspect the parsing of some ISL code")
+                .arg(Arg::with_name("file").required(true)),
+        ).get_matches();
 
     match matches.subcommand() {
-        ("inspect", Some(inspect_matches)) => {
-            match inspect_matches.value_of("file") {
-                Some(filename) => {
-                    inspect(filename).context(format!("While inspecting {:}", filename))?;
-                },
-                None => unreachable!(),
+        ("inspect", Some(inspect_matches)) => match inspect_matches.value_of("file") {
+            Some(filename) => {
+                inspect(filename).context(format!("While inspecting {:}", filename))?;
             }
-        }
+            None => unreachable!(),
+        },
         _ => {
             println!("Booting repl");
 
             repl::repl();
         }
     }
-
 
     Ok(())
 }
