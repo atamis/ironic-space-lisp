@@ -32,6 +32,7 @@ pub fn lift_functions(a: &AST) -> Result<LiftedAST> {
 ///
 /// Includes a `root` AST, and a registry containing all the functions
 /// lifted out. The first function is a dummy function.
+#[derive(Debug)]
 pub struct LiftedAST {
     pub fr: FunctionRegistry,
     pub entry: usize,
@@ -49,7 +50,7 @@ impl LiftedAST {
 /// in the vector is assumed to be its future address in the form `(idx, 0)`.
 /// This is a naive method of function registry to go with the naive code
 /// packer in `compiler::pack_compile_lifted`.
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct FunctionRegistry {
     pub functions: Vec<ASTFunction>,
 }
