@@ -37,8 +37,8 @@ impl ASTVisitor<()> for KeywordSet {
     }
 
     fn def_expr(&mut self, def: &Rc<Def>) -> Result<()> {
-        self.visit(&def.value)?;
         self.insert(def.name.clone());
+        self.visit(&def.value)?;
         Ok(())
     }
 
