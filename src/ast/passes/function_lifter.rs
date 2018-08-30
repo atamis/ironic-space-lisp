@@ -4,6 +4,7 @@ use std::rc::Rc;
 use ast::ASTVisitor;
 use ast::Def;
 use ast::AST;
+use data::Address;
 use data::Keyword;
 use data::Literal;
 use errors::*;
@@ -13,6 +14,12 @@ use errors::*;
 pub struct ASTFunction {
     pub args: Vec<Keyword>,
     pub body: Rc<AST>,
+}
+
+impl ASTFunction {
+    pub fn arity(&self) -> usize {
+        self.args.len()
+    }
 }
 
 /// Extracts functions from `a` to form a `LiftedAST`.
@@ -70,6 +77,10 @@ impl FunctionRegistry {
         let idx = self.functions.len();
         self.functions.push(f);
         idx
+    }
+
+    pub fn lookup(&self, addr: Address) -> Option<&ASTFunction> {
+        self.functions.get(addr.0)
     }
 
     fn visit_def(&mut self, d: &Def) -> Result<Def> {
@@ -135,6 +146,34 @@ impl ASTVisitor<AST> for FunctionRegistry {
             args: args.iter().map(|e| self.visit(e)).collect::<Result<_>>()?,
         })
     }
+}
+
+pub trait LASTVisitor<T> {
+    fn last_visit(&mut self, last: &LiftedAST) -> Result<Vec<T>> {
+        let entry = last.entry;
+        let rs = last
+            .fr
+            .functions
+            .iter()
+            .enumerate()
+            .map(|(idx, func)| {
+                let res = if idx == entry {
+                    self.ast_function_entry(&func.args, &func.body)
+                        .context(format!("While visiting function {:}", idx))
+                } else {
+                    self.ast_function(&func.args, &func.body)
+                        .context(format!("While visiting function {:}", idx))
+                }?;
+
+                Ok(res)
+            }).collect::<Result<_>>()
+            .context("While visiting LiftedAST")?;
+
+        Ok(rs)
+    }
+
+    fn ast_function(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<T>;
+    fn ast_function_entry(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<T>;
 }
 
 #[cfg(test)]
