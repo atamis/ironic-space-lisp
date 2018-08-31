@@ -9,14 +9,65 @@ use ironic_space_lisp::size::DataSize;
 use std::fs::File;
 use std::io::prelude::*;
 
-fn inspect(filename: &str) -> Result<()> {
-    let mut f = File::open(filename).context("file not found")?;
+fn read_stdin() -> Result<String> {
+    use std::io;
+    let mut buffer = String::new();
+    io::stdin().read_to_string(&mut buffer)?;
 
-    let mut contents = String::new();
-    f.read_to_string(&mut contents)
-        .context("something went wrong reading the file")?;
+    Ok(buffer)
+}
 
-    println!("Code:\n {:}", contents);
+/*
+let mut f = File::open(filename).context("file not found")?;
+
+let mut contents = String::new();
+f.read_to_string(&mut contents)
+.context("something went wrong reading the file")?;
+*/
+
+fn exec(content: &str) -> Result<()> {
+    {
+        use ironic_space_lisp::ast;
+        use ironic_space_lisp::ast::passes::function_lifter;
+        use ironic_space_lisp::ast::passes::list;
+        use ironic_space_lisp::ast::passes::unbound;
+        use ironic_space_lisp::compiler;
+        use ironic_space_lisp::parser;
+        use ironic_space_lisp::vm;
+        let mut vm = vm::VM::new(vm::Bytecode::new(vec![]));
+
+        let p = parser::Parser::new();
+
+        let lits = p.parse(&content).context("While parsing contents")?;
+
+        let ast = ast::parse_multi(&lits).context("While ast parsing literals")?;
+
+        let ast = list::pass(&ast)?;
+
+        unbound::pass(&ast, vm.environment.peek()?)?;
+
+        let last = function_lifter::lift_functions(&ast).context("While lifting functions")?;
+
+        let code = compiler::pack_compile_lifted(&last).context("Packing lifted ast")?;
+
+        vm.import_jump(&code);
+        let res = vm.step_until_value(false);
+
+        match res {
+            Ok(x) => println!("{:#?}", x),
+            Err(e) => {
+                vm.code.dissassemble();
+                println!("{:#?}", vm);
+                return Err(e);
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn inspect(content: &str) -> Result<()> {
+    println!("Code:\n {:}", content);
 
     {
         use ironic_space_lisp::ast;
@@ -31,7 +82,7 @@ fn inspect(filename: &str) -> Result<()> {
 
         let p = parser::Parser::new();
 
-        let lits = p.parse(&contents).context("While parsing contents")?;
+        let lits = p.parse(&content).context("While parsing contents")?;
 
         println!("Literal size: {:}", lits.data_size());
         println!("Literals: {:#?}", lits);
@@ -93,19 +144,17 @@ fn run() -> Result<()> {
         .author("Andrew Amis <atamiser@gmail.com>")
         .about("Rust implementation of the Ironic Space Lisp runtime")
         .subcommand(SubCommand::with_name("repl").about("Live read and evaluate ISL"))
-        .subcommand(
-            SubCommand::with_name("inspect")
-                .about("Inspect the parsing of some ISL code")
-                .arg(Arg::with_name("file").required(true)),
-        ).get_matches();
+        .subcommand(SubCommand::with_name("inspect").about("Inspect the parsing of some ISL code"))
+        .subcommand(SubCommand::with_name("run").about("Run input"))
+        .get_matches();
 
     match matches.subcommand() {
-        ("inspect", Some(inspect_matches)) => match inspect_matches.value_of("file") {
-            Some(filename) => {
-                inspect(filename).context(format!("While inspecting {:}", filename))?;
-            }
-            None => unreachable!(),
-        },
+        ("inspect", Some(_inspect_matches)) => {
+            inspect(&read_stdin()?).context(format!("While inspecting"))?;
+        }
+        ("run", Some(_run_matches)) => {
+            exec(&read_stdin()?).context(format!("While executing"))?;
+        }
         _ => {
             println!("Booting repl");
 

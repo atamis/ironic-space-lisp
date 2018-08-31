@@ -396,7 +396,8 @@ impl VM {
             }
         };
 
-        self.exec_op(op)
+        self.exec_op(op).context(format_err!("While executing at {:?}", pc))?;
+        Ok(())
     }
 
     /// Execute a single operation, ignoring any already loaded code and ignoring the
