@@ -4,6 +4,7 @@ extern crate ironic_space_lisp;
 use clap::{App, Arg, SubCommand};
 use ironic_space_lisp::errors::*;
 use ironic_space_lisp::repl;
+use ironic_space_lisp::size::DataSize;
 
 use std::fs::File;
 use std::io::prelude::*;
@@ -32,6 +33,7 @@ fn inspect(filename: &str) -> Result<()> {
 
         let lits = p.parse(&contents).context("While parsing contents")?;
 
+        println!("Literal size: {:}", lits.data_size());
         println!("Literals: {:#?}", lits);
 
         let ast = ast::parse_multi(&lits).context("While ast parsing literals")?;

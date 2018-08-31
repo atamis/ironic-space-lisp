@@ -9,6 +9,7 @@ use ast::passes::list;
 use errors::*;
 use str_to_ast;
 use data;
+use size::*;
 
 pub fn repl() {
     let mut vm = vm::VM::new(vm::Bytecode::new(vec![]));
@@ -16,7 +17,7 @@ pub fn repl() {
     let mut rl = Editor::<()>::new();
 
     loop {
-        let readline = rl.readline(&format!("{:} >", vm.code.chunks.len()));
+        let readline = rl.readline(&format!("{:} {:?} >", vm.code.chunks.len(), vm.data_size()));
 
         let mut res = Err(err_msg("No relevant matches error"));
 
