@@ -1,6 +1,5 @@
 //! Holds list related syscalls
 
-
 use data::Literal;
 use errors::*;
 use syscall::SyscallFactory;
@@ -66,6 +65,7 @@ fn cdr(a: Literal) -> Result<Literal> {
 fn empty(a: Literal) -> Result<Literal> {
     Ok(Literal::Boolean(a.ensure_list()?.is_empty()))
 }
+
 
 
 #[cfg(test)]

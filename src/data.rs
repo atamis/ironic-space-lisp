@@ -10,7 +10,7 @@ pub fn address_inc(a: &mut Address) {
     a.1 += 1;
 }
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, is_enum_variant)]
 pub enum Literal {
     Number(u32),
     Boolean(bool),

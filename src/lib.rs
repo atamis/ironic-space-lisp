@@ -9,6 +9,8 @@ extern crate im;
 extern crate lalrpop_util;
 extern crate rustyline;
 extern crate test;
+#[macro_use]
+extern crate derive_is_enum_variant;
 
 pub mod ast;
 pub mod compiler;

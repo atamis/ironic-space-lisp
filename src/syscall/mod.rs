@@ -12,6 +12,7 @@ use std::fmt;
 
 
 
+pub mod util;
 pub mod math;
 pub mod list;
 

@@ -222,6 +222,10 @@ impl VM {
             environment.insert(name, Rc::new(Literal::Address(addr))).unwrap();
         }
 
+        for (name, addr) in sys.ingest(&syscall::util::Factory::new()) {
+            environment.insert(name, Rc::new(Literal::Address(addr))).unwrap();
+        }
+
         VM {
             code,
             sys,
