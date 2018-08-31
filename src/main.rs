@@ -20,6 +20,7 @@ fn inspect(filename: &str) -> Result<()> {
     {
         use ironic_space_lisp::ast;
         use ironic_space_lisp::ast::passes::function_lifter;
+        use ironic_space_lisp::ast::passes::list;
         use ironic_space_lisp::ast::passes::unbound;
         use ironic_space_lisp::compiler;
         use ironic_space_lisp::parser;
@@ -36,6 +37,12 @@ fn inspect(filename: &str) -> Result<()> {
         let ast = ast::parse_multi(&lits).context("While ast parsing literals")?;
 
         println!("AST: {:#?}", ast);
+
+        let list_ast = list::pass(&ast)?;
+
+        println!("Applying list pass, ASTs equal? {:}", list_ast == ast);
+
+        let ast = list_ast;
 
         if let Err(ref e) = unbound::pass(&ast, vm.environment.peek()?) {
             println!("While in unbound pass");
