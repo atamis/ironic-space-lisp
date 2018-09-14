@@ -1,8 +1,8 @@
 //! Runtime size of data values
 use data;
-use std::mem::size_of;
-use im::Vector;
 use environment::EnvStack;
+use im::Vector;
+use std::mem::size_of;
 use vm;
 
 /// Express size in "runtime" size.
@@ -25,14 +25,19 @@ impl DataSize for data::Literal {
     }
 }
 
-impl<T> DataSize for Vec<T> where T: DataSize {
+impl<T> DataSize for Vec<T>
+where
+    T: DataSize,
+{
     fn data_size(&self) -> usize {
         self.iter().map(DataSize::data_size).sum()
     }
 }
 
-
-impl<T> DataSize for Vector<T> where T: DataSize + Clone {
+impl<T> DataSize for Vector<T>
+where
+    T: DataSize + Clone,
+{
     fn data_size(&self) -> usize {
         self.iter().map(DataSize::data_size).sum()
     }
@@ -41,7 +46,10 @@ impl<T> DataSize for Vector<T> where T: DataSize + Clone {
 impl DataSize for EnvStack {
     fn data_size(&self) -> usize {
         match self.peek() {
-            Ok(env) => env.iter().map(|(s, lit)| s.data_size() + lit.data_size()).sum(),
+            Ok(env) => env
+                .iter()
+                .map(|(s, lit)| s.data_size() + lit.data_size())
+                .sum(),
             Err(_) => 0,
         }
     }

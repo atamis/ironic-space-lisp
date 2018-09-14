@@ -1,25 +1,26 @@
 use data::Literal;
 use errors::*;
-use syscall::SyscallFactory;
-use syscall::Syscall;
 use syscall::destatic;
+use syscall::Syscall;
+use syscall::SyscallFactory;
 
 #[derive(Default)]
 pub struct Factory;
 
 impl Factory {
-    pub fn new() -> Factory { Factory {} }
+    pub fn new() -> Factory {
+        Factory {}
+    }
 }
 
 impl SyscallFactory for Factory {
-    fn syscalls(&self) -> Vec<( String, Syscall )> {
+    fn syscalls(&self) -> Vec<(String, Syscall)> {
         destatic(vec![
             ("list?", Syscall::A1(Box::new(list_pred))),
             ("keyword?", Syscall::A1(Box::new(keyword_pred))),
         ])
     }
 }
-
 
 fn list_pred(a: Literal) -> Result<Literal> {
     Ok(Literal::Boolean(a.is_list()))
@@ -34,8 +35,12 @@ mod tests {
     use super::*;
     use data::list;
 
-    fn mytrue() -> Literal { Literal::Boolean(true)}
-    fn myfalse() -> Literal { Literal::Boolean(false)}
+    fn mytrue() -> Literal {
+        Literal::Boolean(true)
+    }
+    fn myfalse() -> Literal {
+        Literal::Boolean(false)
+    }
 
     #[test]
     fn test_list_pred() {
@@ -45,7 +50,5 @@ mod tests {
     }
 
     #[test]
-    fn test_keyword_pred() {
-        
-    }
+    fn test_keyword_pred() {}
 }

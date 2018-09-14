@@ -2,15 +2,17 @@
 
 use data::Literal;
 use errors::*;
-use syscall::SyscallFactory;
-use syscall::Syscall;
 use syscall::destatic;
+use syscall::Syscall;
+use syscall::SyscallFactory;
 
 #[derive(Default)]
 pub struct Factory;
 
 impl Factory {
-    pub fn new() -> Factory { Factory {} }
+    pub fn new() -> Factory {
+        Factory {}
+    }
 }
 
 impl SyscallFactory for Factory {
@@ -22,7 +24,6 @@ impl SyscallFactory for Factory {
         ])
     }
 }
-
 
 fn add(a: Literal, b: Literal) -> Result<Literal> {
     Ok(Literal::Number(a.ensure_number()? + b.ensure_number()?))
@@ -41,13 +42,25 @@ mod tests {
     use super::*;
     #[test]
     fn test_math() {
-        assert_eq!(add(Literal::Number(1), Literal::Number(1)).unwrap(), Literal::Number(2));
+        assert_eq!(
+            add(Literal::Number(1), Literal::Number(1)).unwrap(),
+            Literal::Number(2)
+        );
         assert!(add(Literal::Boolean(true), Literal::Number(1)).is_err());
 
-        assert_eq!(sub(Literal::Number(1), Literal::Number(1)).unwrap(), Literal::Number(0));
+        assert_eq!(
+            sub(Literal::Number(1), Literal::Number(1)).unwrap(),
+            Literal::Number(0)
+        );
         assert!(add(Literal::Boolean(true), Literal::Number(1)).is_err());
 
-        assert_eq!(eq(Literal::Number(1), Literal::Number(1)).unwrap(), Literal::Boolean(true));
-        assert_eq!(eq(Literal::Number(1), Literal::Number(0)).unwrap(), Literal::Boolean(false));
+        assert_eq!(
+            eq(Literal::Number(1), Literal::Number(1)).unwrap(),
+            Literal::Boolean(true)
+        );
+        assert_eq!(
+            eq(Literal::Number(1), Literal::Number(0)).unwrap(),
+            Literal::Boolean(false)
+        );
     }
 }

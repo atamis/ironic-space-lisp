@@ -2,20 +2,22 @@
 
 use data::Literal;
 use errors::*;
-use syscall::SyscallFactory;
-use syscall::Syscall;
-use syscall::destatic;
 use im::vector::Vector;
+use syscall::destatic;
+use syscall::Syscall;
+use syscall::SyscallFactory;
 
 #[derive(Default)]
 pub struct Factory;
 
 impl Factory {
-    pub fn new() -> Factory { Factory {} }
+    pub fn new() -> Factory {
+        Factory {}
+    }
 }
 
 impl SyscallFactory for Factory {
-    fn syscalls(&self) -> Vec<( String, Syscall )> {
+    fn syscalls(&self) -> Vec<(String, Syscall)> {
         destatic(vec![
             ("len", Syscall::A1(Box::new(len))),
             ("cons", Syscall::A2(Box::new(cons))),
@@ -59,14 +61,11 @@ fn cdr(a: Literal) -> Result<Literal> {
             Ok(Literal::List(rest))
         }
     }
-
 }
 
 fn empty(a: Literal) -> Result<Literal> {
     Ok(Literal::Boolean(a.ensure_list()?.is_empty()))
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -75,22 +74,36 @@ mod tests {
 
     #[test]
     fn test_len() {
-        let lst = list(vec!(Literal::Number(1), Literal::Number(2), Literal::Number(3)));
+        let lst = list(vec![
+            Literal::Number(1),
+            Literal::Number(2),
+            Literal::Number(3),
+        ]);
 
         assert_eq!(len(lst).unwrap(), Literal::Number(3));
     }
 
     #[test]
     fn test_cons() {
-        let lst = list(vec!(Literal::Number(2), Literal::Number(3)));
+        let lst = list(vec![Literal::Number(2), Literal::Number(3)]);
 
-        assert_eq!(cons(Literal::Number(1), lst).unwrap(),
-                   list(vec!(Literal::Number(1), Literal::Number(2), Literal::Number(3))));
+        assert_eq!(
+            cons(Literal::Number(1), lst).unwrap(),
+            list(vec!(
+                Literal::Number(1),
+                Literal::Number(2),
+                Literal::Number(3)
+            ))
+        );
     }
 
     #[test]
     fn test_car() {
-        let lst = list(vec!(Literal::Number(1), Literal::Number(2), Literal::Number(3)));
+        let lst = list(vec![
+            Literal::Number(1),
+            Literal::Number(2),
+            Literal::Number(3),
+        ]);
 
         assert_eq!(car(lst).unwrap(), Literal::Number(1));
 
@@ -99,9 +112,16 @@ mod tests {
 
     #[test]
     fn test_cdr() {
-        let lst = list(vec!(Literal::Number(1), Literal::Number(2), Literal::Number(3)));
+        let lst = list(vec![
+            Literal::Number(1),
+            Literal::Number(2),
+            Literal::Number(3),
+        ]);
 
-        assert_eq!(cdr(lst).unwrap(), list(vec!(Literal::Number(2), Literal::Number(3))));
+        assert_eq!(
+            cdr(lst).unwrap(),
+            list(vec!(Literal::Number(2), Literal::Number(3)))
+        );
 
         assert!(cdr(list(vec![])).is_err());
 
@@ -110,7 +130,6 @@ mod tests {
             list(Vec::new())
         );
     }
-
 
     #[test]
     fn test_empty() {

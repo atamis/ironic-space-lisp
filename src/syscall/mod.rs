@@ -2,24 +2,21 @@
 // they don't _have_ to be pass by value.
 #![allow(needless_pass_by_value)]
 
-use data::Literal;
 use data::Address;
 use data::Keyword;
+use data::Literal;
 use errors::*;
-use std::usize;
 use std::collections::HashMap;
 use std::fmt;
+use std::usize;
 
-
-
-pub mod util;
-pub mod math;
 pub mod list;
+pub mod math;
+pub mod util;
 
 pub type StackFn = Fn(&mut Vec<Literal>) -> Result<()>;
 pub type A1Fn = Fn(Literal) -> Result<Literal>;
 pub type A2Fn = Fn(Literal, Literal) -> Result<Literal>;
-
 
 pub enum Syscall {
     Stack(Box<StackFn>),
@@ -56,18 +53,19 @@ impl SyscallRegistry {
     }
 
     pub fn contains(&self, addr: Address) -> bool {
-       self.syscalls.contains_key(&( usize::MAX - addr.0 ))
+        self.syscalls.contains_key(&(usize::MAX - addr.0))
     }
 
-    pub fn cost(&self, _addr: Address) -> usize { 20 }
+    pub fn cost(&self, _addr: Address) -> usize {
+        20
+    }
 
     pub fn ingest(&mut self, fact: &SyscallFactory) -> Vec<(String, Address)> {
-        fact
-            .syscalls()
+        fact.syscalls()
             .into_iter()
             .map(|(name, syscall)| {
                 self.syscalls.insert(self.idx, syscall);
-                let a = (usize::MAX-self.idx, 0);
+                let a = (usize::MAX - self.idx, 0);
                 self.idx += 1;
                 (name, a)
             }).collect()

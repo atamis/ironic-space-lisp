@@ -72,11 +72,11 @@
 use data;
 use data::Literal;
 use errors::*;
-use std::fmt::Debug;
 use nom::types::CompleteStr;
-use nom::{ digit, anychar };
-use std::str::FromStr;
 use nom::IResult;
+use nom::{anychar, digit};
+use std::fmt::Debug;
+use std::str::FromStr;
 
 /// Legacy struct, delegates to `parser::parse()`
 pub struct Parser();
@@ -87,7 +87,6 @@ impl Default for Parser {
     }
 }
 
-
 impl Parser {
     pub fn new() -> Parser {
         Parser()
@@ -97,7 +96,6 @@ impl Parser {
     pub fn parse(&self, input: &str) -> Result<Vec<data::Literal>> {
         parse(input)
     }
-
 }
 
 /// Parses a string to a vector of `data::Literal`s.
@@ -105,26 +103,29 @@ pub fn parse(input: &str) -> Result<Vec<data::Literal>> {
     unwr(exprs(CompleteStr(input)))
 }
 
-
 fn cstr(s: &str) -> CompleteStr {
     CompleteStr(s)
 }
 
-fn unwr<T, L>(r: IResult<T, L>) -> Result<L> where T: Debug {
+fn unwr<T, L>(r: IResult<T, L>) -> Result<L>
+where
+    T: Debug,
+{
     match r {
         Ok((_, o)) => Ok(o),
         Err(e) => Err(format_err!("Parse error: {:?}", e)),
     }
 }
 
-
-
 /// Applies a parser function to a string to get a value.
 ///
 /// Parsers take a special form of string, and produces its own result type.
 /// This function wraps the string, and unwraps the result, and repackages
 /// it into the ISL's Result type.
-pub fn app<F, T>(f: F, s: &str) -> Result<T> where F: Fn(CompleteStr) -> IResult<CompleteStr, T> {
+pub fn app<F, T>(f: F, s: &str) -> Result<T>
+where
+    F: Fn(CompleteStr) -> IResult<CompleteStr, T>,
+{
     unwr(f(cstr(s)))
 }
 
@@ -132,16 +133,16 @@ pub fn app<F, T>(f: F, s: &str) -> Result<T> where F: Fn(CompleteStr) -> IResult
 ///
 /// The wrapper function wraps and unwraps input to the function. See `app()` for more info.
 pub fn apper<F, T>(f: F) -> Box<Fn(&str) -> Result<T>>
-where F: Fn(CompleteStr) -> IResult<CompleteStr, T> + 'static {
+where
+    F: Fn(CompleteStr) -> IResult<CompleteStr, T> + 'static,
+{
     Box::new(move |s: &str| unwr(f(cstr(s))))
 }
-
 
 // These get used in macros, but rust doesn't recognize that
 #[allow(dead_code)]
 fn keyword_element_first(s: char) -> bool {
-    s.is_alphabetic() ||
-        "-!??*+/$<>.=".contains(s)
+    s.is_alphabetic() || "-!??*+/$<>.=".contains(s)
 }
 #[allow(dead_code)]
 fn keyword_element(s: char) -> bool {
@@ -215,7 +216,6 @@ mod tests {
         assert!(p("22").is_ok());
         assert_eq!(p("22").unwrap(), Number(22));
 
-
         assert_eq!(p("304032").unwrap(), Number(304032));
         assert!(p("99999999999999999999999999999999999999999999").is_err());
     }
@@ -253,10 +253,7 @@ mod tests {
         assert_eq!(p("asdf qwer").unwrap(), vec![k("asdf"), k("qwer")]);
 
         assert_eq!(p("1234").unwrap(), vec![Number(1234)]);
-        assert_eq!(
-            p("1234 5678").unwrap(),
-            vec![Number(1234), Number(5678)]
-        );
+        assert_eq!(p("1234 5678").unwrap(), vec![Number(1234), Number(5678)]);
 
         assert_eq!(
             p("1234 asdf\n qwer").unwrap(),

@@ -17,7 +17,7 @@ pub enum Literal {
     Address(Address),
     Keyword(Keyword),
     List(Vector<Literal>),
-    Closure(usize, Address)
+    Closure(usize, Address),
 }
 
 pub fn list(v: Vec<Literal>) -> Literal {

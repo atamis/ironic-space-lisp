@@ -16,7 +16,6 @@ pub struct Bytecode {
     pub chunks: Vec<Chunk>,
 }
 
-
 /// A `Vec` of operations
 #[derive(Debug, Clone, PartialEq)]
 pub struct Chunk {
@@ -79,18 +78,16 @@ impl Bytecode {
             .chunks
             .iter()
             .cloned()
-            .map(|chunk| {
-                Chunk {
-                    ops: chunk
-                        .ops
-                        .iter()
-                        .map(|op| {
-                            match op {
-                                Op::Lit(Literal::Address((a1, a2))) => Op::Lit(Literal::Address((a1 + new_chunk_idx, *a2))),
-                                x => x.clone(),
-                            }
-                        }).collect(),
-                }
+            .map(|chunk| Chunk {
+                ops: chunk
+                    .ops
+                    .iter()
+                    .map(|op| match op {
+                        Op::Lit(Literal::Address((a1, a2))) => {
+                            Op::Lit(Literal::Address((a1 + new_chunk_idx, *a2)))
+                        }
+                        x => x.clone(),
+                    }).collect(),
             }).collect();
 
         self.chunks.append(&mut new_chunks);
@@ -198,7 +195,7 @@ impl fmt::Debug for Op {
             Op::PopEnv => write!(f, "oPoE"),
             Op::Dup => write!(f, "oD"),
             Op::Pop => write!(f, "oP"),
-            Op::MakeClosure => write!(f, "oMkC")
+            Op::MakeClosure => write!(f, "oMkC"),
         }
     }
 }
@@ -222,15 +219,21 @@ impl VM {
         let mut sys = syscall::SyscallRegistry::new();
 
         for (name, addr) in sys.ingest(&syscall::math::Factory::new()) {
-            environment.insert(name, Rc::new(Literal::Address(addr))).unwrap();
+            environment
+                .insert(name, Rc::new(Literal::Address(addr)))
+                .unwrap();
         }
 
         for (name, addr) in sys.ingest(&syscall::list::Factory::new()) {
-            environment.insert(name, Rc::new(Literal::Address(addr))).unwrap();
+            environment
+                .insert(name, Rc::new(Literal::Address(addr)))
+                .unwrap();
         }
 
         for (name, addr) in sys.ingest(&syscall::util::Factory::new()) {
-            environment.insert(name, Rc::new(Literal::Address(addr))).unwrap();
+            environment
+                .insert(name, Rc::new(Literal::Address(addr)))
+                .unwrap();
         }
 
         VM {
@@ -297,11 +300,17 @@ impl VM {
         let mut c = max;
         loop {
             // peek next op
-            let cost = match self.pc_peek().context("Peeking pc while executing until cost") {
+            let cost = match self
+                .pc_peek()
+                .context("Peeking pc while executing until cost")
+            {
                 Ok(op) => op.cost(),
                 Err(e) => {
-                    let pc = self.frames.last().ok_or_else(|| err_msg("Stack empty, no counter"))?;
-                    if self.sys.contains(*pc)  {
+                    let pc = self
+                        .frames
+                        .last()
+                        .ok_or_else(|| err_msg("Stack empty, no counter"))?;
+                    if self.sys.contains(*pc) {
                         self.sys.cost(*pc)
                     } else {
                         Err(e).context("Also failed syscall lookup")?;
@@ -363,14 +372,20 @@ impl VM {
         match syscall {
             Syscall::Stack(ref f) => f(stack),
             Syscall::A1(ref f) => {
-                let a = stack.pop().ok_or_else(|| err_msg("Error popping stack for 1-arity syscall"))?;
+                let a = stack
+                    .pop()
+                    .ok_or_else(|| err_msg("Error popping stack for 1-arity syscall"))?;
                 let v = f(a).context("While executing 1-arity syscall")?;
                 stack.push(v);
                 Ok(())
-            },
+            }
             Syscall::A2(ref f) => {
-                let a = stack.pop().ok_or_else(|| err_msg("Error popping stack for first arg of 2-arity syscall"))?;
-                let b = stack.pop().ok_or_else(|| err_msg("Error popping stack for second arg of 2-arity syscall"))?;
+                let a = stack.pop().ok_or_else(|| {
+                    err_msg("Error popping stack for first arg of 2-arity syscall")
+                })?;
+                let b = stack.pop().ok_or_else(|| {
+                    err_msg("Error popping stack for second arg of 2-arity syscall")
+                })?;
                 let v = f(a, b).context("While executing 2-arity syscall")?;
                 stack.push(v);
                 Ok(())
@@ -393,8 +408,11 @@ impl VM {
                 // TODO: This should only happen when chunk lookup fails
                 // Fix this when real error states are implemented.
                 if let Some(ref f) = self.sys.lookup(pc) {
-                    VM::invoke_syscall(&mut self.stack, f).context(format!("Invoking syscall {:?}", pc))?;
-                    self.frames.pop().ok_or_else(|| err_msg("Error popping stack after syscall"))?;
+                    VM::invoke_syscall(&mut self.stack, f)
+                        .context(format!("Invoking syscall {:?}", pc))?;
+                    self.frames
+                        .pop()
+                        .ok_or_else(|| err_msg("Error popping stack after syscall"))?;
                     return Ok(());
                 }
                 // This is required because we can't return a context directly
@@ -403,7 +421,8 @@ impl VM {
             }
         };
 
-        self.exec_op(op).context(format_err!("While executing at {:?}", pc))?;
+        self.exec_op(op)
+            .context(format_err!("While executing at {:?}", pc))?;
         Ok(())
     }
 
@@ -423,7 +442,9 @@ impl VM {
             Op::PopEnv => self.op_popenv().context("Executing operation popenv")?,
             Op::Dup => self.op_dup().context("Executing operation dup")?,
             Op::Pop => self.op_pop().context("Executing operation pop")?,
-            Op::MakeClosure => self.op_make_closure().context("Executing operation make-closujre")?,
+            Op::MakeClosure => self
+                .op_make_closure()
+                .context("Executing operation make-closujre")?,
         }
         Ok(())
     }
@@ -470,9 +491,7 @@ impl VM {
         let cond = self
             .stack
             .pop()
-            .ok_or_else(|| err_msg(
-                "Attempted to pop stack for conditional for if zero",
-            ))?;
+            .ok_or_else(|| err_msg("Attempted to pop stack for conditional for if zero"))?;
 
         let then = self
             .stack
@@ -542,13 +561,23 @@ impl VM {
     }
 
     fn op_pop(&mut self) -> Result<()> {
-        self.stack.pop().ok_or_else(|| err_msg("Attempted to pop empty stack"))?;
+        self.stack
+            .pop()
+            .ok_or_else(|| err_msg("Attempted to pop empty stack"))?;
         Ok(())
     }
 
     fn op_make_closure(&mut self) -> Result<()> {
-        let arity = self.stack.pop().ok_or_else(|| err_msg("Attempted to pop empty stack"))?.ensure_number()?;
-        let address = self.stack.pop().ok_or_else(|| err_msg("Attempted to pop empty stack"))?.ensure_address()?;
+        let arity = self
+            .stack
+            .pop()
+            .ok_or_else(|| err_msg("Attempted to pop empty stack"))?
+            .ensure_number()?;
+        let address = self
+            .stack
+            .pop()
+            .ok_or_else(|| err_msg("Attempted to pop empty stack"))?
+            .ensure_address()?;
         self.stack.push(Literal::Closure(arity as usize, address));
 
         Ok(())
@@ -686,15 +715,13 @@ mod tests {
         vm.op_lit(Literal::Boolean(false)).unwrap();
         assert!(vm.op_jumpcond().is_err());
 
-
         // Now uses Literal::truthy, which is defined for all values.
         /*let mut vm = VM::new(Bytecode::new(vec![vec![]]));
 
         vm.op_lit(Literal::Address((6, 0))).unwrap();
         vm.op_lit(Literal::Address((5, 0))).unwrap();
         vm.op_lit(Literal::Number(1)).unwrap();
-        assert!(vm.op_jumpcond().is_err());*/
-    }
+        assert!(vm.op_jumpcond().is_err());*/    }
 
     #[test]
     fn test_op_load() {
@@ -842,18 +869,19 @@ mod tests {
 
     #[test]
     fn test_syscalls() {
-        let mut vm = VM::new(Bytecode::new(
-            vec![vec![
-                Op::Lit(Literal::Number(1)),
-                Op::Lit(Literal::Number(1)),
-                Op::Lit(Literal::Keyword("+".to_string())),
-                Op::Load,
-                Op::Call,
-                Op::Return,
-            ]]
-        ));
+        let mut vm = VM::new(Bytecode::new(vec![vec![
+            Op::Lit(Literal::Number(1)),
+            Op::Lit(Literal::Number(1)),
+            Op::Lit(Literal::Keyword("+".to_string())),
+            Op::Load,
+            Op::Call,
+            Op::Return,
+        ]]));
 
-        assert_eq!(vm.step_until_cost(10000).unwrap().unwrap(), Literal::Number(2));
+        assert_eq!(
+            vm.step_until_cost(10000).unwrap().unwrap(),
+            Literal::Number(2)
+        );
     }
 
     // Benchmarks
@@ -878,13 +906,13 @@ mod tests {
         b.iter(|| {
             vm.frames.push((0, 0));
             vm.step_until_cost(10000).unwrap().unwrap();
-        } )
+        })
     }
 
     #[bench]
     fn bench_infinite_recursion(b: &mut Bencher) {
-        use compiler;
         use ast::passes::function_lifter;
+        use compiler;
         use str_to_ast;
 
         let s = "(def x (lambda () (x))) (x)";
@@ -902,12 +930,16 @@ mod tests {
             vm.frames.clear();
             vm.frames.push((0, 0));
             vm.step_until_cost(10000).unwrap();
-        } );
+        });
     }
 
     #[bench]
     fn bench_op_lit(b: &mut Bencher) {
-        b.iter(|| { VM::new(Bytecode::new(vec![])).op_lit(Literal::Number(0)).unwrap() })
+        b.iter(|| {
+            VM::new(Bytecode::new(vec![]))
+                .op_lit(Literal::Number(0))
+                .unwrap()
+        })
     }
 
     #[bench]
@@ -954,28 +986,16 @@ mod tests {
     fn test_bytecode_import() {
         let a = |a1, a2| Op::Lit(Literal::Address((a1, a2)));
 
-        let mut b1 = Bytecode::new(
-            vec![
-                vec![a(0, 0), a(1, 3)],
-                vec![a(1, 0), a(0, 3)],
-            ],
-        );
+        let mut b1 = Bytecode::new(vec![vec![a(0, 0), a(1, 3)], vec![a(1, 0), a(0, 3)]]);
 
-        let b2 = Bytecode::new(
-            vec![
-                vec![a(0, 0), a(1, 3)],
-                vec![a(1, 0), a(0, 3)],
-            ],
-        );
+        let b2 = Bytecode::new(vec![vec![a(0, 0), a(1, 3)], vec![a(1, 0), a(0, 3)]]);
 
-        let b3 = Bytecode::new(
-            vec![
-                vec![a(0, 0), a(1, 3)],
-                vec![a(1, 0), a(0, 3)],
-                vec![a(2, 0), a(3, 3)],
-                vec![a(3, 0), a(2, 3)],
-            ],
-        );
+        let b3 = Bytecode::new(vec![
+            vec![a(0, 0), a(1, 3)],
+            vec![a(1, 0), a(0, 3)],
+            vec![a(2, 0), a(3, 3)],
+            vec![a(3, 0), a(2, 3)],
+        ]);
 
         b1.import(&b2);
 
