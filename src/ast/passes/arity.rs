@@ -17,6 +17,8 @@ keep track of rebindings.
 Most critically, it needs access to runtime function arities, but by runtime, such
 arity information has been destroyed by the compiler.
 
+Call with arity, arity check at runtime against closure struct.
+
 */
 
 

@@ -17,6 +17,7 @@ pub enum Literal {
     Address(Address),
     Keyword(Keyword),
     List(Vector<Literal>),
+    Closure(usize, Address)
 }
 
 pub fn list(v: Vec<Literal>) -> Literal {
@@ -32,6 +33,7 @@ impl fmt::Debug for Literal {
             Literal::Address(a) => write!(f, "A({:?})", a),
             Literal::Keyword(k) => write!(f, ":{:?}", k),
             Literal::List(ref v) => write!(f, "{:?}", v),
+            Literal::Closure(arity, address) => write!(f, "{:?}/{:}", address, arity),
         }
     }
 }

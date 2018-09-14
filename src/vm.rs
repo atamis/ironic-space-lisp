@@ -152,6 +152,11 @@ pub enum Op {
     ///
     /// `<item>`
     Pop,
+
+    /// Make a closure from an address and an arity
+    ///
+    /// `<address arity>`
+    MakeClosure,
 }
 
 impl Op {
@@ -169,6 +174,7 @@ impl Op {
             Op::PopEnv => "PopEnv",
             Op::Dup => "Dup",
             Op::Pop => "Pop",
+            Op::MakeClosure => "MkClosure",
         }
     }
 
@@ -192,6 +198,7 @@ impl fmt::Debug for Op {
             Op::PopEnv => write!(f, "oPoE"),
             Op::Dup => write!(f, "oD"),
             Op::Pop => write!(f, "oP"),
+            Op::MakeClosure => write!(f, "oMkC")
         }
     }
 }
@@ -416,6 +423,7 @@ impl VM {
             Op::PopEnv => self.op_popenv().context("Executing operation popenv")?,
             Op::Dup => self.op_dup().context("Executing operation dup")?,
             Op::Pop => self.op_pop().context("Executing operation pop")?,
+            Op::MakeClosure => self.op_make_closure().context("Executing operation make-closujre")?,
         }
         Ok(())
     }
@@ -535,6 +543,14 @@ impl VM {
 
     fn op_pop(&mut self) -> Result<()> {
         self.stack.pop().ok_or_else(|| err_msg("Attempted to pop empty stack"))?;
+        Ok(())
+    }
+
+    fn op_make_closure(&mut self) -> Result<()> {
+        let arity = self.stack.pop().ok_or_else(|| err_msg("Attempted to pop empty stack"))?.ensure_number()?;
+        let address = self.stack.pop().ok_or_else(|| err_msg("Attempted to pop empty stack"))?.ensure_address()?;
+        self.stack.push(Literal::Closure(arity as usize, address));
+
         Ok(())
     }
 }
@@ -755,6 +771,16 @@ mod tests {
         assert_eq!(vm.stack.len(), 0);
 
         assert!(vm.op_pop().is_err());
+    }
+
+    #[test]
+    fn test_op_make_closure() {
+        let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+        vm.op_lit(Literal::Address((0, 0))).unwrap();
+        vm.op_lit(Literal::Number(0)).unwrap();
+        vm.op_make_closure().unwrap();
+
+        assert_eq!(*vm.stack.last().unwrap(), Literal::Closure(0, (0, 0)));
     }
 
     #[test]
