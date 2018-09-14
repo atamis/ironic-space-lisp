@@ -31,7 +31,7 @@ impl ListPass {
     // Vec should be reversed before being passed to consify
     // consify uses Vec::pop for better performance
     fn consify(&mut self, mut v: Vec<AST>) -> Result<AST> {
-        if v.len() == 0 {
+        if v.is_empty() {
             Ok(AST::Value(data::list(vec![])))
         } else {
             Ok(AST::Application {

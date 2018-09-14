@@ -1,12 +1,11 @@
 extern crate clap;
 extern crate ironic_space_lisp;
 
-use clap::{App, Arg, SubCommand};
+use clap::{App, SubCommand};
 use ironic_space_lisp::errors::*;
 use ironic_space_lisp::repl;
 use ironic_space_lisp::size::DataSize;
 
-use std::fs::File;
 use std::io::prelude::*;
 
 fn read_stdin() -> Result<String> {
@@ -150,10 +149,10 @@ fn run() -> Result<()> {
 
     match matches.subcommand() {
         ("inspect", Some(_inspect_matches)) => {
-            inspect(&read_stdin()?).context(format!("While inspecting"))?;
+            inspect(&read_stdin()?).context("While inspecting")?;
         }
         ("run", Some(_run_matches)) => {
-            exec(&read_stdin()?).context(format!("While executing"))?;
+            exec(&read_stdin()?).context("While executing")?;
         }
         _ => {
             println!("Booting repl");
