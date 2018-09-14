@@ -1,18 +1,13 @@
-#[allow(clippy)]
-pub mod isl;
-
 use data;
 use data::Literal;
 use errors::*;
-use failure::Error;
-use lalrpop_util;
 use std::fmt::Debug;
-use std::fmt::Display;
 use nom::types::CompleteStr;
 use nom::{ digit, anychar };
 use std::str::FromStr;
+use nom::IResult;
 
-pub struct Parser(isl::ExprsParser);
+pub struct Parser();
 
 impl Default for Parser {
     fn default() -> Self {
@@ -23,22 +18,41 @@ impl Default for Parser {
 
 impl Parser {
     pub fn new() -> Parser {
-        Parser(isl::ExprsParser::new())
+        Parser()
     }
 
     pub fn parse(&self, input: &str) -> Result<Vec<data::Literal>> {
-        self.0.parse(input).map_err(|e| Parser::wrap_err(&e))
+        parse(input)
     }
 
-    fn wrap_err<A, B, C>(e: &lalrpop_util::ParseError<A, B, C>) -> Error
-    where
-        A: Display + Debug,
-        B: Display + Debug,
-        C: Display + Debug,
-    {
-        format_err!("ParseError: {:?}", e)
+}
+
+pub fn parse(input: &str) -> Result<Vec<data::Literal>> {
+    unwr(exprs(CompleteStr(input)))
+}
+
+
+fn cstr(s: &str) -> CompleteStr {
+    CompleteStr(s)
+}
+
+fn unwr<T, L>(r: IResult<T, L>) -> Result<L> where T: Debug {
+    match r {
+        Ok((_, o)) => Ok(o),
+        Err(e) => Err(format_err!("Parse error: {:?}", e)),
     }
 }
+
+
+pub fn apper<F, T>(f: F) -> Box<Fn(&str) -> Result<T>>
+where F: Fn(CompleteStr) -> IResult<CompleteStr, T> + 'static {
+    Box::new(move |s: &str| unwr(f(cstr(s))))
+}
+
+pub fn app<F, T>(f: F, s: &str) -> Result<T> where F: Fn(CompleteStr) -> IResult<CompleteStr, T> {
+    unwr(f(cstr(s)))
+}
+
 
 // These get used in macros, but rust doesn't recognize that
 #[allow(dead_code)]
@@ -96,39 +110,15 @@ named!(tagged_expr<CompleteStr, Literal>,
       )
 );
 
-named!(exprs<CompleteStr, Vec<Literal> >, many0!(complete!(ws!(tagged_expr))));
+named!(pub exprs<CompleteStr, Vec<Literal> >, many0!(complete!(ws!(tagged_expr))));
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use nom::IResult;
-
-    fn cstr(s: &str) -> CompleteStr {
-        CompleteStr(s)
-    }
-
-    fn unwr<T, L>(r: IResult<T, L>) -> Result<L> {
-        match r {
-            Ok((_, o)) => Ok(o),
-            Err(_) => Err(err_msg("Parse error or something")),
-        }
-    }
-
-
-    fn apper<F, T>(f: F) -> Box<Fn(&str) -> Result<T>>
-    where F: Fn(CompleteStr) -> IResult<CompleteStr, T> + 'static {
-        Box::new(move |s: &str| unwr(f(cstr(s))))
-    }
-
-    fn app<F, T>(f: F, s: &str) -> Result<T> where F: Fn(CompleteStr) -> IResult<CompleteStr, T> {
-        unwr(f(cstr(s)))
-    }
-
     use data::list;
     use data::Literal;
     use data::Literal::Keyword;
     use data::Literal::Number;
-    use parser::isl;
 
     fn k(s: &str) -> Literal {
         Keyword(s.to_string())

@@ -3,12 +3,8 @@ name = "ironic-space-lisp"
 version = "0.1.0"
 authors = ["Andrew Amis <atamiser@gmail.com>"]
 
-[build-dependencies]
-lalrpop = "0.15.2"
-
 [dependencies]
 failure = "0.1.2"
-lalrpop-util = "0.15.2"
 regex = "0.2.1"
 im = "11.0.1"
 rustyline = "2.0.0"
