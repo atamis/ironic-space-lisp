@@ -1,4 +1,5 @@
 # ironic-space-lisp
+[![Build Status](https://travis-ci.org/atamis/ironic-space-lisp.svg?branch=master)](https://travis-ci.org/atamis/ironic-space-lisp)
 
 Weird VM-lisp in Rust. It's inspired by Erlang, Clojure and Scheme. It's
 architected on the assertion that if you never jump into input-based code, it's
