@@ -11,6 +11,8 @@ extern crate rustyline;
 extern crate test;
 #[macro_use]
 extern crate derive_is_enum_variant;
+#[macro_use]
+extern crate nom;
 
 pub mod ast;
 pub mod compiler;
