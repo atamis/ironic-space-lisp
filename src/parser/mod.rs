@@ -1,3 +1,74 @@
+//! Parser for parsing `data::Literal` values from strings.
+//!
+//! The string representation of `data::Literals` is a little inconsistent:
+//! The `std::fmt::Debug` implementation has some extra debug information,
+//! and this parser can't parse it correctly. The extra information is
+//! useful, but not necessary.
+//!
+//! This parser parses what is basically a SEXPR format that maps to a
+//! subset of the `data::Literal` enum. Values are numbers, keywords,
+//! and lists, which may contain 1 or more additional values.
+//!
+//! Numbers are currently unsigned. The parser will error if the number is
+//! too large. This outputs a `Literal::Number`
+//!
+//! ```
+//! # use ironic_space_lisp::parser;
+//! # use ironic_space_lisp::data::Literal;
+//! assert_eq!(parser::parse("123").unwrap()[0], Literal::Number(123));
+//! ```
+//!
+//! Keywords a strings of characters that are alphanumeric, or in the set
+//! `"-!??*+/$<>.="`, except for the first character, which cannot be
+//! numeric. This outputs a `Literal::Keyword`
+//!
+//! ```
+//! # use ironic_space_lisp::parser::parse;
+//! # use ironic_space_lisp::data::Literal;
+//! parse("asdf");
+//! parse("+");
+//! parse("a123");
+//! parse("<html>");
+//! parse("</html>");
+//! ```
+//!
+//! Lists are surrounded by matching parentheses, and output a
+//! `Literal::List`, and contain 0 or more other literals. They are not
+//! separated by commas.
+//!
+//! ```
+//! # use ironic_space_lisp::parser::parse;
+//! # use ironic_space_lisp::data::Literal;
+//! parse("(+ 1 2 3)");
+//! parse("(((((())))))");
+//! parse("(if (< x 2) () (inc x))");
+//! ```
+//!
+//! This parser also handles quoting, and related "reader macros".
+//!
+//! ```
+//! # use ironic_space_lisp::parser::parse;
+//! # use ironic_space_lisp::data::Literal;
+//! assert_eq!(parse("'1").unwrap(),
+//!            parse("(quote 1)").unwrap());
+//!
+//! assert_eq!(parse("'keyword").unwrap(),
+//!            parse("(quote keyword)").unwrap());
+//!
+//! assert_eq!(parse("`keyword").unwrap(),
+//!            parse("(quasiquote keyword)").unwrap());
+//!
+//! assert_eq!(parse("`(+ 1 2 ,x)`").unwrap(),
+//!            parse("(quasiquote (+ 1 2 (unquote x)))").unwrap());
+//! ```
+//!
+//! Note that `parser::parse` attempts to parse the string completely
+//! into potentially multiple literal values, which it returns as an vector.
+//! However, the parser exposes the raw nom parsers `exprs`, `tagged_expr`,
+//! and `expr`, which could be used to parse single literals.
+//!
+//! This parser uses `nom::types::CompleteStr`, which ensures the input
+//! strings are completely consumed.
 use data;
 use data::Literal;
 use errors::*;
@@ -7,6 +78,7 @@ use nom::{ digit, anychar };
 use std::str::FromStr;
 use nom::IResult;
 
+/// Legacy struct, delegates to `parser::parse()`
 pub struct Parser();
 
 impl Default for Parser {
@@ -21,12 +93,14 @@ impl Parser {
         Parser()
     }
 
+    /// Delegates to `parser::parse()`
     pub fn parse(&self, input: &str) -> Result<Vec<data::Literal>> {
         parse(input)
     }
 
 }
 
+/// Parses a string to a vector of `data::Literal`s.
 pub fn parse(input: &str) -> Result<Vec<data::Literal>> {
     unwr(exprs(CompleteStr(input)))
 }
@@ -44,13 +118,22 @@ fn unwr<T, L>(r: IResult<T, L>) -> Result<L> where T: Debug {
 }
 
 
+
+/// Applies a parser function to a string to get a value.
+///
+/// Parsers take a special form of string, and produces its own result type.
+/// This function wraps the string, and unwraps the result, and repackages
+/// it into the ISL's Result type.
+pub fn app<F, T>(f: F, s: &str) -> Result<T> where F: Fn(CompleteStr) -> IResult<CompleteStr, T> {
+    unwr(f(cstr(s)))
+}
+
+/// Wraps a parser function to make it easier to use.
+///
+/// The wrapper function wraps and unwraps input to the function. See `app()` for more info.
 pub fn apper<F, T>(f: F) -> Box<Fn(&str) -> Result<T>>
 where F: Fn(CompleteStr) -> IResult<CompleteStr, T> + 'static {
     Box::new(move |s: &str| unwr(f(cstr(s))))
-}
-
-pub fn app<F, T>(f: F, s: &str) -> Result<T> where F: Fn(CompleteStr) -> IResult<CompleteStr, T> {
-    unwr(f(cstr(s)))
 }
 
 
@@ -65,7 +148,7 @@ fn keyword_element(s: char) -> bool {
     keyword_element_first(s) || s.is_numeric()
 }
 
-named!(number<CompleteStr, Literal >, map!(digit, |s| Literal::Number(u32::from_str(&s).unwrap())));
+named!(number<CompleteStr, Literal >, map_res!(digit, |s: CompleteStr| u32::from_str(&s).map(|n| Literal::Number(n))));
 
 named!(keyword<CompleteStr, Literal >,
        do_parse!(
@@ -79,7 +162,7 @@ named!(keyword<CompleteStr, Literal >,
        )
 );
 
-named!(expr<CompleteStr, Literal >,
+named_attr!(#[doc = "Raw nom parser for parsing a single untagged expr."], pub expr<CompleteStr, Literal >,
        alt!(keyword | number |
             map!(delimited!(tag!("("),
                             exprs,
@@ -88,7 +171,7 @@ named!(expr<CompleteStr, Literal >,
     )
 );
 
-named!(tagged_expr<CompleteStr, Literal>,
+named_attr!(#[doc = "Raw nom parser for parsing single tagged exprs."], pub tagged_expr<CompleteStr, Literal>,
       do_parse!(
           tag: opt!(alt!(tag!("'") | tag!("`") | tag!(","))) >>
               expr: expr >>
@@ -110,7 +193,9 @@ named!(tagged_expr<CompleteStr, Literal>,
       )
 );
 
-named!(pub exprs<CompleteStr, Vec<Literal> >, many0!(complete!(ws!(tagged_expr))));
+named_attr!(
+    #[doc = "Raw nom parser for parsing mulitple exprs."],
+    pub exprs<CompleteStr, Vec<Literal> >, many0!(complete!(ws!(tagged_expr))));
 
 #[cfg(test)]
 mod tests {
@@ -132,6 +217,7 @@ mod tests {
 
 
         assert_eq!(p("304032").unwrap(), Number(304032));
+        assert!(p("99999999999999999999999999999999999999999999").is_err());
     }
 
     #[test]
