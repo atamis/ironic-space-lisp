@@ -12,7 +12,7 @@ use str_to_ast;
 use vm;
 
 pub fn repl() {
-    let mut vm = vm::VM::new(vm::Bytecode::new(vec![]));
+    let mut vm = vm::VM::new(vm::bytecode::Bytecode::new(vec![]));
 
     let mut rl = Editor::<()>::new();
 

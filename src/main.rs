@@ -33,7 +33,7 @@ fn exec(content: &str) -> Result<()> {
         use ironic_space_lisp::compiler;
         use ironic_space_lisp::parser;
         use ironic_space_lisp::vm;
-        let mut vm = vm::VM::new(vm::Bytecode::new(vec![]));
+        let mut vm = vm::VM::new(vm::bytecode::Bytecode::new(vec![]));
 
         let p = parser::Parser::new();
 
@@ -77,7 +77,7 @@ fn inspect(content: &str) -> Result<()> {
         use ironic_space_lisp::parser;
         use ironic_space_lisp::vm;
 
-        let vm = vm::VM::new(vm::Bytecode::new(vec![]));
+        let vm = vm::VM::new(vm::bytecode::Bytecode::new(vec![]));
 
         let p = parser::Parser::new();
 

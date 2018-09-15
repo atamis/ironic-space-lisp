@@ -8,9 +8,9 @@ use ast::AST;
 use data::Keyword;
 use data::Literal;
 use errors::*;
-use vm::Bytecode;
-use vm::Chunk;
-use vm::Op;
+use vm::bytecode::Bytecode;
+use vm::bytecode::Chunk;
+use vm::op::Op;
 
 pub type IrChunk = Vec<IrOp>;
 pub type IrChunkSlice<'a> = &'a [IrOp];
