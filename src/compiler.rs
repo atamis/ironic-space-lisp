@@ -38,6 +38,7 @@ pub enum IrOp {
     PopEnv,
     Dup,
     Pop,
+    CallArity(usize),
 }
 
 /// Empty struct that implements `ASTVisitor<IrChunk>`.
@@ -138,7 +139,7 @@ impl ASTVisitor<IrChunk> for Compiler {
         let mut f_chunk = self.visit(f)?;
         chunk.append(&mut f_chunk);
 
-        chunk.push(IrOp::Call);
+        chunk.push(IrOp::CallArity(args.len()));
 
         Ok(chunk)
     }
@@ -291,6 +292,7 @@ pub fn pack(
 
                 Op::JumpCond
             }
+            IrOp::CallArity(a) => Op::CallArity(*a),
             //_ => { return Err(err_msg("not implemented"))},
         };
 
