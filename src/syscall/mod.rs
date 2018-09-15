@@ -24,6 +24,16 @@ pub enum Syscall {
     A2(Box<A2Fn>),
 }
 
+impl Syscall {
+    pub fn arity(&self) -> Option<usize> {
+        match self {
+            Syscall::Stack(_) => None,
+            Syscall::A1(_) => Some(1),
+            Syscall::A2(_) => Some(2),
+        }
+    }
+}
+
 pub trait SyscallFactory {
     fn syscalls(&self) -> Vec<(Keyword, Syscall)>;
 }
@@ -60,14 +70,15 @@ impl SyscallRegistry {
         20
     }
 
-    pub fn ingest(&mut self, fact: &SyscallFactory) -> Vec<(String, Address)> {
+    pub fn ingest(&mut self, fact: &SyscallFactory) -> Vec<(String, Option<usize>, Address)> {
         fact.syscalls()
             .into_iter()
             .map(|(name, syscall)| {
+                let arity = syscall.arity();
                 self.syscalls.insert(self.idx, syscall);
                 let a = (usize::MAX - self.idx, 0);
                 self.idx += 1;
-                (name, a)
+                (name, arity, a)
             }).collect()
     }
 }

@@ -29,29 +29,31 @@ pub struct VM {
     pub environment: EnvStack,
 }
 
+fn ingest_environment(
+    sys: &mut syscall::SyscallRegistry,
+    environment: &mut EnvStack,
+    fact: &syscall::SyscallFactory,
+) {
+    for (name, arity_opt, addr) in sys.ingest(fact) {
+        let f = match arity_opt {
+            Some(n) => Literal::Closure(n, addr),
+            None => Literal::Address(addr),
+        };
+
+        let f = Rc::new(f);
+
+        environment.insert(name, f).unwrap();
+    }
+}
+
 impl VM {
     /// Create a VM loaded with the provided code. Program counter is initially `(0, 0)`.
     pub fn new(code: Bytecode) -> VM {
         let mut environment = EnvStack::new();
         let mut sys = syscall::SyscallRegistry::new();
 
-        for (name, addr) in sys.ingest(&syscall::math::Factory::new()) {
-            environment
-                .insert(name, Rc::new(Literal::Address(addr)))
-                .unwrap();
-        }
-
-        for (name, addr) in sys.ingest(&syscall::list::Factory::new()) {
-            environment
-                .insert(name, Rc::new(Literal::Address(addr)))
-                .unwrap();
-        }
-
-        for (name, addr) in sys.ingest(&syscall::util::Factory::new()) {
-            environment
-                .insert(name, Rc::new(Literal::Address(addr)))
-                .unwrap();
-        }
+        ingest_environment(&mut sys, &mut environment, &syscall::list::Factory::new());
+        ingest_environment(&mut sys, &mut environment, &syscall::util::Factory::new());
 
         VM {
             code,
