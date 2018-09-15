@@ -32,6 +32,10 @@ impl Chunk {
             if let Op::Lit(l) = op {
                 print!("\t{:?}", l);
             }
+            if let Op::CallArity(a) = op {
+                print!("\t{:}", a);
+            }
+
             println!()
         }
     }
@@ -154,6 +158,12 @@ pub enum Op {
     ///
     /// `<address arity>`
     MakeClosure,
+
+
+    /// Call a function with a given arity
+    ///
+    /// parameter: arity
+    CallArity(usize)
 }
 
 impl Op {
@@ -172,6 +182,7 @@ impl Op {
             Op::Dup => "Dup",
             Op::Pop => "Pop",
             Op::MakeClosure => "MkClosure",
+            Op::CallArity(_) => "CallArity",
         }
     }
 
@@ -196,6 +207,7 @@ impl fmt::Debug for Op {
             Op::Dup => write!(f, "oD"),
             Op::Pop => write!(f, "oP"),
             Op::MakeClosure => write!(f, "oMkC"),
+            Op::CallArity(a) => write!(f, "oC{:}", a),
         }
     }
 }
@@ -445,6 +457,7 @@ impl VM {
             Op::MakeClosure => self
                 .op_make_closure()
                 .context("Executing operation make-closujre")?,
+            Op::CallArity(a) => self.op_call_arity(a).context("Executing operation call-arity")?,
         }
         Ok(())
     }
@@ -467,12 +480,14 @@ impl VM {
             .pop()
             .ok_or_else(|| err_msg("Attempted to pop data stack for jump"))?;
 
-        if let Literal::Address(addr) = a {
-            self.frames.push(addr);
-            Ok(())
-        } else {
-            Err(err_msg("attempted to jump to non-address"))
-        }
+        let addr = match a {
+            Literal::Address(addr) => addr,
+            Literal::Closure(_, addr) => addr,
+            _ => return Err(err_msg("attempted to jump to non-address")),
+        };
+
+        self.frames.push(addr);
+        Ok(())
     }
 
     fn op_jump(&mut self) -> Result<()> {
@@ -579,6 +594,29 @@ impl VM {
             .ok_or_else(|| err_msg("Attempted to pop empty stack"))?
             .ensure_address()?;
         self.stack.push(Literal::Closure(arity as usize, address));
+
+        Ok(())
+    }
+
+    fn op_call_arity(&mut self, a: usize) -> Result<()> {
+        let c = self
+            .stack
+            .pop()
+            .ok_or_else(|| err_msg("Attempted to pop data stack for jump"))?;
+
+        let addr = match c {
+            Literal::Address(addr) => addr,
+            Literal::Closure(_, addr) => addr,
+            _ => return Err(err_msg("attempted to jump to non-address")),
+        };
+
+        if let Literal::Closure(arity, _) = c {
+            if arity != a {
+                return Err(format_err!("Attempted to call closure with arity {:} with argument arity {:}", arity, a))
+            }
+        }
+
+        self.frames.push(addr);
 
         Ok(())
     }
@@ -808,6 +846,48 @@ mod tests {
         vm.op_make_closure().unwrap();
 
         assert_eq!(*vm.stack.last().unwrap(), Literal::Closure(0, (0, 0)));
+    }
+
+    #[test]
+    fn test_op_call_closure() {
+        let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+        vm.op_lit(Literal::Closure(2, (0, 0))).unwrap();
+        vm.op_call().unwrap();
+
+        assert_eq!(*vm.frames.last().unwrap(), (0, 0));
+        assert_eq!(vm.frames.len(), 2)
+    }
+
+    #[test]
+    fn test_op_call_arity() {
+        let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+
+        vm.op_lit(Literal::Closure(2, (0, 0))).unwrap();
+        assert!(vm.op_call_arity(2).is_ok());
+
+        assert_eq!(*vm.frames.last().unwrap(), (0, 0));
+
+
+        let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+
+        vm.op_lit(Literal::Closure(2, (0, 0))).unwrap();
+        assert!(vm.op_call_arity(1).is_err());
+
+
+        let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+
+        vm.op_lit(Literal::Address((0, 0))).unwrap();
+        assert!(vm.op_call_arity(1).is_ok());
+
+        assert_eq!(*vm.frames.last().unwrap(), (0, 0));
+
+
+        let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+
+        vm.op_lit(Literal::Address((0, 0))).unwrap();
+        assert!(vm.op_call_arity(2).is_ok());
+
+        assert_eq!(*vm.frames.last().unwrap(), (0, 0));
     }
 
     #[test]
