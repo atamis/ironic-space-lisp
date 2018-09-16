@@ -229,8 +229,10 @@ impl VM {
                 // TODO: This should only happen when chunk lookup fails
                 // Fix this when real error states are implemented.
                 if let Some(ref f) = self.sys.lookup(pc) {
-                    VM::invoke_syscall(&mut self.stack, f)
-                        .context(format!("Invoking syscall {:?}", pc))?;
+                    VM::invoke_syscall(&mut self.stack, f).context(format!(
+                        "Invoking syscall {:?}, with stack {:?}",
+                        pc, self.frames
+                    ))?;
                     self.frames
                         .pop()
                         .ok_or_else(|| err_msg("Error popping stack after syscall"))?;
