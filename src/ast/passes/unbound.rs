@@ -53,6 +53,12 @@ impl ASTVisitor<()> for KeywordSet {
     }
 
     fn do_expr(&mut self, exprs: &[AST]) -> Result<()> {
+        for a in exprs {
+            if let AST::Def(d) = a {
+                self.insert(d.name.clone());
+            }
+        }
+
         self.multi_visit(exprs)?;
         Ok(())
     }
