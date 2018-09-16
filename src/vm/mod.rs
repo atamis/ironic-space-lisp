@@ -52,6 +52,7 @@ impl VM {
         let mut environment = EnvStack::new();
         let mut sys = syscall::SyscallRegistry::new();
 
+        ingest_environment(&mut sys, &mut environment, &syscall::math::Factory::new());
         ingest_environment(&mut sys, &mut environment, &syscall::list::Factory::new());
         ingest_environment(&mut sys, &mut environment, &syscall::util::Factory::new());
 

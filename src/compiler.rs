@@ -409,6 +409,21 @@ mod tests {
         println!("{:?}", vm);
     }
 
+    #[test]
+    fn test_arity_checking() {
+        let code = lifted_compile("(def test (lambda (x y) (do x y))) (test 1)");
+
+        code.dissassemble();
+
+        let mut vm = VM::new(code);
+
+        let res = vm.step_until_cost(10000);
+
+        println!("{:?}", res);
+
+        assert!(res.is_err())
+    }
+
     #[bench]
     fn bench_toolchain(b: &mut Bencher) {
         use test;
