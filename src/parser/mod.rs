@@ -163,11 +163,25 @@ named!(keyword<CompleteStr, Literal >,
        )
 );
 
+named!(boolean<CompleteStr, Literal>,
+       alt!(
+           value!(Literal::Boolean(true), tag!("#t")) |
+           value!(Literal::Boolean(false), tag!("#f"))
+           //value!(Literal::Boolean(true), tag!("true")) |
+           //value!(Literal::Boolean(true), tag!("false"))
+       )
+);
+
 named_attr!(#[doc = "Raw nom parser for parsing a single untagged expr."], pub expr<CompleteStr, Literal >,
-       alt!(keyword | number |
-            map!(delimited!(tag!("("),
-                            exprs,
-                            tag!(")")),
+       alt!(keyword | number | boolean |
+            map!(alt!(
+                delimited!(tag!("("),
+                           exprs,
+                           tag!(")")) |
+                delimited!(tag!("["),
+                           exprs,
+                           tag!("]"))
+            ),
                  |v| data::list(v))
     )
 );
@@ -241,6 +255,18 @@ mod tests {
         assert_eq!(p("asdf.qwer").unwrap(), k("asdf.qwer"));
 
         assert!(p("1234").is_err())
+    }
+
+    #[test]
+    fn isl_test_boolean() {
+        let p = apper(boolean);
+
+        assert_eq!(p("#t").unwrap(), Literal::Boolean(true));
+        assert_eq!(p("#f").unwrap(), Literal::Boolean(false));
+
+        let p = apper(expr);
+
+        assert_eq!(p("( #t )").unwrap(), list(vec![Literal::Boolean(true)]));
     }
 
     #[test]

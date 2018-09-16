@@ -154,6 +154,7 @@ fn parse_compound(first: &Literal, rest: &Vector<Literal>) -> Result<AST> {
             "let" => parse_let(first, rest).context("Parsing let expr"),
             "do" => parse_do(first, rest).context("Parsing do expr"),
             "lambda" => parse_lambda(first, rest).context("Parsing lambda expr"),
+            "fn" => parse_lambda(first, rest).context("Parsing fn lambda expr"),
             "quote" => parse_quote(first, rest).context("Parsing quoted expr"),
             _ => parse_application(first, rest).context("Parsing application expr"),
         }
