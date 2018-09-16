@@ -26,6 +26,8 @@ impl SyscallFactory for Factory {
             ("first", Syscall::A1(Box::new(car))),
             ("rest", Syscall::A1(Box::new(cdr))),
             ("empty?", Syscall::A1(Box::new(empty))),
+            ("n", Syscall::A2(Box::new(n))),
+            ("append", Syscall::A2(Box::new(append))),
         ])
     }
 }
@@ -65,6 +67,25 @@ fn cdr(a: Literal) -> Result<Literal> {
 
 fn empty(a: Literal) -> Result<Literal> {
     Ok(Literal::Boolean(a.ensure_list()?.is_empty()))
+}
+
+fn n(a: Literal, b: Literal) -> Result<Literal> {
+    let a = a.ensure_number()?;
+    let b = b.ensure_list()?;
+
+    let nth = b
+        .get(a as usize)
+        .ok_or_else(|| format_err!("Index out of bounds {:}", a))?;
+    Ok(nth.clone())
+}
+
+fn append(a: Literal, b: Literal) -> Result<Literal> {
+    let mut a = a.ensure_list()?;
+    let b = b.ensure_list()?;
+
+    a.append(b);
+
+    Ok(Literal::List(a))
 }
 
 #[cfg(test)]
@@ -140,4 +161,53 @@ mod tests {
         assert_eq!(empty(lst).unwrap(), Literal::Boolean(false));
     }
 
+    #[test]
+    fn test_n() {
+        let lst = list(vec![
+            Literal::Number(1),
+            Literal::Number(2),
+            Literal::Number(3),
+        ]);
+
+        assert_eq!(
+            n(Literal::Number(0), lst.clone()).unwrap(),
+            Literal::Number(1)
+        );
+        assert_eq!(
+            n(Literal::Number(1), lst.clone()).unwrap(),
+            Literal::Number(2)
+        );
+        assert_eq!(
+            n(Literal::Number(2), lst.clone()).unwrap(),
+            Literal::Number(3)
+        );
+    }
+
+    #[test]
+    fn test_append() {
+        let lst1 = list(vec![
+            Literal::Number(1),
+            Literal::Number(2),
+            Literal::Number(3),
+        ]);
+
+        let lst2 = list(vec![
+            Literal::Number(4),
+            Literal::Number(5),
+            Literal::Number(6),
+        ]);
+
+        let lst3 = list(vec![
+            Literal::Number(1),
+            Literal::Number(2),
+            Literal::Number(3),
+            Literal::Number(4),
+            Literal::Number(5),
+            Literal::Number(6),
+        ]);
+
+        assert_eq!(append(lst1.clone(), lst2).unwrap(), lst3);
+
+        assert_eq!(append(lst1.clone(), list(vec![])).unwrap(), lst1);
+    }
 }

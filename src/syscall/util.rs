@@ -19,6 +19,9 @@ impl SyscallFactory for Factory {
             ("list?", Syscall::A1(Box::new(list_pred))),
             ("keyword?", Syscall::A1(Box::new(keyword_pred))),
             ("print", Syscall::A1(Box::new(println))),
+            ("or", Syscall::A2(Box::new(or))),
+            ("even?", Syscall::A1(Box::new(even_pred))),
+            ("odd?", Syscall::A1(Box::new(odd_pred))),
         ])
     }
 }
@@ -34,6 +37,18 @@ fn keyword_pred(a: Literal) -> Result<Literal> {
 fn println(a: Literal) -> Result<Literal> {
     println!("{:?}", a);
     Ok(a)
+}
+
+fn or(a: Literal, b: Literal) -> Result<Literal> {
+    Ok(Literal::Boolean(a.ensure_bool()? || b.ensure_bool()?))
+}
+
+fn even_pred(a: Literal) -> Result<Literal> {
+    Ok(Literal::Boolean(a.ensure_number()? % 2 == 0))
+}
+
+fn odd_pred(a: Literal) -> Result<Literal> {
+    Ok(Literal::Boolean(a.ensure_number()? % 2 == 1))
 }
 
 #[cfg(test)]
@@ -56,5 +71,27 @@ mod tests {
     }
 
     #[test]
-    fn test_keyword_pred() {}
+    fn test_keyword_pred() {
+        assert_eq!(
+            keyword_pred(Literal::Keyword("test".to_string())).unwrap(),
+            mytrue()
+        );
+        assert_eq!(keyword_pred(Literal::Number(1)).unwrap(), myfalse());
+    }
+
+    #[test]
+    fn test_or() {
+        assert_eq!(or(mytrue(), mytrue()).unwrap(), mytrue());
+        assert_eq!(or(mytrue(), myfalse()).unwrap(), mytrue());
+        assert_eq!(or(myfalse(), mytrue()).unwrap(), mytrue());
+        assert_eq!(or(myfalse(), myfalse()).unwrap(), myfalse());
+    }
+
+    #[test]
+    fn test_even_odd() {
+        assert_eq!(even_pred(Literal::Number(1)).unwrap(), myfalse());
+        assert_eq!(even_pred(Literal::Number(2)).unwrap(), mytrue());
+        assert_eq!(odd_pred(Literal::Number(1)).unwrap(), mytrue());
+        assert_eq!(odd_pred(Literal::Number(2)).unwrap(), myfalse());
+    }
 }
