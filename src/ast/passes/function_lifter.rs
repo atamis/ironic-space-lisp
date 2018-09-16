@@ -133,7 +133,7 @@ impl ASTVisitor<AST> for FunctionRegistry {
             body: new_body,
         });
 
-        Ok(AST::Value(Literal::Address((i, 0))))
+        Ok(AST::Value(Literal::Closure(args.len(), (i, 0))))
     }
 
     fn var_expr(&mut self, k: &Keyword) -> Result<AST> {
@@ -212,7 +212,7 @@ mod tests {
 
         assert_eq!(
             *last.entry_fn().body,
-            AST::Do(vec![AST::Value(Literal::Address((1, 0)))])
+            AST::Do(vec![AST::Value(Literal::Closure(1, (1, 0)))])
         );
     }
 
@@ -224,7 +224,7 @@ mod tests {
             last.fr.functions[2],
             ASTFunction {
                 args: vec!["x".to_string()],
-                body: Rc::new(AST::Value(Literal::Address((1, 0))))
+                body: Rc::new(AST::Value(Literal::Closure(1, (1, 0))))
             }
         );
 
@@ -238,7 +238,7 @@ mod tests {
 
         assert_eq!(
             *last.entry_fn().body,
-            AST::Do(vec![AST::Value(Literal::Address((2, 0)))])
+            AST::Do(vec![AST::Value(Literal::Closure(1, (2, 0)))])
         );
     }
 }
