@@ -18,6 +18,7 @@ impl SyscallFactory for Factory {
         destatic(vec![
             ("list?", Syscall::A1(Box::new(list_pred))),
             ("keyword?", Syscall::A1(Box::new(keyword_pred))),
+            ("print", Syscall::A1(Box::new(println))),
         ])
     }
 }
@@ -28,6 +29,11 @@ fn list_pred(a: Literal) -> Result<Literal> {
 
 fn keyword_pred(a: Literal) -> Result<Literal> {
     Ok(Literal::Boolean(a.is_keyword()))
+}
+
+fn println(a: Literal) -> Result<Literal> {
+    println!("{:?}", a);
+    Ok(a)
 }
 
 #[cfg(test)]

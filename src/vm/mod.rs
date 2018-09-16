@@ -183,6 +183,7 @@ impl VM {
 
     pub fn import_jump(&mut self, code: &Bytecode) -> Address {
         let a = self.code.import(code);
+        self.frames.clear();
         self.frames.push(a);
         a
     }
