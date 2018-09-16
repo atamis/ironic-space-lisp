@@ -41,6 +41,24 @@ impl Pass {
         }
     }
 
+    fn condify(&mut self, mut terms: Vec<(AST, AST)>) -> Result<AST> {
+        if terms.is_empty() {
+            Ok(AST::Value(Literal::Keyword(
+                "incomplete-cond-use-true".to_string(),
+            )))
+        } else {
+            let (pred, then) = terms
+                .pop()
+                .ok_or_else(|| err_msg("Attempted to pop empty term list, empty check failed"))?;
+            let (pred, then) = (Rc::new(pred), Rc::new(then));
+            Ok(AST::If {
+                pred,
+                then,
+                els: Rc::new(self.condify(terms)?),
+            })
+        }
+    }
+
     // Returns Ok(None) if no expansion happened
     fn expand(&mut self, s: &str, args: &[AST]) -> Result<Option<AST>> {
         match s {
@@ -50,9 +68,38 @@ impl Pass {
                 let new_ast = self.consify(new_args)?;
                 Ok(Some(new_ast))
             }
+            "cond" => {
+                if args.len() % 2 != 0 {
+                    return Err(err_msg(
+                        "Odd number of terms in cond, even number required, (cond pred then...)",
+                    ));
+                }
+
+                let new_args = self.multi_visit(args)?;
+                let mut terms = group_by_2(new_args);
+                terms.reverse();
+
+                Ok(Some(self.condify(terms)?))
+            }
             _ => Ok(None),
         }
     }
+}
+
+// WARN: panics if v.len() % 2 != 0
+fn group_by_2<T>(mut v: Vec<T>) -> Vec<(T, T)> {
+    assert!(v.len() % 2 == 0);
+    let mut out = Vec::with_capacity(v.len() / 2);
+
+    v.reverse();
+
+    while !v.is_empty() {
+        let t = (v.pop().unwrap(), v.pop().unwrap());
+
+        out.push(t);
+    }
+
+    out
 }
 
 impl ASTVisitor<AST> for Pass {
@@ -133,6 +180,10 @@ mod tests {
         pass(&ast)
     }
 
+    fn n(n: u32) -> AST {
+        AST::Value(Literal::Number(n))
+    }
+
     #[test]
     fn test_list() {
         assert_eq!(
@@ -150,5 +201,43 @@ mod tests {
         );
 
         assert_eq!(p("(list)").unwrap(), AST::Value(list(vec![])),)
+    }
+
+    #[test]
+    fn test_group_by_2() {
+        let v = group_by_2(vec![1, 2, 3, 4, 5, 6]);
+        assert_eq!(v, vec![(1, 2), (3, 4), (5, 6)]);
+
+        assert_eq!(group_by_2::<usize>(vec![]), vec![]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_group_by_2_panics1() {
+        group_by_2(vec![1]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_group_by_2_panics2() {
+        group_by_2(vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn test_cond() {
+        assert_eq!(
+            p("(cond 1 2 3 4)").unwrap(),
+            AST::If {
+                pred: Rc::new(n(1)),
+                then: Rc::new(n(2)),
+                els: Rc::new(AST::If {
+                    pred: Rc::new(n(3)),
+                    then: Rc::new(n(4)),
+                    els: Rc::new(AST::Value(Literal::Keyword(
+                        "incomplete-cond-use-true".to_string()
+                    )))
+                })
+            }
+        );
     }
 }
