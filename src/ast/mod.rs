@@ -83,7 +83,7 @@ pub trait ASTVisitor<R> {
             .map(|(i, ast)| {
                 let a = self
                     .visit(ast)
-                    .context(format!("While parsing do expression {:}", i))?;
+                    .context(format!("While parsing multi expression {:}", i))?;
                 Ok(a)
             }).collect::<Result<_>>()?;
 

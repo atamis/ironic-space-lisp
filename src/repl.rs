@@ -2,7 +2,7 @@ use rustyline::error::ReadlineError;
 use rustyline::Editor;
 
 use ast::passes::function_lifter;
-use ast::passes::list;
+use ast::passes::internal_macro;
 use ast::passes::unbound;
 use compiler;
 use data;
@@ -58,7 +58,7 @@ pub fn repl() {
 pub fn eval(vm: &mut vm::VM, s: &str) -> Result<Option<data::Literal>> {
     let ast = str_to_ast(&s)?;
 
-    let ast = list::pass(&ast)?;
+    let ast = internal_macro::pass(&ast)?;
 
     unbound::pass(&ast, vm.environment.peek()?).context("Unbound pass in repl")?;
 

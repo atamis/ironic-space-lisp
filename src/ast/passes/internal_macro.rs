@@ -13,14 +13,14 @@ use errors::*;
 use std::rc::Rc;
 
 pub fn pass(a: &AST) -> Result<AST> {
-    let mut lp = ListPass {};
+    let mut lp = Pass {};
 
     lp.visit(a)
 }
 
-struct ListPass;
+struct Pass;
 
-impl ListPass {
+impl Pass {
     fn visit_def(&mut self, d: &Def) -> Result<Def> {
         Ok(Def {
             name: d.name.clone(),
@@ -40,9 +40,22 @@ impl ListPass {
             })
         }
     }
+
+    // Returns Ok(None) if no expansion happened
+    fn expand(&mut self, s: &str, args: &[AST]) -> Result<Option<AST>> {
+        match s {
+            "list" => {
+                let mut new_args = self.multi_visit(args)?;
+                new_args.reverse();
+                let new_ast = self.consify(new_args)?;
+                Ok(Some(new_ast))
+            }
+            _ => Ok(None),
+        }
+    }
 }
 
-impl ASTVisitor<AST> for ListPass {
+impl ASTVisitor<AST> for Pass {
     fn value_expr(&mut self, l: &Literal) -> Result<AST> {
         Ok(AST::Value(l.clone()))
     }
@@ -89,14 +102,14 @@ impl ASTVisitor<AST> for ListPass {
     }
 
     fn application_expr(&mut self, f: &Rc<AST>, args: &[AST]) -> Result<AST> {
-        let mut new_args: Vec<AST> = args.iter().map(|e| self.visit(e)).collect::<Result<_>>()?;
-
         if let AST::Var(ref s) = **f {
-            if s == "list" {
-                new_args.reverse();
-                return self.consify(new_args);
+            if let Some(ast) = self.expand(s, args)? {
+                return Ok(ast);
             }
         }
+
+        let new_args = self.multi_visit(args)?;
+
         Ok(AST::Application {
             f: Rc::new(self.visit(f)?),
             args: new_args,

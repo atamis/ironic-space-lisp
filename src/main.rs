@@ -28,7 +28,7 @@ fn exec(content: &str) -> Result<()> {
     {
         use ironic_space_lisp::ast;
         use ironic_space_lisp::ast::passes::function_lifter;
-        use ironic_space_lisp::ast::passes::list;
+        use ironic_space_lisp::ast::passes::internal_macro;
         use ironic_space_lisp::ast::passes::unbound;
         use ironic_space_lisp::compiler;
         use ironic_space_lisp::parser;
@@ -41,7 +41,7 @@ fn exec(content: &str) -> Result<()> {
 
         let ast = ast::parse_multi(&lits).context("While ast parsing literals")?;
 
-        let ast = list::pass(&ast)?;
+        let ast = internal_macro::pass(&ast)?;
 
         unbound::pass(&ast, vm.environment.peek()?)?;
 
@@ -71,7 +71,7 @@ fn inspect(content: &str) -> Result<()> {
     {
         use ironic_space_lisp::ast;
         use ironic_space_lisp::ast::passes::function_lifter;
-        use ironic_space_lisp::ast::passes::list;
+        use ironic_space_lisp::ast::passes::internal_macro;
         use ironic_space_lisp::ast::passes::unbound;
         use ironic_space_lisp::compiler;
         use ironic_space_lisp::parser;
@@ -90,7 +90,7 @@ fn inspect(content: &str) -> Result<()> {
 
         println!("AST: {:#?}", ast);
 
-        let list_ast = list::pass(&ast)?;
+        let list_ast = internal_macro::pass(&ast)?;
 
         println!("Applying list pass, ASTs equal? {:}", list_ast == ast);
 
