@@ -85,4 +85,51 @@ impl Literal {
             Err(format_err!("Type error, expected list, got {:?}", self))
         }
     }
+
+    // TODO: I think this might be accidentally quadratic
+    // Non-quadratic might not be possible unless it's restricted to
+    // finding single values rather than complex data structures.
+    pub fn contains(&self, p: &Literal) -> bool {
+        self == p || {
+            if let Literal::List(l) = self {
+                l.iter().any(|prime| prime.contains(p))
+            } else {
+                false
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_contains() {
+        assert!(Literal::Number(1).contains(&Literal::Number(1)));
+        assert!(!Literal::Number(1).contains(&Literal::Number(2)));
+
+        assert!(list(vec![Literal::Number(1)]).contains(&Literal::Number(1)));
+        assert!(
+            list(vec![
+                Literal::Keyword("test".to_string()),
+                Literal::Number(1)
+            ]).contains(&Literal::Number(1))
+        );
+
+        assert!(
+            !list(vec![list(vec![list(vec![list(vec![list(vec![])])])])])
+                .contains(&Literal::Number(1))
+        );
+        assert!(
+            list(vec![list(vec![list(vec![list(vec![list(vec![
+                Literal::Number(1)
+            ])])])])]).contains(&Literal::Number(1))
+        );
+
+        assert!(
+            list(vec![Literal::Keyword("test".to_string())])
+                .contains(&Literal::Keyword("test".to_string()))
+        )
+    }
 }

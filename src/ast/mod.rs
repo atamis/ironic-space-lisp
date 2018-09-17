@@ -156,6 +156,7 @@ fn parse_compound(first: &Literal, rest: &Vector<Literal>) -> Result<AST> {
             "lambda" => parse_lambda(first, rest).context("Parsing lambda expr"),
             "fn" => parse_lambda(first, rest).context("Parsing fn lambda expr"),
             "quote" => parse_quote(first, rest).context("Parsing quoted expr"),
+            "quasiquote" => parse_quasiquote(first, rest).context("Parsing quasiquoted expr"),
             _ => parse_application(first, rest).context("Parsing application expr"),
         }
     } else {
@@ -298,6 +299,39 @@ fn parse_quote(_first: &Literal, rest: &Vector<Literal>) -> Result<AST> {
     } else {
         Ok(AST::Value(rest[0].clone()))
     }
+}
+
+fn parse_quasiquote(_first: &Literal, rest: &Vector<Literal>) -> Result<AST> {
+    if rest.len() != 1 {
+        return Err(err_msg(
+            "Additional arguments to quasiquote, (quasiquote lit)",
+        ));
+    }
+
+    Ok(dynamic_quasiquote(&rest[0]).context("While parsing quasiquote")?)
+}
+
+fn dynamic_quasiquote(a: &Literal) -> Result<AST> {
+    let uq = Literal::Keyword("unquote".to_string());
+    // Is dynamic structure necessary
+    if a.contains(&uq) {
+        if let Literal::List(l) = a {
+            if l.len() == 2 && l[0] == uq {
+                // Parse unquoted stuff. This should remove the unquote "call"
+                let tree = parse(&l[1]).context("While parsing unquote")?;
+                return Ok(tree);
+            }
+
+            // Dynamically build the list at runtime.
+            return Ok(AST::Application {
+                f: Rc::new(AST::Var("list".to_string())),
+                args: l.iter().map(dynamic_quasiquote).collect::<Result<_>>()?,
+            });
+        }
+    }
+
+    // No? act like (quote x)
+    Ok(AST::Value(a.clone()))
 }
 
 fn parse_application(first: &Literal, rest: &Vector<Literal>) -> Result<AST> {
@@ -560,5 +594,22 @@ mod tests {
         let p1 = ps("'1").unwrap();
 
         assert_eq!(p1, AST::Value(Literal::Number(1)));
+    }
+
+    #[test]
+    fn test_quasiquote() {
+        let p1 = ps("`1").unwrap();
+
+        assert_eq!(ps("`1").unwrap(), AST::Value(Literal::Number(1)));
+
+        assert_eq!(
+            ps("`(test asdf ,(+ 1 2 3))").unwrap(),
+            ps("(list 'test 'asdf (+ 1 2 3))").unwrap()
+        );
+
+        assert_eq!(
+            ps("`(test asdf ,x)").unwrap(),
+            ps("(list 'test 'asdf x)").unwrap()
+        );
     }
 }

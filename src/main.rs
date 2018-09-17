@@ -92,7 +92,7 @@ fn inspect(content: &str) -> Result<()> {
 
         let list_ast = internal_macro::pass(&ast)?;
 
-        println!("Applying list pass, ASTs equal? {:}", list_ast == ast);
+        println!("Applying macro pass, ASTs equal? {:}", list_ast == ast);
 
         let ast = list_ast;
 

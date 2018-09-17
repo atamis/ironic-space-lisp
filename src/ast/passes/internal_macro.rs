@@ -1,6 +1,9 @@
-//! Convert variadic list applications to static arity cons applications
+//! Apply several internal macros to the AST.
 //!
-//! This should be called before `unbound` because the converts `list`, which
+//! Converts variadic list applications to static arity cons applications.
+//! Also converts cond to nested ifs.
+//!
+//! This should be called before `unbound` because it converts `list`, which
 //! has no binding, to `cons`, which is a syscall.
 
 use ast::ASTVisitor;
