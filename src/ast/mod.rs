@@ -61,7 +61,7 @@ pub trait ASTVisitor<R> {
                 self.if_expr(pred, then, els).context("Visiting if expr")
             }
             AST::Def(def) => self.def_expr(def).context("Visiting def expr"),
-            AST::Let { defs, body } => self.let_expr(defs, body).context("Fixing let expr"),
+            AST::Let { defs, body } => self.let_expr(defs, body).context("Visiting let expr"),
             AST::Do(asts) => self.do_expr(asts).context("Visiting do expr"),
             AST::Lambda { args, body } => {
                 self.lambda_expr(args, body).context("Visiting lambda expr")

@@ -30,9 +30,9 @@ impl ASTVisitor<()> for KeywordSet {
     }
 
     fn if_expr(&mut self, pred: &Rc<AST>, then: &Rc<AST>, els: &Rc<AST>) -> Result<()> {
-        self.visit(pred)?;
-        self.visit(then)?;
-        self.visit(els)?;
+        self.visit(pred).context("Visiting predicate")?;
+        self.visit(then).context("Vising then arm")?;
+        self.visit(els).context("Vising else arm")?;
         Ok(())
     }
 
