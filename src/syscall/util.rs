@@ -20,8 +20,10 @@ impl SyscallFactory for Factory {
             ("keyword?", Syscall::A1(Box::new(keyword_pred))),
             ("print", Syscall::A1(Box::new(println))),
             ("or", Syscall::A2(Box::new(or))),
+            ("and", Syscall::A2(Box::new(and))),
             ("even?", Syscall::A1(Box::new(even_pred))),
             ("odd?", Syscall::A1(Box::new(odd_pred))),
+            ("error", Syscall::A1(Box::new(vm_error))),
         ])
     }
 }
@@ -43,12 +45,20 @@ fn or(a: Literal, b: Literal) -> Result<Literal> {
     Ok(Literal::Boolean(a.ensure_bool()? || b.ensure_bool()?))
 }
 
+fn and(a: Literal, b: Literal) -> Result<Literal> {
+    Ok(Literal::Boolean(a.ensure_bool()? && b.ensure_bool()?))
+}
+
 fn even_pred(a: Literal) -> Result<Literal> {
     Ok(Literal::Boolean(a.ensure_number()? % 2 == 0))
 }
 
 fn odd_pred(a: Literal) -> Result<Literal> {
     Ok(Literal::Boolean(a.ensure_number()? % 2 == 1))
+}
+
+fn vm_error(a: Literal) -> Result<Literal> {
+    Err(format_err!("Runtime error: {:?}", a))
 }
 
 #[cfg(test)]

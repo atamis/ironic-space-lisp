@@ -1,7 +1,7 @@
 (def assoc
      (lambda (id lst)
        (if (empty? lst)
-           'none
+           (error `(assoc not found ,id))
            (let (pair (car lst)
                       key (car pair))
              (if (= key id)
@@ -36,7 +36,7 @@
         '()
         (cons (list (car a) (car b)) (zip (cdr a) (cdr b)))
         )
-      'error-zip-lists-uneven
+      (error 'error-zip-lists-uneven)
       )
     )
   )
@@ -107,6 +107,13 @@
     )
   )
 
+(def all
+  (fn (f lst)
+    (if (empty? lst)
+      #t
+      (and (f (car lst)) (all f (cdr lst)))
+      ))
+  )
 
 (def ret
   (fn (val env)
@@ -188,11 +195,22 @@
                                                 (make-func args env body)
                                                 env))
                        (= name 'let) (let [bindings (car r)
+                                           body (n 1 r)
                                            names (filter-index (fn (a idx) (even? idx)) bindings)
                                            values (filter-index (fn (a idx) (odd? idx)) bindings)]
                                        (if (= (len names) (len values))
-                                         'good
-                                         'error-uneven-bindings-in-let
+                                         (if (all keyword? names)
+                                           (let [vals-r (map-eval values env)
+                                                 new-env (append (zip names (ret-v vals-r)) (ret-e vals-r))
+                                                 body-r (eval
+                                                         body
+                                                         new-env
+                                                         )
+                                                 ]
+                                             (ret (ret-v body-r) env)
+                                             )
+                                           (error 'error-binding-names-arent-keywords))
+                                         (error 'error-uneven-bindings-in-let)
                                          )
                                        )
                        #t (let [vs-r (map-eval expr env)
@@ -207,7 +225,6 @@
       (keyword? expr) (ret (assoc expr env) env)
       #t (ret expr env)
       )))
-
 
 (print (filter-index (fn (a idx) (odd? idx)) '(a b c d e f g h)))
 
@@ -226,5 +243,7 @@
 (print (zip '(a b c) '(1 2 3)))
 
 (test '((fn (x) (+ 1 x)) 1) '())
+
+(test '(let (x 1 y 2) (+ x y)) '())
 
 'done
