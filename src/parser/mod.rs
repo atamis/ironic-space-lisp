@@ -58,7 +58,7 @@
 //! assert_eq!(parse("`keyword").unwrap(),
 //!            parse("(quasiquote keyword)").unwrap());
 //!
-//! assert_eq!(parse("`(+ 1 2 ,x)`").unwrap(),
+//! assert_eq!(parse("`(+ 1 2 ,x)").unwrap(),
 //!            parse("(quasiquote (+ 1 2 (unquote x)))").unwrap());
 //! ```
 //!
@@ -100,7 +100,20 @@ impl Parser {
 
 /// Parses a string to a vector of `data::Literal`s.
 pub fn parse(input: &str) -> Result<Vec<data::Literal>> {
-    unwr(exprs(CompleteStr(input)))
+    let mut input = CompleteStr(input);
+    let mut lits = vec![];
+
+    while input != CompleteStr("") {
+        match tagged_expr(input) {
+            Ok((rem, l)) => {
+                lits.push(l);
+                input = rem;
+            }
+            e => return Err(format_err!("Parse error: {:?}", e)),
+        }
+    }
+
+    Ok(lits)
 }
 
 fn cstr(s: &str) -> CompleteStr {
@@ -187,6 +200,7 @@ named_attr!(#[doc = "Raw nom parser for parsing a single untagged expr."], pub e
 );
 
 named_attr!(#[doc = "Raw nom parser for parsing single tagged exprs."], pub tagged_expr<CompleteStr, Literal>,
+            ws!(
       do_parse!(
           tag: opt!(alt!(tag!("'") | tag!("`") | tag!(","))) >>
               expr: expr >>
@@ -206,11 +220,12 @@ named_attr!(#[doc = "Raw nom parser for parsing single tagged exprs."], pub tagg
                   }
               })
       )
+                    )
 );
 
 named_attr!(
     #[doc = "Raw nom parser for parsing mulitple exprs."],
-    pub exprs<CompleteStr, Vec<Literal> >, many0!(complete!(ws!(tagged_expr))));
+    pub exprs<CompleteStr, Vec<Literal> >, complete!(ws!(many0!(complete!(tagged_expr)))));
 
 #[cfg(test)]
 mod tests {
