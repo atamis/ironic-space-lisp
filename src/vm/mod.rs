@@ -1,5 +1,6 @@
 //! Bytecode definition and VM for bytecode execution.
 
+mod builder;
 pub mod bytecode;
 pub mod op;
 
@@ -7,6 +8,8 @@ pub mod op;
 mod tests;
 
 use std::rc::Rc;
+
+pub use self::builder::Builder;
 
 use data;
 use data::Address;
