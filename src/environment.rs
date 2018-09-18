@@ -13,7 +13,6 @@ use errors::*;
 /// but this isn't necessary.
 pub type Env = HashMap<String, Rc<data::Literal>>;
 
-
 /// Represents multiple nested environment bindings.
 #[derive(Debug, Default)]
 pub struct EnvStack {

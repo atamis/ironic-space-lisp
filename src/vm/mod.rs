@@ -91,7 +91,7 @@ impl VM {
 
     /// Step until a "top-level" return, which is when the frame stack is empty.
     /// At this point, the stack is popped and returned. A failure to pop a value
-    /// is treated as an error state. Propagates errors from [`single_step()`]. If
+    /// is treated as an error state. Propagates errors from [`VM::single_step()`]. If
     /// `print` is `true`, print the VM state on every state.
     pub fn step_until_value(&mut self, print: bool) -> Result<data::Literal> {
         loop {
@@ -111,7 +111,7 @@ impl VM {
     }
 
     /// Step until a resource is consumed. Each operation executed decrements a counter
-    /// initially set to `max`. As with `step_until_value`, the lack of a return value
+    /// initially set to `max`. As with [`VM::step_until_value()`], the lack of a return value
     /// is treated as an error.
     ///
     /// Returns `Err` if an error is encountered
@@ -183,7 +183,6 @@ impl VM {
         self.stack = vec![];
         self.frames = vec![(0, 0)];
     }
-
 
     /// Imports new code into the VM's [`Bytecode`] repo, jumps to the main
     /// function of the new code, and returns that address.
@@ -258,7 +257,7 @@ impl VM {
     }
 
     /// Execute a single operation, ignoring any already loaded code and ignoring the
-    /// program counter. See [ `single_step()` ] for more details.
+    /// program counter. See [`VM::single_step()`] for more details.
     pub fn exec_op(&mut self, op: Op) -> Result<()> {
         // https://users.rust-lang.org/t/announcing-failure/13895/18
         match op {
