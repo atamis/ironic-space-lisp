@@ -1,12 +1,25 @@
 (def assoc
-     (lambda (id lst)
-       (if (empty? lst)
-           (error `(assoc not found ,id))
-           (let (pair (car lst)
-                      key (car pair))
-             (if (= key id)
-                 (car (cdr pair))
-                 (assoc id (cdr lst)))))))
+  (fn (id lst)
+    (if (empty? lst)
+      (error `(assoc-not-found ,id))
+      (let (pair (car lst)
+                 key (car pair))
+        (if (= key id)
+          (car (cdr pair))
+          (assoc id (cdr lst)))))))
+
+(def assoc-contains?
+  (fn (id lst)
+    (if (empty? lst)
+      #f
+      (let (pair (car lst)
+                 key (car pair))
+        (if (= key id)
+          #t
+          (assoc-contains? id (cdr lst))))
+      )
+    )
+  )
 
 (def foldl
      (lambda (f init lst)
@@ -218,7 +231,7 @@
                                 args (cdr (ret-v vs-r))]
                             (if (func? f)
                               (eval (func-body f) (append (zip (func-args f) args) (func-env f)))
-                              'cannot-apply-nonfunc
+                              (error `(error-cannot-apply-nonfunc ,f))
                               )
                             )
                        ))
