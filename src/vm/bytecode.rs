@@ -59,7 +59,7 @@ impl Bytecode {
         let op = chunk
             .ops
             .get(a.1)
-            .ok_or_else(|| err_msg("Invalid operation address"))?;
+            .ok_or_else(|| format_err!("Invalid operation address: {:?}", a))?;
         Ok(op.clone())
     }
 
@@ -85,6 +85,9 @@ impl Bytecode {
                     .map(|op| match op {
                         Op::Lit(Literal::Address((a1, a2))) => {
                             Op::Lit(Literal::Address((a1 + new_chunk_idx, *a2)))
+                        }
+                        Op::Lit(Literal::Closure(arity, (a1, a2))) => {
+                            Op::Lit(Literal::Closure(*arity, ((a1 + new_chunk_idx), *a2)))
                         }
                         x => x.clone(),
                     }).collect(),
