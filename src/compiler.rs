@@ -1,4 +1,4 @@
-//! Compile `AST`s to `Bytecode`.
+//! Compile [`AST`]s to [`Bytecode`].
 use std::rc::Rc;
 
 use ast::passes::function_lifter;
@@ -12,14 +12,16 @@ use vm::bytecode::Bytecode;
 use vm::bytecode::Chunk;
 use vm::op::Op;
 
+/// A vector of [`IrOp`]s.
 pub type IrChunk = Vec<IrOp>;
+/// Alias for an [`IrChunk`] reference.
 pub type IrChunkSlice<'a> = &'a [IrOp];
 
 /// Intermediate operation representation.
 ///
-/// As an intermediate representation, it's largely flat, except for `JumpCond`, which
+/// As an intermediate representation, it's largely flat, except for [`IrOp::JumpCond`], which
 /// represents its potential jump targets as pointers to other IrChunks. Functions
-/// are handled by `ast::passes::function_lifter` and `pack_compile_lifted` rather
+/// are handled by [`function_lifter`] and [`pack_compile_lifted()`] rather
 /// represented in IrOp.
 #[derive(Debug, PartialEq)]
 pub enum IrOp {
@@ -43,7 +45,7 @@ pub enum IrOp {
 
 /// Empty struct that implements `ASTVisitor<IrChunk>`.
 ///
-/// See `ASTVisitor<IrChunk>` and `ast::ASTVisitor` for information.
+/// See `ASTVisitor<IrChunk>` and [`ASTVisitor`] for information.
 pub struct Compiler;
 
 impl Compiler {
@@ -145,7 +147,7 @@ impl ASTVisitor<IrChunk> for Compiler {
     }
 }
 
-/// Compiles a raw `AST` into n IrChunk. See `Compiler` for implementation.
+/// Compiles a raw [ `AST` ] into an [ `IrChunk` ]. See [ `Compiler` ] for implementation.
 pub fn compile(a: &AST) -> Result<IrChunk> {
     let mut c = Compiler {};
     c.visit(a)
@@ -159,7 +161,7 @@ fn alloc_chunk(code: &mut Bytecode) -> usize {
     idx
 }
 
-/// Compile and pack a `LiftedAST` into a new bytecode.
+/// Compile and pack a [`LiftedAST`](function_lifter::LiftedAST) into a new bytecode.
 pub fn pack_compile_lifted(last: &function_lifter::LiftedAST) -> Result<Bytecode> {
     let mut code = Bytecode::new(vec![]);
 
@@ -214,6 +216,7 @@ pub fn pack_compile_lifted(last: &function_lifter::LiftedAST) -> Result<Bytecode
     Ok(code)
 }
 
+// This doesn't really work.
 fn tail_call_optimization(chunk: &mut IrChunk) {
     let len = chunk.len();
     if len >= 3
@@ -226,7 +229,7 @@ fn tail_call_optimization(chunk: &mut IrChunk) {
     }
 }
 
-/// Pack an `IrChunk` into a new `Bytecode` and return it.
+/// Pack an [ `IrChunk` ] into a new [ `Bytecode` ] and return it.
 pub fn pack_start(ir: IrChunkSlice) -> Result<Bytecode> {
     let mut code = Bytecode::new(vec![vec![]]);
 
@@ -245,7 +248,7 @@ pub fn pack_start(ir: IrChunkSlice) -> Result<Bytecode> {
     Ok(code)
 }
 
-/// Pack an `IrChunk` into bytecode at a particular chunk and op index. Returns ending op index.
+/// Pack an [ `IrChunk` ] into bytecode at a particular chunk and op index. Returns ending op index.
 pub fn pack(
     ir: IrChunkSlice,
     code: &mut Bytecode,

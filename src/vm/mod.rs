@@ -22,10 +22,13 @@ use vm::op::Op;
 /// Keeps track of data stack, frame stack, environment stack, and the code.
 #[derive(Debug)]
 pub struct VM {
+    /// The live code repo.
     pub code: Bytecode,
     frames: Vec<data::Address>,
+    /// The data stack
     pub stack: Vec<data::Literal>,
     sys: syscall::SyscallRegistry,
+    /// The current local environment bindings.
     pub environment: EnvStack,
 }
 
@@ -88,7 +91,7 @@ impl VM {
 
     /// Step until a "top-level" return, which is when the frame stack is empty.
     /// At this point, the stack is popped and returned. A failure to pop a value
-    /// is treated as an error state. Propagates errors from `single_step`. If
+    /// is treated as an error state. Propagates errors from [`single_step()`]. If
     /// `print` is `true`, print the VM state on every state.
     pub fn step_until_value(&mut self, print: bool) -> Result<data::Literal> {
         loop {
@@ -181,6 +184,11 @@ impl VM {
         self.frames = vec![(0, 0)];
     }
 
+
+    /// Imports new code into the VM's [`Bytecode`] repo, jumps to the main
+    /// function of the new code, and returns that address.
+    ///
+    /// This clears the frame stack, and shouldn't be used mid-execution.
     pub fn import_jump(&mut self, code: &Bytecode) -> Address {
         let a = self.code.import(code);
         self.frames.clear();
@@ -218,7 +226,7 @@ impl VM {
     /// or `Ok(())` if it was successful. No particular attempt has been made to make
     /// `Err`s survivable, but no particular attempt has been made to prevent further
     /// execution. No attempt has been made to attempt to maintain operation arity in
-    /// error states. See `fn op_*` for raw implementations, an the documentation for `Op`
+    /// error states. See `fn op_*` for raw implementations, and see  [ `Op` ]
     /// for high level descriptions of the operations.
     pub fn single_step(&mut self) -> Result<()> {
         let pc = self.pcounter()?;
@@ -250,7 +258,7 @@ impl VM {
     }
 
     /// Execute a single operation, ignoring any already loaded code and ignoring the
-    /// program counter. See `single_step` for more details.
+    /// program counter. See [ `single_step()` ] for more details.
     pub fn exec_op(&mut self, op: Op) -> Result<()> {
         // https://users.rust-lang.org/t/announcing-failure/13895/18
         match op {

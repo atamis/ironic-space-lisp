@@ -1,3 +1,6 @@
+//! Holds general utility syscalls.
+//!
+//! Registers syscalls `list?, keyword?, print, or, and, even?, odd?, error`
 use data::Literal;
 use errors::*;
 use syscall::destatic;

@@ -1,11 +1,20 @@
+//! Runtime environments
+//!
+//! This leverages immutable [`HashMap`]s from the [`im`](im) crate.
 use im::hashmap::HashMap;
 use std::rc::Rc;
 
 use data;
 use errors::*;
 
+/// Represents runtime variable bindings.
+///
+/// Currently maintaints [`Rc`] pointers to the [`Literal`](data::Literal),
+/// but this isn't necessary.
 pub type Env = HashMap<String, Rc<data::Literal>>;
 
+
+/// Represents multiple nested environment bindings.
 #[derive(Debug, Default)]
 pub struct EnvStack {
     envs: Vec<Env>,
@@ -18,6 +27,7 @@ impl EnvStack {
         }
     }
 
+    /// Insert a new `(k, v)` pair into the top environment.
     pub fn insert(&mut self, k: String, v: Rc<data::Literal>) -> Result<()> {
         self.envs
             .last_mut()
@@ -31,6 +41,7 @@ impl EnvStack {
         self.insert(k.to_string(), Rc::new(v))
     }
 
+    /// Get the value associated with a key. Returns `Err()` if not found.
     pub fn get(&self, k: &str) -> Result<Rc<data::Literal>> {
         match self.peek()?.get(k) {
             Some(r) => Ok(Rc::clone(r)),
@@ -38,10 +49,12 @@ impl EnvStack {
         }
     }
 
+    /// Peek the top [`Env`] from the stack.
     pub fn peek(&self) -> Result<&Env> {
         self.envs.last().ok_or_else(|| err_msg("Env stack empty"))
     }
 
+    /// Push a new local binding environment to the environment stack.
     pub fn push(&mut self) {
         let n = match self.envs.last() {
             Some(e) => e.clone(),
@@ -51,6 +64,7 @@ impl EnvStack {
         self.envs.push(n);
     }
 
+    /// Pop the top environment, forgetting those local bindings.
     pub fn pop(&mut self) -> Result<()> {
         self.envs
             .pop()

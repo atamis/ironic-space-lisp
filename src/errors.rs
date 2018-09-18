@@ -1,3 +1,6 @@
+//! Error handling code
+//!
+//! Currently reexports some [ `failure` ] types, and `Result<T>` type like `error_chain` used.
 use failure;
 #[allow(unused_imports)]
 use failure::Error;
@@ -5,6 +8,7 @@ use failure::Error;
 pub use failure::err_msg;
 pub use failure::ResultExt;
 
+/// Result for user facing errors.
 pub type Result<T> = failure::_core::prelude::v1::Result<T, Error>;
 
 /*#[derive(Debug, Fail)]

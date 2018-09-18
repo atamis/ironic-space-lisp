@@ -1,10 +1,10 @@
-//! AST definition, AST parser, and the `ASTVisitor` utility trait.
+//! [`AST`] definition, AST parser, and the [`ASTVisitor`] utility trait.
 //!
 //! This AST specifies some special forms. The construction of the
-//! `data::Literal` values makes matching them properly difficulty,
+//! [`Literal`] values makes matching them properly difficulty,
 //! and providing meaningful errors harder. This simplifies the
 //! error reporting, an offers an easy way of traversing the AST,
-//! the `ASTVisitor` trait.
+//! the [`ASTVisitor`] trait.
 
 use im::vector::Vector;
 use std::rc::Rc;
@@ -124,7 +124,7 @@ pub fn parse_multi(exprs: &[Literal]) -> Result<AST> {
     }
 }
 
-/// Parse raw sexprs (`data::Literal`) into an AST.
+/// Parse raw sexprs ([`Literal`]) into an AST.
 pub fn parse(e: &Literal) -> Result<AST> {
     match e {
         Literal::List(ref vec) => {
@@ -200,7 +200,8 @@ fn parse_if(_first: &Literal, rest: &Vector<Literal>) -> Result<AST> {
         return Err(err_msg("malformed if expr, (if pred then else)"));
     }
 
-    let mut asts: Vec<Rc<AST>> = rest.iter()
+    let mut asts: Vec<Rc<AST>> = rest
+        .iter()
         .map(|l| parse(l))
         .collect::<Result<Vec<AST>>>()? // make sure there are no parse errors
         .into_iter()
@@ -598,8 +599,6 @@ mod tests {
 
     #[test]
     fn test_quasiquote() {
-        let p1 = ps("`1").unwrap();
-
         assert_eq!(ps("`1").unwrap(), AST::Value(Literal::Number(1)));
 
         assert_eq!(
