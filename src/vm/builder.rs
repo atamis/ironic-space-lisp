@@ -35,6 +35,15 @@ impl Builder {
         self.sys_facts.push(fact);
         self
     }
+
+    pub fn default_libs(&mut self) -> &mut Builder {
+        self.syscalls(Box::new(syscall::math::Factory::new()));
+        self.syscalls(Box::new(syscall::list::Factory::new()));
+        self.syscalls(Box::new(syscall::util::Factory::new()));
+
+        self
+    }
+
     pub fn env(&mut self, k: Keyword, v: Literal) -> &mut Builder {
         self.env.push((k, v));
         self
@@ -74,8 +83,11 @@ impl Builder {
 fn build_entry_chunk(entries: Vec<Address>) -> Chunk {
     let mut ops = Vec::with_capacity(entries.len() * 3 + 1);
 
-    for a in entries {
-        ops.append(&mut vec![Op::Lit(Literal::Address(a)), Op::Call, Op::Pop])
+    for (idx, a) in entries.iter().enumerate() {
+        ops.append(&mut vec![Op::Lit(Literal::Address(*a)), Op::Call]);
+        if idx < entries.len() - 1 {
+            ops.push(Op::Pop);
+        }
     }
 
     ops.push(Op::Return);

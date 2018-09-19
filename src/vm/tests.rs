@@ -281,7 +281,6 @@ fn test_step_until() {
 
     let mut empty = VM::new(Bytecode::new(vec![vec![]]));
     assert!(ret.step_until_value(false).is_err());
-    assert!(empty.single_step().is_err());
 }
 
 #[test]
@@ -350,9 +349,9 @@ fn bench_nested_envs(b: &mut Bencher) {
 
     let code = pack_start(&ir).unwrap();
 
-    code.dissassemble();
-
     let mut vm = VM::new(code);
+
+    vm.step_until_cost(10000).unwrap().unwrap();
 
     b.iter(|| {
         vm.frames.push((0, 0));

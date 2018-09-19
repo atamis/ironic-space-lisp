@@ -55,20 +55,11 @@ fn ingest_environment(
 impl VM {
     /// Create a VM loaded with the provided code. Program counter is initially `(0, 0)`.
     pub fn new(code: Bytecode) -> VM {
-        let mut environment = EnvStack::new();
-        let mut sys = syscall::SyscallRegistry::new();
+        let mut b = Builder::new();
 
-        ingest_environment(&mut sys, &mut environment, &syscall::math::Factory::new());
-        ingest_environment(&mut sys, &mut environment, &syscall::list::Factory::new());
-        ingest_environment(&mut sys, &mut environment, &syscall::util::Factory::new());
+        b.code(code).default_libs();
 
-        VM {
-            code,
-            sys,
-            environment,
-            frames: vec![(0, 0)],
-            stack: vec![],
-        }
+        return b.build();
     }
 
     fn pcounter(&mut self) -> Result<Address> {

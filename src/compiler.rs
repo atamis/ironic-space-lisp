@@ -363,6 +363,8 @@ mod tests {
 
         let mut vm = VM::new(code);
 
+        vm.code.dissassemble();
+
         assert_eq!(vm.step_until_cost(10000).unwrap(), Some(Literal::Number(5)));
     }
 
