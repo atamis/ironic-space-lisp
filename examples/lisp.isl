@@ -98,6 +98,12 @@
   )
 
 
+(def filter-index
+  (fn (f lst)
+    (filter-index-internal f lst 0)
+    )
+  )
+
 (def filter-index-internal
   (fn (f lst n)
     (if (empty? lst)
@@ -114,12 +120,6 @@
     )
   )
 
-(def filter-index
-  (fn (f lst)
-    (filter-index-internal f lst 0)
-    )
-  )
-
 (def all
   (fn (f lst)
     (if (empty? lst)
@@ -127,6 +127,18 @@
       (and (f (car lst)) (all f (cdr lst)))
       ))
   )
+
+
+(def contains?
+  (fn (lst a)
+    (if (empty? lst)
+      #f
+      (if (= a (car lst))
+        #t
+        (contains? (cdr lst) a))
+      )
+    ))
+
 
 (def ret
   (fn (val env)
@@ -180,6 +192,29 @@
     )
   )
 
+(def is-syscall?
+  (fn (sys)
+    (contains? '(print empty? car cdr odd? cons print list) sys)))
+
+(def syscall-invoke
+  (fn (sys args)
+    (let [a0 (n 0 args)]
+      (cond
+        (= sys 'empty?) (empty? a0)
+        (= sys 'car) (car a0)
+        (= sys 'cdr) (cdr a0)
+        (= sys 'odd?) (odd? a0)
+        (= sys 'print) (print a0)
+        #t (if (= (len args) 1)
+             (error `(syscall-not-found ,sys ,args))
+             (let [a1 (n 1 args)]
+               (cond
+                 (= sys 'cons) (cons a0 a1)
+                 #t (error `(syscall-not-found ,sys ,args)))))
+        )
+      )
+    ))
+
 (def eval
   (fn (expr env)
     (cond
@@ -226,11 +261,16 @@
                                          (error 'error-uneven-bindings-in-let)
                                          )
                                        )
+                       (= name 'quote) (ret r env)
+                       (is-syscall? name) (let [args-r (map-eval r env)
+                                                args-v (ret-v args-r)
+                                                new-env (ret-e args-r)]
+                                            (ret (syscall-invoke name args-v) new-env))
                        #t (let [vs-r (map-eval expr env)
                                 f (car (ret-v vs-r))
                                 args (cdr (ret-v vs-r))]
                             (if (func? f)
-                              (eval (func-body f) (append (zip (func-args f) args) (func-env f)))
+                              (eval (func-body f) (append (zip (func-args f) args) (append (ret-e vs-r) (func-env f))))
                               (error `(error-cannot-apply-nonfunc ,f))
                               )
                             )
