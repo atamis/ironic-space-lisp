@@ -279,7 +279,7 @@ fn test_step_until() {
                                                       Op::Return]]));
         assert_never_terminates!(never.step_until_value(false));*/
 
-    let mut empty = VM::new(Bytecode::new(vec![vec![]]));
+    //let mut empty = VM::new(Bytecode::new(vec![vec![]]));
     assert!(ret.step_until_value(false).is_err());
 }
 

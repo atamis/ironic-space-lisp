@@ -5,6 +5,8 @@
 
 #[macro_use]
 extern crate failure;
+#[allow(unused_imports)]
+#[macro_use]
 extern crate im;
 extern crate rustyline;
 extern crate test;

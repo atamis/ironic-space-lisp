@@ -70,6 +70,29 @@ impl EnvStack {
             .ok_or_else(|| err_msg("Attempted to pop empty environment stack"))?;
         Ok(())
     }
+
+    /// A vector of deduped envs. WARNING: this clones everything.
+    ///
+    /// Although nested [`Env`]s share data when the [`EnvStack`] is pushed
+    /// and popped, each [`Env`] prints the entire stack regardless of whether
+    /// that data is local to it or not. This dedups them for pretty printing,
+    /// but it's very expensive.
+    pub fn diff_stack(&self) -> Vec<Env> {
+        let mut denvs = Vec::with_capacity(self.envs.len());
+        let (first, rest) = self.envs.split_at(1);
+
+        denvs.push(first[0].clone());
+
+        for (idx, e) in rest.iter().enumerate() {
+            // idx is the idx of the env - 1, because of split_at
+
+            let last = { self.envs[idx].clone() };
+
+            denvs.push(last.difference(e.clone()));
+        }
+
+        denvs
+    }
 }
 
 // TODO probably use refcells
@@ -138,5 +161,34 @@ mod tests {
 
         assert_eq!(root.get(&s11).unwrap(), n(0));
         assert!(root.get(&s21).is_err());
+    }
+
+    fn n(n: u32) -> Rc<Literal> {
+        Rc::new(Literal::Number(n))
+    }
+
+    #[test]
+    fn test_diff_stack() {
+        let mut e = EnvStack::new();
+
+        e.insert("test0".to_string(), n(0)).unwrap();
+        e.push();
+        e.insert("test1".to_string(), n(1)).unwrap();
+        e.insert("test2".to_string(), n(2)).unwrap();
+        e.push();
+        e.push();
+        e.insert("test3".to_string(), n(3)).unwrap();
+
+        let ds = e.diff_stack();
+
+        assert_eq!(ds[0], hashmap!{"test0".to_string() => n(0)});
+        assert_eq!(
+            ds[1],
+            hashmap!{"test1".to_string() => n(1), "test2".to_string() => n(2)}
+        );
+        assert_eq!(ds[2], hashmap!{});
+        assert_eq!(ds[3], hashmap!{"test3".to_string() => n(3)});
+
+        assert_eq!(EnvStack::new().diff_stack(), [hashmap!{}]);
     }
 }
