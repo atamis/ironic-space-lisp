@@ -7,6 +7,14 @@ use std::rc::Rc;
 use data;
 use errors::*;
 
+use std::fmt;
+
+impl fmt::Debug for EnvStack {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "EnvStack {{}}")
+    }
+}
+
 /// Represents runtime variable bindings.
 ///
 /// Currently maintaints [`Rc`] pointers to the [`Literal`](data::Literal),
@@ -14,7 +22,7 @@ use errors::*;
 pub type Env = HashMap<String, Rc<data::Literal>>;
 
 /// Represents multiple nested environment bindings.
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct EnvStack {
     envs: Vec<Env>,
 }
