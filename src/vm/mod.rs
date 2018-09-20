@@ -27,7 +27,7 @@ use vm::op::Op;
 pub struct VM {
     /// The live code repo.
     pub code: Bytecode,
-    frames: Vec<data::Address>,
+    pub frames: Vec<data::Address>,
     /// The data stack
     pub stack: Vec<data::Literal>,
     sys: syscall::SyscallRegistry,

@@ -47,7 +47,7 @@ impl fmt::Debug for Literal {
             Literal::Boolean(true) => write!(f, "#t"),
             Literal::Boolean(false) => write!(f, "#f"),
             Literal::Address(a) => write!(f, "A({:?})", a),
-            Literal::Keyword(k) => write!(f, ":{:?}", k),
+            Literal::Keyword(k) => write!(f, ":{:}", k),
             Literal::List(ref v) => write!(f, "{:?}", v),
             Literal::Closure(arity, address) => write!(f, "{:?}/{:}", address, arity),
         }

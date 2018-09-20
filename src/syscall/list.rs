@@ -26,7 +26,7 @@ impl SyscallFactory for Factory {
             ("first", Syscall::A1(Box::new(car))),
             ("rest", Syscall::A1(Box::new(cdr))),
             ("empty?", Syscall::A1(Box::new(empty))),
-            ("n", Syscall::A2(Box::new(n))),
+            ("nth", Syscall::A2(Box::new(n))),
             ("append", Syscall::A2(Box::new(append))),
         ])
     }
@@ -55,7 +55,7 @@ fn car(a: Literal) -> Result<Literal> {
 fn cdr(a: Literal) -> Result<Literal> {
     let lst = a.ensure_list()?;
     match lst.len() {
-        0 => Err(err_msg("Cannot car empty list")),
+        0 => Err(err_msg("Cannot cdr empty list")),
         1 => Ok(Literal::List(Vector::new())),
         _ => {
             let (_, rest) = lst.split_at(1);

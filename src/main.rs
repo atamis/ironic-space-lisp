@@ -4,6 +4,7 @@ extern crate ironic_space_lisp;
 use clap::{App, SubCommand};
 use ironic_space_lisp::errors::*;
 use ironic_space_lisp::repl;
+use ironic_space_lisp::self_hosted;
 use ironic_space_lisp::size::DataSize;
 
 use std::io::prelude::*;
@@ -15,14 +16,6 @@ fn read_stdin() -> Result<String> {
 
     Ok(buffer)
 }
-
-/*
-let mut f = File::open(filename).context("file not found")?;
-
-let mut contents = String::new();
-f.read_to_string(&mut contents)
-.context("something went wrong reading the file")?;
-*/
 
 fn exec(content: &str) -> Result<()> {
     {
@@ -145,6 +138,7 @@ fn run() -> Result<()> {
         .subcommand(SubCommand::with_name("repl").about("Live read and evaluate ISL"))
         .subcommand(SubCommand::with_name("inspect").about("Inspect the parsing of some ISL code"))
         .subcommand(SubCommand::with_name("run").about("Run input"))
+        .subcommand(SubCommand::with_name("self").about("Run self-hosted interpreter."))
         .get_matches();
 
     match matches.subcommand() {
@@ -153,6 +147,9 @@ fn run() -> Result<()> {
         }
         ("run", Some(_run_matches)) => {
             exec(&read_stdin()?).context("While executing")?;
+        }
+        ("self", Some(_self_matches)) => {
+            self_hosted::self_hosted().context("Executing self-hosted interpreter")?;
         }
         _ => {
             println!("Booting repl");

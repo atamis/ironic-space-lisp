@@ -23,6 +23,7 @@ pub mod errors;
 pub mod interpreter;
 pub mod parser;
 pub mod repl;
+pub mod self_hosted;
 pub mod size;
 pub mod syscall;
 pub mod vm;

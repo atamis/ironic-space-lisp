@@ -27,6 +27,7 @@ impl SyscallFactory for Factory {
             ("even?", Syscall::A1(Box::new(even_pred))),
             ("odd?", Syscall::A1(Box::new(odd_pred))),
             ("error", Syscall::A1(Box::new(vm_error))),
+            ("size", Syscall::A1(Box::new(size))),
         ])
     }
 }
@@ -62,6 +63,11 @@ fn odd_pred(a: Literal) -> Result<Literal> {
 
 fn vm_error(a: Literal) -> Result<Literal> {
     Err(format_err!("Runtime error: {:?}", a))
+}
+
+fn size(a: Literal) -> Result<Literal> {
+    use size::DataSize;
+    Ok(Literal::Number(a.data_size() as u32))
 }
 
 #[cfg(test)]
