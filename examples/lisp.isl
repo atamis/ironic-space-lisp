@@ -343,6 +343,7 @@
 (test '(let (x 1 y 2) x) '())
 
 (test '1 '((test 1)))
+(test '(do 1) '((test 1)))
 
 (test '(cond #t 1) '((test 1)))
 

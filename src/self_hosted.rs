@@ -12,7 +12,7 @@ use parser;
 use vm;
 use vm::bytecode;
 
-fn read_lisp() -> Result<String> {
+pub fn read_lisp() -> Result<String> {
     use std::fs::File;
     let mut f = File::open("examples/lisp.isl").context("file not found")?;
 
@@ -23,7 +23,7 @@ fn read_lisp() -> Result<String> {
     Ok(contents)
 }
 
-fn ast(lits: &[data::Literal], e: &environment::Env) -> Result<function_lifter::LiftedAST> {
+pub fn ast(lits: &[data::Literal], e: &environment::Env) -> Result<function_lifter::LiftedAST> {
     let ast = ast::parse_multi(&lits)?;
     let ast = internal_macro::pass(&ast)?;
 
@@ -38,7 +38,7 @@ fn compile(last: &function_lifter::LiftedAST) -> Result<bytecode::Bytecode> {
     compiler::pack_compile_lifted(&last)
 }
 
-fn empty_vm() -> vm::VM {
+pub fn empty_vm() -> vm::VM {
     let mut builder = vm::Builder::new();
 
     builder.default_libs();
