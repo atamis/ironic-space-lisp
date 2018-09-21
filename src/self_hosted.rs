@@ -53,17 +53,11 @@ fn make_double(lits: &[data::Literal], e: &environment::Env) -> Result<bytecode:
     d.append(&mut new_lits);
 
     // (eval (quote (do *lits)) '())
-    let caller = data::list(vec![
-        data::Literal::Keyword("eval".to_string()),
-        data::list(vec![
-            data::Literal::Keyword("quote".to_string()),
-            data::list(d),
-        ]),
-        data::list(vec![
-            data::Literal::Keyword("quote".to_string()),
-            data::list(vec![]),
-        ]),
-    ]);
+    let caller = list_lit!(
+        "eval",
+        list_lit!("quote", d.clone()),
+        list_lit!("quote", list_lit!())
+    );
 
     let last = ast(&[caller], e)?;
     compile(&last)

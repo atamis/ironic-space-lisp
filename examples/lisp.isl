@@ -33,10 +33,6 @@
             '()
             (cons (f (car lst)) (map f (cdr lst))))))
 
-(def call+
-  (lambda (args)
-          (foldl + 0 args)))
-
 (def test
   (fn (x env)
     (print (list x (ret-v (eval x env))))
@@ -74,11 +70,10 @@
 
 (def group-by
   (fn (n lst)
-    (do 
-      (if (empty? lst)
-        '()
-        (cons (take n lst) (group-by n (after n lst)))
-        ))
+    (if (empty? lst)
+      '()
+      (cons (take n lst) (group-by n (after n lst)))
+      )
     )
   )
 

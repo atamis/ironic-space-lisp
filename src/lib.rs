@@ -17,6 +17,7 @@ extern crate nom;
 
 pub mod ast;
 pub mod compiler;
+#[macro_use]
 pub mod data;
 pub mod environment;
 pub mod errors;

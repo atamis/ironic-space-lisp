@@ -174,6 +174,12 @@ impl From<Vector<Literal>> for Literal {
     }
 }
 
+impl From<Vec<Literal>> for Literal {
+    fn from(v: Vec<Literal>) -> Literal {
+        list(v)
+    }
+}
+
 /// Macro to easily make a [`Literal::List`](data::Literal::List).
 ///
 /// ```
