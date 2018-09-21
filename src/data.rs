@@ -1,6 +1,11 @@
 //! Runtime data definitions
+///
+/// For the singleton `Literal` structs (Number, Boolean, Address, keyword, List),
+/// this module implemented `From` on the base Rust data types to ease literal
+/// construction.
 
-use im::vector::Vector;
+#[doc(hidden)]
+pub use im::vector::Vector;
 use std::fmt;
 
 use errors::*;
@@ -55,6 +60,10 @@ impl fmt::Debug for Literal {
 }
 
 impl Literal {
+    pub fn new_keyword<T: Into<String>>(s: T) -> Literal {
+        Literal::Keyword(s.into())
+    }
+
     /// Is something truthy? Used by if expressions and [ `JumpCond` ](super::vm::op::Op)
     pub fn truthy(&self) -> bool {
         match self {
@@ -129,6 +138,80 @@ impl Literal {
     }
 }
 
+impl From<u32> for Literal {
+    fn from(n: u32) -> Literal {
+        Literal::Number(n)
+    }
+}
+
+impl From<String> for Literal {
+    fn from(s: String) -> Literal {
+        Literal::new_keyword(s)
+    }
+}
+
+impl<'a> From<&'a str> for Literal {
+    fn from(s: &str) -> Literal {
+        Literal::new_keyword(s)
+    }
+}
+
+impl From<bool> for Literal {
+    fn from(b: bool) -> Literal {
+        Literal::Boolean(b)
+    }
+}
+
+impl From<Address> for Literal {
+    fn from(a: Address) -> Literal {
+        Literal::Address(a)
+    }
+}
+
+impl From<Vector<Literal>> for Literal {
+    fn from(v: Vector<Literal>) -> Literal {
+        Literal::List(v)
+    }
+}
+
+/// Macro to easily make a [`Literal::List`](data::Literal::List).
+///
+/// ```
+/// # #[macro_use] extern crate ironic_space_lisp;
+/// list_lit![];
+/// list_lit![1, 2, 3];
+/// list_lit![1, 2, 3,];
+/// ```
+///
+/// Calls `into()` on all elements passed in so that they'll be converted
+/// to [`Literal`](data::Literal). This may result in a rather cryptic
+/// type error, or missing trait error, if you put an element in that can't be
+/// converted to a [`Literal`](data::Literal).
+#[macro_export]
+macro_rules! list_lit {
+    () => {
+       $crate::data::Literal::List($crate::data::Vector::new())
+    };
+
+    ( $($x:expr),* ) => {{
+        let mut v = $crate::data::Vector::new();
+        $(
+            v.push_back($x.into());
+        )*
+        let l: $crate::data::Literal = v.into();
+        l
+    }};
+
+    ( $($x:expr, )* ) => {{
+        let mut v = $crate::data::Vector::new();
+        $(
+            v.push_back($x.into());
+        )*
+            let l: $crate::data::Literal = v.into();
+        l
+    }};
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -160,5 +243,39 @@ mod tests {
             list(vec![Literal::Keyword("test".to_string())])
                 .contains(&Literal::Keyword("test".to_string()))
         )
+    }
+
+    #[test]
+    fn test_from() {
+        let a1: Literal = (1 as u32).into();
+        assert_eq!(a1, Literal::Number(1));
+
+        let a2: Literal = "test".into();
+        assert_eq!(a2, Literal::Keyword("test".to_string()));
+
+        let a3: Literal = ("test".to_string()).into();
+        assert_eq!(a3, Literal::Keyword("test".to_string()));
+
+        let a4: Literal = true.into();
+        assert_eq!(a4, Literal::Boolean(true));
+
+        let a5: Literal = false.into();
+        assert_eq!(a5, Literal::Boolean(false));
+
+        let a6: Literal = (2, 3).into();
+        assert_eq!(a6, Literal::Address((2, 3)));
+
+        let a7: Literal = vector![1.into(), 2.into()].into();
+        assert_eq!(a7, list(vec![Literal::Number(1), Literal::Number(2)]))
+    }
+
+    #[test]
+    fn test_lit_list() {
+        assert_eq!(list_lit![], list(vec![]));
+        assert_eq!(list_lit![1, 2, 3], list(vec![1.into(), 2.into(), 3.into()]));
+        assert_eq!(
+            list_lit![1, 2, 3,],
+            list(vec![1.into(), 2.into(), 3.into()])
+        );
     }
 }
