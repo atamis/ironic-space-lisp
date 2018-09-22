@@ -122,6 +122,9 @@ fn main() {
         ("1", Some(1.into())),
         ("asdfasdfasdf", None),
         ("(+ 1 2)", Some(3.into())), // lol
+        ("(list 1)", Some(list_lit!(1))),
+        ("(list 1 2)", Some(list_lit!(1, 2))),
+        ("(list 1 2 3)", Some(list_lit!(1, 2, 3))),
     ];
     let mut evalers: Vec<(&str, Box<Evaler>)> = vec![
         ("vm", Box::new(self_hosted::empty_vm())),
