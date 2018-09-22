@@ -63,7 +63,7 @@ impl Builder {
         let mut sys = syscall::SyscallRegistry::new();
 
         for f in self.sys_facts {
-            ingest_environment(&mut sys, &mut e, &*f);
+            ingest_environment(&mut sys, e.peek_mut().unwrap(), &*f);
         }
 
         for (k, v) in self.env {

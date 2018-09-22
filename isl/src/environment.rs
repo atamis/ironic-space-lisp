@@ -61,6 +61,12 @@ impl EnvStack {
         self.envs.last().ok_or_else(|| err_msg("Env stack empty"))
     }
 
+    pub fn peek_mut(&mut self) -> Result<&mut Env> {
+        self.envs
+            .last_mut()
+            .ok_or_else(|| err_msg("Env stack empty"))
+    }
+
     /// Push a new local binding environment to the environment stack.
     pub fn push(&mut self) {
         let n = match self.envs.last() {

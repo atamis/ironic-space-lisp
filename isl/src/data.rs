@@ -90,6 +90,20 @@ impl Literal {
         }
     }
 
+    /// Attempt to destructure a [`Literal`] into an address, but flexibly, returning `Err()` if not possible.
+    ///
+    /// Will destructure both [`Literal::Address`] and [`Literal::Closure`], throwing away arity information.
+    pub fn ensure_address_flexible(&self) -> Result<Address> {
+        match self {
+            Literal::Address(a) => Ok(*a),
+            Literal::Closure(_arity, addr) => Ok(*addr),
+            _ => Err(format_err!(
+                "Type error, expected Address or Closure, got {:?}",
+                self
+            )),
+        }
+    }
+
     /// Attempt to destructure a [`Literal`] into a bool, returning `Err()` if not possible.
     pub fn ensure_bool(&self) -> Result<bool> {
         if let Literal::Boolean(a) = self {

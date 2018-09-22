@@ -14,6 +14,7 @@ pub use self::builder::Builder;
 use data;
 use data::Address;
 use data::Literal;
+use environment::Env;
 use environment::EnvStack;
 use errors::*;
 use syscall;
@@ -35,9 +36,9 @@ pub struct VM {
     pub environment: EnvStack,
 }
 
-fn ingest_environment(
+pub fn ingest_environment(
     sys: &mut syscall::SyscallRegistry,
-    environment: &mut EnvStack,
+    env: &mut Env,
     fact: &syscall::SyscallFactory,
 ) {
     for (name, arity_opt, addr) in sys.ingest(fact) {
@@ -48,7 +49,7 @@ fn ingest_environment(
 
         let f = Rc::new(f);
 
-        environment.insert(name, f).unwrap();
+        env.insert(name, f);
     }
 }
 
