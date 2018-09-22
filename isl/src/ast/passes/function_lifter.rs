@@ -10,7 +10,7 @@ use data::Literal;
 use errors::*;
 
 /// Represents a function as a list of arguments and an `AST` node.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ASTFunction {
     pub args: Vec<Keyword>,
     pub body: Rc<AST>,
@@ -39,7 +39,7 @@ pub fn lift_functions(a: &AST) -> Result<LiftedAST> {
 ///
 /// Includes a `root` AST, and a registry containing all the functions
 /// lifted out. The first function is a dummy function.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct LiftedAST {
     pub fr: FunctionRegistry,
     pub entry: usize,
@@ -49,6 +49,20 @@ impl LiftedAST {
     pub fn entry_fn(&self) -> &ASTFunction {
         &self.fr.functions[self.entry]
     }
+
+    pub fn import(&mut self, last: &LiftedAST) -> Result<Address> {
+        let new_idx = self.fr.functions.len();
+        let import_entry = last.entry;
+        let new_entry = import_entry + new_idx;
+
+        let mut new_fns = import::Import(new_idx)
+            .last_visit(last)
+            .context("While importing functions from a LiftedAST")?;
+
+        self.fr.functions.append(&mut new_fns);
+
+        Ok((new_entry, 0).into())
+    }
 }
 
 /// Represents a registry of functions for some `AST`.
@@ -57,7 +71,7 @@ impl LiftedAST {
 /// in the vector is assumed to be its future address in the form `(idx, 0)`.
 /// This is a naive method of function registry to go with the naive code
 /// packer in `compiler::pack_compile_lifted`.
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct FunctionRegistry {
     pub functions: Vec<ASTFunction>,
 }
@@ -173,7 +187,91 @@ pub trait LASTVisitor<T> {
     }
 
     fn ast_function(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<T>;
-    fn ast_function_entry(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<T>;
+    fn ast_function_entry(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<T> {
+        self.ast_function(args, body)
+    }
+}
+
+mod import {
+    use super::*;
+
+    pub struct Import(pub usize);
+
+    impl Import {
+        fn visit_def(&mut self, d: &Def) -> Result<Def> {
+            Ok(Def {
+                name: d.name.clone(),
+                value: self.visit(&d.value)?,
+            })
+        }
+    }
+
+    impl LASTVisitor<ASTFunction> for Import {
+        fn ast_function(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<ASTFunction> {
+            Ok(ASTFunction {
+                args: args.to_vec(),
+                body: Rc::new(self.visit(body).context("Visiting body of function")?),
+            })
+        }
+    }
+
+    impl ASTVisitor<AST> for Import {
+        fn value_expr(&mut self, l: &Literal) -> Result<AST> {
+            Ok(AST::Value(match l {
+                Literal::Address((a1, a2)) => (a1 + self.0, *a2).into(),
+                Literal::Closure(arity, (a1, a2)) => Literal::Closure(*arity, (a1 + self.0, *a2)),
+                x => x.clone(),
+            }))
+        }
+
+        fn if_expr(&mut self, pred: &Rc<AST>, then: &Rc<AST>, els: &Rc<AST>) -> Result<AST> {
+            Ok(AST::If {
+                pred: Rc::new(self.visit(pred)?),
+                then: Rc::new(self.visit(then)?),
+                els: Rc::new(self.visit(els)?),
+            })
+        }
+
+        fn def_expr(&mut self, def: &Rc<Def>) -> Result<AST> {
+            Ok(AST::Def(Rc::new(self.visit_def(def)?)))
+        }
+
+        fn let_expr(&mut self, defs: &[Def], body: &Rc<AST>) -> Result<AST> {
+            let new_defs = defs
+                .iter()
+                .map(|d| self.visit_def(d))
+                .collect::<Result<_>>()?;
+
+            Ok(AST::Let {
+                defs: new_defs,
+                body: Rc::new(self.visit(body)?),
+            })
+        }
+
+        fn do_expr(&mut self, exprs: &[AST]) -> Result<AST> {
+            let new_exprs = self.multi_visit(exprs)?;
+
+            Ok(AST::Do(new_exprs))
+        }
+
+        fn lambda_expr(&mut self, _args: &[Keyword], _body: &Rc<AST>) -> Result<AST> {
+            Err(err_msg("Not implemented"))
+        }
+
+        #[allow(ptr_arg)]
+        fn var_expr(&mut self, k: &Keyword) -> Result<AST> {
+            Ok(AST::Var(k.clone()))
+        }
+
+        fn application_expr(&mut self, f: &Rc<AST>, args: &[AST]) -> Result<AST> {
+            let new_args = self.multi_visit(args)?;
+
+            Ok(AST::Application {
+                f: Rc::new(self.visit(f)?),
+                args: new_args,
+            })
+        }
+    }
 }
 
 #[cfg(test)]
@@ -240,5 +338,42 @@ mod tests {
             *last.entry_fn().body,
             AST::Do(vec![AST::Value(Literal::Closure(1, (2, 0)))])
         );
+    }
+
+    #[test]
+    fn test_last_import() {
+        let mut last1 = LiftedAST {
+            fr: FunctionRegistry {
+                functions: vec![ASTFunction {
+                    args: vec![],
+                    body: Rc::new(AST::Value((0, 0).into())),
+                }],
+            },
+            entry: 0,
+        };
+
+        let last2 = LiftedAST {
+            fr: FunctionRegistry {
+                functions: vec![ASTFunction {
+                    args: vec!["test".to_string()],
+                    body: Rc::new(AST::Value((0, 0).into())),
+                }],
+            },
+            entry: 0,
+        };
+
+        let new_entry = last1.import(&last2).unwrap();
+
+        assert_eq!(new_entry, (1, 0));
+
+        let new_entry_fn = &last1.fr.functions[1];
+
+        assert_eq!(new_entry_fn.args, vec!["test"]);
+
+        assert_eq!(*new_entry_fn.body, AST::Value((1, 0).into()));
+
+        let orig_entry_fn = last1.entry_fn();
+
+        assert_eq!(*orig_entry_fn.body, AST::Value((0, 0).into()));
     }
 }
