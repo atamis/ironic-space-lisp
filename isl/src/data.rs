@@ -183,7 +183,7 @@ impl From<Vec<Literal>> for Literal {
 /// Macro to easily make a [`Literal::List`](data::Literal::List).
 ///
 /// ```
-/// # #[macro_use] extern crate ironic_space_lisp;
+/// # #[macro_use] extern crate isl;
 /// list_lit![];
 /// list_lit![1, 2, 3];
 /// list_lit![1, 2, 3,];

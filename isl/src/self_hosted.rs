@@ -1,5 +1,3 @@
-use std::io::prelude::*;
-
 use ast;
 use ast::passes::function_lifter;
 use ast::passes::internal_macro;
@@ -12,15 +10,8 @@ use parser;
 use vm;
 use vm::bytecode;
 
-pub fn read_lisp() -> Result<String> {
-    use std::fs::File;
-    let mut f = File::open("examples/lisp.isl").context("file not found")?;
-
-    let mut contents = String::new();
-    f.read_to_string(&mut contents)
-        .context("something went wrong reading the file")?;
-
-    Ok(contents)
+pub fn read_lisp<'a>() -> Result<&'a str> {
+    Ok(include_str!("../examples/lisp.isl"))
 }
 
 pub fn ast(lits: &[data::Literal], e: &environment::Env) -> Result<function_lifter::LiftedAST> {

@@ -13,8 +13,8 @@
 //! too large. This outputs a `Literal::Number`
 //!
 //! ```
-//! # use ironic_space_lisp::parser;
-//! # use ironic_space_lisp::data::Literal;
+//! # use isl::parser;
+//! # use isl::data::Literal;
 //! assert_eq!(parser::parse("123").unwrap()[0], Literal::Number(123));
 //! ```
 //!
@@ -23,8 +23,8 @@
 //! numeric. This outputs a `Literal::Keyword`
 //!
 //! ```
-//! # use ironic_space_lisp::parser::parse;
-//! # use ironic_space_lisp::data::Literal;
+//! # use isl::parser::parse;
+//! # use isl::data::Literal;
 //! parse("asdf");
 //! parse("+");
 //! parse("a123");
@@ -37,8 +37,8 @@
 //! separated by commas.
 //!
 //! ```
-//! # use ironic_space_lisp::parser::parse;
-//! # use ironic_space_lisp::data::Literal;
+//! # use isl::parser::parse;
+//! # use isl::data::Literal;
 //! parse("(+ 1 2 3)");
 //! parse("(((((())))))");
 //! parse("(if (< x 2) () (inc x))");
@@ -47,8 +47,8 @@
 //! This parser also handles quoting, and related "reader macros".
 //!
 //! ```
-//! # use ironic_space_lisp::parser::parse;
-//! # use ironic_space_lisp::data::Literal;
+//! # use isl::parser::parse;
+//! # use isl::data::Literal;
 //! assert_eq!(parse("'1").unwrap(),
 //!            parse("(quote 1)").unwrap());
 //!

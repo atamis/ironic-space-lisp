@@ -1,11 +1,11 @@
 extern crate clap;
-extern crate ironic_space_lisp;
+extern crate isl;
 
 use clap::{App, SubCommand};
-use ironic_space_lisp::errors::*;
-use ironic_space_lisp::repl;
-use ironic_space_lisp::self_hosted;
-use ironic_space_lisp::size::DataSize;
+use isl::errors::*;
+use isl::repl;
+use isl::self_hosted;
+use isl::size::DataSize;
 
 use std::io::prelude::*;
 
@@ -19,13 +19,13 @@ fn read_stdin() -> Result<String> {
 
 fn exec(content: &str) -> Result<()> {
     {
-        use ironic_space_lisp::ast;
-        use ironic_space_lisp::ast::passes::function_lifter;
-        use ironic_space_lisp::ast::passes::internal_macro;
-        use ironic_space_lisp::ast::passes::unbound;
-        use ironic_space_lisp::compiler;
-        use ironic_space_lisp::parser;
-        use ironic_space_lisp::vm;
+        use isl::ast;
+        use isl::ast::passes::function_lifter;
+        use isl::ast::passes::internal_macro;
+        use isl::ast::passes::unbound;
+        use isl::compiler;
+        use isl::parser;
+        use isl::vm;
         let mut vm = vm::VM::new(vm::bytecode::Bytecode::new(vec![]));
 
         let p = parser::Parser::new();
@@ -62,13 +62,13 @@ fn inspect(content: &str) -> Result<()> {
     println!("Code:\n {:}", content);
 
     {
-        use ironic_space_lisp::ast;
-        use ironic_space_lisp::ast::passes::function_lifter;
-        use ironic_space_lisp::ast::passes::internal_macro;
-        use ironic_space_lisp::ast::passes::unbound;
-        use ironic_space_lisp::compiler;
-        use ironic_space_lisp::parser;
-        use ironic_space_lisp::vm;
+        use isl::ast;
+        use isl::ast::passes::function_lifter;
+        use isl::ast::passes::internal_macro;
+        use isl::ast::passes::unbound;
+        use isl::compiler;
+        use isl::parser;
+        use isl::vm;
 
         let vm = vm::VM::new(vm::bytecode::Bytecode::new(vec![]));
 

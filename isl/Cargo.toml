@@ -1,7 +1,10 @@
+cargo-features = ["default-run"]
+
 [package]
-name = "ironic-space-lisp"
+name = "isl"
 version = "0.1.0"
 authors = ["Andrew Amis <atamiser@gmail.com>"]
+default-run = "isl"
 
 [dependencies]
 failure = "0.1.2"
