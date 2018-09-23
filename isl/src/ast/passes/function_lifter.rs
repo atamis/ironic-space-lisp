@@ -61,7 +61,7 @@ impl LiftedAST {
 
         self.fr.functions.append(&mut new_fns);
 
-        Ok((new_entry, 0).into())
+        Ok((new_entry, 0))
     }
 }
 
@@ -258,7 +258,7 @@ mod import {
             Err(err_msg("Not implemented"))
         }
 
-        #[allow(ptr_arg)]
+        #[allow(clippy::ptr_arg)]
         fn var_expr(&mut self, k: &Keyword) -> Result<AST> {
             Ok(AST::Var(k.clone()))
         }

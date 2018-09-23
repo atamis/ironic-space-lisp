@@ -162,7 +162,7 @@ fn keyword_element(s: char) -> bool {
     keyword_element_first(s) || s.is_numeric()
 }
 
-named!(number<CompleteStr, Literal >, map_res!(digit, |s: CompleteStr| u32::from_str(&s).map(|n| Literal::Number(n))));
+named!(number<CompleteStr, Literal >, map_res!(digit, |s: CompleteStr| u32::from_str(&s).map(Literal::Number)));
 
 named!(keyword<CompleteStr, Literal >,
        do_parse!(
@@ -195,7 +195,7 @@ named_attr!(#[doc = "Raw nom parser for parsing a single untagged expr."], pub e
                            exprs,
                            tag!("]"))
             ),
-                 |v| data::list(v))
+                 data::list)
     )
 );
 

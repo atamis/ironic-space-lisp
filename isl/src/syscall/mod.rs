@@ -4,7 +4,7 @@
 
 // Clippy complains about A1Fns and A2Fns because
 // they don't _have_ to be pass by value.
-#![allow(needless_pass_by_value)]
+#![allow(clippy::needless_pass_by_value)]
 
 use data::Address;
 use data::Keyword;

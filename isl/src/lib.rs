@@ -1,5 +1,6 @@
 // because clippy
 #![allow(unknown_lints)]
+#![feature(tool_lints)]
 // because bench
 #![feature(test)]
 

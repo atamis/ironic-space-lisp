@@ -92,6 +92,6 @@ fn main() {
     }
 
     output_buffer
-        .write(toml::to_string_pretty(&result).unwrap().as_bytes())
+        .write_all(toml::to_string_pretty(&result).unwrap().as_bytes())
         .unwrap();
 }

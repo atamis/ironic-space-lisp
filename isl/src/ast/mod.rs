@@ -102,7 +102,7 @@ pub trait ASTVisitor<R> {
 
     fn lambda_expr(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<R>;
 
-    #[allow(ptr_arg)]
+    #[allow(clippy::ptr_arg)]
     fn var_expr(&mut self, k: &Keyword) -> Result<R>;
 
     fn application_expr(&mut self, f: &Rc<AST>, args: &[AST]) -> Result<R>;

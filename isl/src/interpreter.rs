@@ -20,6 +20,12 @@ pub struct Interpreter {
     last: LiftedAST,
 }
 
+impl Default for Interpreter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Represents a binding between an interpreter and its global state and a local environment.
 struct Context<'a, 'b> {
     terp: &'a Interpreter,
@@ -160,7 +166,7 @@ impl Interpreter {
         let astfn = self.last.fr.lookup(addr);
 
         // TODO: extract to function
-        if let None = astfn {
+        if astfn.is_none() {
             // check syscall registry
             match self.sys.lookup(addr) {
                 Some(scall) => {

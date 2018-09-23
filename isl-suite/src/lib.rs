@@ -44,6 +44,12 @@ impl Evaler for interpreter::Interpreter {
 
 pub struct HostedEvaler(vm::VM);
 
+impl Default for HostedEvaler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HostedEvaler {
     pub fn new() -> HostedEvaler {
         let mut vm = self_hosted::empty_vm();

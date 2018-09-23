@@ -60,7 +60,7 @@ impl VM {
 
         b.code(code).default_libs();
 
-        return b.build();
+        b.build()
     }
 
     fn pcounter(&mut self) -> Result<Address> {

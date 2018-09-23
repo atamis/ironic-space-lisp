@@ -11,6 +11,7 @@ use vm::bytecode::Chunk;
 use vm::op::Op;
 
 /// Construct a VM.
+#[derive(Default)]
 pub struct Builder {
     codes: Vec<Bytecode>,
     sys_facts: Vec<Box<syscall::SyscallFactory>>,
@@ -57,7 +58,7 @@ impl Builder {
             entries.push(code.import(&c));
         }
 
-        code.chunks[0] = build_entry_chunk(entries);
+        code.chunks[0] = build_entry_chunk(&entries);
 
         let mut e = environment::EnvStack::new();
         let mut sys = syscall::SyscallRegistry::new();
@@ -80,7 +81,7 @@ impl Builder {
     }
 }
 
-fn build_entry_chunk(entries: Vec<Address>) -> Chunk {
+fn build_entry_chunk(entries: &[Address]) -> Chunk {
     let mut ops = Vec::with_capacity(entries.len() * 3 + 1);
 
     for (idx, a) in entries.iter().enumerate() {
