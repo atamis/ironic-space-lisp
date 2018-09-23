@@ -4,6 +4,7 @@ use std::rc::Rc;
 use ast::passes::function_lifter;
 use ast::ASTVisitor;
 use ast::Def;
+use ast::DefVisitor;
 use ast::AST;
 use data::Keyword;
 use data::Literal;
@@ -48,11 +49,11 @@ pub enum IrOp {
 /// See `ASTVisitor<IrChunk>` and [`ASTVisitor`] for information.
 pub struct Compiler;
 
-impl Compiler {
-    fn visit_def(&mut self, def: &Def) -> Result<IrChunk> {
-        let mut body_chunk = self.visit(&def.value)?;
+impl DefVisitor<IrChunk> for Compiler {
+    fn visit_def(&mut self, name: &str, value: &AST) -> Result<IrChunk> {
+        let mut body_chunk = self.visit(value)?;
 
-        body_chunk.push(IrOp::Lit(Literal::Keyword(def.name.clone())));
+        body_chunk.push(IrOp::Lit(name.into()));
         body_chunk.push(IrOp::Store);
 
         Ok(body_chunk)
@@ -79,7 +80,7 @@ impl ASTVisitor<IrChunk> for Compiler {
     }
 
     fn def_expr(&mut self, def: &Rc<Def>) -> Result<IrChunk> {
-        let mut chunk = self.visit_def(def)?;
+        let mut chunk = self.visit_single_def(def)?;
 
         chunk.append(&mut self.var_expr(&def.name)?);
 
@@ -89,8 +90,7 @@ impl ASTVisitor<IrChunk> for Compiler {
     fn let_expr(&mut self, defs: &[Def], body: &Rc<AST>) -> Result<IrChunk> {
         let mut chunk = vec![IrOp::PushEnv];
 
-        for d in defs {
-            let mut def_chunk = self.visit_def(d)?;
+        for mut def_chunk in self.visit_multi_def(defs)?.into_iter() {
             chunk.append(&mut def_chunk);
         }
 

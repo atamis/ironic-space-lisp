@@ -8,6 +8,7 @@
 
 use ast::ASTVisitor;
 use ast::Def;
+use ast::DefVisitor;
 use ast::AST;
 use data;
 use data::Keyword;
@@ -24,13 +25,6 @@ pub fn pass(a: &AST) -> Result<AST> {
 struct Pass;
 
 impl Pass {
-    fn visit_def(&mut self, d: &Def) -> Result<Def> {
-        Ok(Def {
-            name: d.name.clone(),
-            value: self.visit(&d.value)?,
-        })
-    }
-
     // Vec should be reversed before being passed to consify
     // consify uses Vec::pop for better performance
     fn consify(&mut self, mut v: Vec<AST>) -> Result<AST> {
@@ -119,14 +113,11 @@ impl ASTVisitor<AST> for Pass {
     }
 
     fn def_expr(&mut self, def: &Rc<Def>) -> Result<AST> {
-        Ok(AST::Def(Rc::new(self.visit_def(def)?)))
+        Ok(AST::Def(Rc::new(self.visit_single_def(def)?)))
     }
 
     fn let_expr(&mut self, defs: &[Def], body: &Rc<AST>) -> Result<AST> {
-        let new_defs = defs
-            .iter()
-            .map(|d| self.visit_def(d))
-            .collect::<Result<_>>()?;
+        let new_defs = self.visit_multi_def(defs)?;
 
         Ok(AST::Let {
             defs: new_defs,
@@ -163,6 +154,15 @@ impl ASTVisitor<AST> for Pass {
         Ok(AST::Application {
             f: Rc::new(self.visit(f)?),
             args: new_args,
+        })
+    }
+}
+
+impl DefVisitor<Def> for Pass {
+    fn visit_def(&mut self, name: &str, value: &AST) -> Result<Def> {
+        Ok(Def {
+            name: name.to_string(),
+            value: self.visit(value)?,
         })
     }
 }

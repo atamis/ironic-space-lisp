@@ -3,6 +3,7 @@ use std::rc::Rc;
 
 use ast::ASTVisitor;
 use ast::Def;
+use ast::DefVisitor;
 use ast::AST;
 use data::Address;
 use data::Keyword;
@@ -96,13 +97,6 @@ impl FunctionRegistry {
     pub fn lookup(&self, addr: Address) -> Option<&ASTFunction> {
         self.functions.get(addr.0)
     }
-
-    fn visit_def(&mut self, d: &Def) -> Result<Def> {
-        Ok(Def {
-            name: d.name.clone(),
-            value: self.visit(&d.value)?,
-        })
-    }
 }
 
 impl ASTVisitor<AST> for FunctionRegistry {
@@ -119,13 +113,13 @@ impl ASTVisitor<AST> for FunctionRegistry {
     }
 
     fn def_expr(&mut self, def: &Rc<Def>) -> Result<AST> {
-        Ok(AST::Def(Rc::new(self.visit_def(def)?)))
+        Ok(AST::Def(Rc::new(self.visit_single_def(def)?)))
     }
 
     fn let_expr(&mut self, defs: &[Def], body: &Rc<AST>) -> Result<AST> {
         let new_defs = defs
             .iter()
-            .map(|d| self.visit_def(d))
+            .map(|d| self.visit_single_def(d))
             .collect::<Result<_>>()?;
 
         Ok(AST::Let {
@@ -158,6 +152,15 @@ impl ASTVisitor<AST> for FunctionRegistry {
         Ok(AST::Application {
             f: Rc::new(self.visit(f)?),
             args: args.iter().map(|e| self.visit(e)).collect::<Result<_>>()?,
+        })
+    }
+}
+
+impl DefVisitor<Def> for FunctionRegistry {
+    fn visit_def(&mut self, name: &str, value: &AST) -> Result<Def> {
+        Ok(Def {
+            name: name.to_string(),
+            value: self.visit(value)?,
         })
     }
 }

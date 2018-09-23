@@ -42,6 +42,31 @@ pub struct Def {
     pub value: AST,
 }
 
+pub trait DefVisitor<R> {
+    fn visit_multi_def(&mut self, defs: &[Def]) -> Result<Vec<R>> {
+        let rs: Vec<R> = defs
+            .iter()
+            .enumerate()
+            .map(|(i, def)| {
+                let a = self
+                    .visit_def(&def.name, &def.value)
+                    .context(format!("While parsing def #{:}", i))?;
+                Ok(a)
+            }).collect::<Result<_>>()?;
+
+        Ok(rs)
+    }
+
+    fn visit_single_def(&mut self, d: &Def) -> Result<R> {
+        let res = self
+            .visit_def(&d.name, &d.value)
+            .context(format!("While visiting def {:}", d.name))?;
+        Ok(res)
+    }
+
+    fn visit_def(&mut self, name: &str, value: &AST) -> Result<R>;
+}
+
 /// Representation of Lisp code in terms of special forms and applications.
 #[derive(Debug, PartialEq)]
 pub enum AST {

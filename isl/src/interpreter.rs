@@ -4,6 +4,7 @@ use ast::passes::function_lifter;
 use ast::passes::function_lifter::LiftedAST;
 use ast::ASTVisitor;
 use ast::Def;
+use ast::DefVisitor;
 use ast::AST;
 use data::Address;
 use data::Keyword;
@@ -58,7 +59,7 @@ impl<'a, 'b> ASTVisitor<Literal> for Context<'a, 'b> {
     }
 
     fn def_expr(&mut self, def: &Rc<Def>) -> Result<Literal> {
-        let res = put_def(self, def).context("Evaluating def")?;
+        let res = self.visit_single_def(def).context("Evaluating def")?;
 
         Ok(res)
     }
@@ -67,10 +68,9 @@ impl<'a, 'b> ASTVisitor<Literal> for Context<'a, 'b> {
         let mut let_env = self.env.clone();
         let mut let_context = self.with_new_env(&mut let_env);
 
-        for d in defs {
-            // TODO binding index
-            put_def(&mut let_context, d).context("Evalutaing bindings for let")?;
-        }
+        let_context
+            .visit_multi_def(defs)
+            .context("Evaluating bindings for let")?;
 
         let body_val = let_context.visit(body).context("Evaluting let body")?;
 
@@ -111,13 +111,14 @@ impl<'a, 'b> ASTVisitor<Literal> for Context<'a, 'b> {
     }
 }
 
-fn put_def(ctx: &mut Context, def: &Def) -> Result<Literal> {
-    let res = ctx.visit(&def.value).context(format_err!(
-        "While evaluating def value for {:}",
-        def.name.clone()
-    ))?;
-    ctx.env.insert(def.name.clone(), Rc::new(res.clone()));
-    Ok(res)
+impl<'a, 'b> DefVisitor<Literal> for Context<'a, 'b> {
+    fn visit_def(&mut self, name: &str, value: &AST) -> Result<Literal> {
+        let res = self
+            .visit(value)
+            .context(format_err!("While evaluating def value for {:}", name))?;
+        self.env.insert(name.to_string(), Rc::new(res.clone()));
+        Ok(res)
+    }
 }
 
 impl Interpreter {
@@ -161,7 +162,7 @@ impl Interpreter {
     }
 
     /// Call a function or syscall by address, with the given arguments. Returns the result or an error.
-    pub fn call_fn_addr(&self, addr: Address, mut args: Vec<Literal>) -> Result<Literal> {
+    pub fn call_fn_addr(&self, addr: Address, args: Vec<Literal>) -> Result<Literal> {
         // Check function registry
         let astfn = self.last.fr.lookup(addr);
 
@@ -217,16 +218,16 @@ impl Interpreter {
                 }
 
                 // Have to call these functions by value
-                return match scall {
+                match scall {
                     // Use unreachable instead of wildcard to we get warned when we
                     // add new types of syscalls
                     syscall::Syscall::Stack(_) => unreachable!(),
                     syscall::Syscall::A1(f) => f(args.remove(0)),
                     // these are both 0 because args gets mutated, and the second arg is now the first.
                     syscall::Syscall::A2(f) => f(args.remove(0), args.remove(0)),
-                };
+                }
             }
-            None => return Err(format_err!("Couldn't find function for address {:?}", addr)),
+            None => Err(format_err!("Couldn't find function for address {:?}", addr)),
         }
     }
 
