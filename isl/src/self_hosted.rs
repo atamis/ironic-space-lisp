@@ -1,7 +1,5 @@
-use ast;
-use ast::passes::function_lifter;
-use ast::passes::internal_macro;
-use ast::passes::unbound;
+use ast::ast;
+use ast::LiftedAST;
 use compiler;
 use data;
 use environment;
@@ -14,18 +12,7 @@ pub fn read_lisp<'a>() -> Result<&'a str> {
     Ok(include_str!("../examples/lisp.isl"))
 }
 
-pub fn ast(lits: &[data::Literal], e: &environment::Env) -> Result<function_lifter::LiftedAST> {
-    let ast = ast::parse_multi(&lits)?;
-    let ast = internal_macro::pass(&ast)?;
-
-    unbound::pass(&ast, e)?;
-
-    let last = function_lifter::lift_functions(&ast)?;
-
-    Ok(last)
-}
-
-fn compile(last: &function_lifter::LiftedAST) -> Result<bytecode::Bytecode> {
+fn compile(last: &LiftedAST) -> Result<bytecode::Bytecode> {
     compiler::pack_compile_lifted(&last)
 }
 

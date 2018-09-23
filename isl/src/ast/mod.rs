@@ -9,11 +9,31 @@
 use im::vector::Vector;
 use std::rc::Rc;
 
+use data;
 use data::Keyword;
 use data::Literal;
+use environment;
 use errors::*;
 
 pub mod passes;
+use self::passes::function_lifter;
+pub use self::passes::function_lifter::LiftedAST;
+use self::passes::internal_macro;
+use self::passes::unbound;
+
+/// Parse several [`Literal`]s into a [`LiftedAST`].
+pub fn ast(lits: &[data::Literal], e: &environment::Env) -> Result<function_lifter::LiftedAST> {
+    let last = {
+        let ast = parse_multi(&lits).context("Multiparsing literals")?;
+        let ast = internal_macro::pass(&ast).context("Expanding internal macros")?;
+
+        unbound::pass(&ast, e).context("Checking unbound variables")?;
+
+        function_lifter::lift_functions(&ast).context("Lifting functions")
+    }.context("While parsing multiple literals")?;
+
+    Ok(last)
+}
 
 /// Represents a "definition", either a local binding or a top level definition.
 #[derive(Debug, PartialEq)]

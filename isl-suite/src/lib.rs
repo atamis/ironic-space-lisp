@@ -19,7 +19,7 @@ pub trait Evaler {
 
 impl Evaler for vm::VM {
     fn lit_eval(&mut self, lit: &[Literal]) -> Result<Literal> {
-        let last = self_hosted::ast(&lit, self.environment.peek().unwrap())?;
+        let last = ast::ast(&lit, self.environment.peek().unwrap())?;
 
         let code = compiler::pack_compile_lifted(&last).unwrap();
 
@@ -58,7 +58,7 @@ impl HostedEvaler {
 
         let lits = parser::parse(&s).unwrap();
 
-        let last = self_hosted::ast(&lits, vm.environment.peek().unwrap()).unwrap();
+        let last = ast::ast(&lits, vm.environment.peek().unwrap()).unwrap();
 
         let code = compiler::pack_compile_lifted(&last).unwrap();
 
@@ -89,7 +89,7 @@ impl Evaler for HostedEvaler {
 
         println!("caller: {:?}", caller);
 
-        let last = self_hosted::ast(&[caller], vm.environment.peek()?)?;
+        let last = ast::ast(&[caller], vm.environment.peek()?)?;
 
         vm.import_jump(&compiler::pack_compile_lifted(&last)?);
 
