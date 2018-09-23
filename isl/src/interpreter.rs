@@ -165,42 +165,8 @@ impl Interpreter {
         // Check function registry
         let astfn = self.last.fr.lookup(addr);
 
-        // TODO: extract to function
         if astfn.is_none() {
-            // check syscall registry
-            match self.sys.lookup(addr) {
-                Some(scall) => {
-                    // don't even deal
-                    if let syscall::Syscall::Stack(_) = scall {
-                        return Err(format_err!(
-                            "Interpreter can't call stack syscalls, found at {:?}",
-                            addr
-                        ));
-                    }
-
-                    let sysarity = scall.arity().unwrap();
-
-                    if sysarity != args.len() {
-                        return Err(format_err!(
-                            "Error calling function {:?}, expected {:} args, got {:} args",
-                            addr,
-                            sysarity,
-                            args.len()
-                        ));
-                    }
-
-                    // Have to call these functions by value
-                    return match scall {
-                        // Use unreachable instead of wildcard to we get warned when we
-                        // add new types of syscalls
-                        syscall::Syscall::Stack(_) => unreachable!(),
-                        syscall::Syscall::A1(f) => f(args.remove(0)),
-                        // these are both 0 because args gets mutated, and the second arg is now the first.
-                        syscall::Syscall::A2(f) => f(args.remove(0), args.remove(0)),
-                    };
-                }
-                None => return Err(format_err!("Couldn't find function for address {:?}", addr)),
-            }
+            return self.invoke_syscall(addr, args);
         }
 
         let astfn = astfn.unwrap();
@@ -225,6 +191,43 @@ impl Interpreter {
         Ok(fn_ctx
             .visit(&astfn.body)
             .context("While executing body of function")?)
+    }
+
+    fn invoke_syscall(&self, addr: Address, mut args: Vec<Literal>) -> Result<Literal> {
+        // check syscall registry
+        match self.sys.lookup(addr) {
+            Some(scall) => {
+                // don't even deal
+                if let syscall::Syscall::Stack(_) = scall {
+                    return Err(format_err!(
+                        "Interpreter can't call stack syscalls, found at {:?}",
+                        addr
+                    ));
+                }
+
+                let sysarity = scall.arity().unwrap();
+
+                if sysarity != args.len() {
+                    return Err(format_err!(
+                        "Error calling function {:?}, expected {:} args, got {:} args",
+                        addr,
+                        sysarity,
+                        args.len()
+                    ));
+                }
+
+                // Have to call these functions by value
+                return match scall {
+                    // Use unreachable instead of wildcard to we get warned when we
+                    // add new types of syscalls
+                    syscall::Syscall::Stack(_) => unreachable!(),
+                    syscall::Syscall::A1(f) => f(args.remove(0)),
+                    // these are both 0 because args gets mutated, and the second arg is now the first.
+                    syscall::Syscall::A2(f) => f(args.remove(0), args.remove(0)),
+                };
+            }
+            None => return Err(format_err!("Couldn't find function for address {:?}", addr)),
+        }
     }
 
     /// Call function an address, allowing it to modify the global state.
