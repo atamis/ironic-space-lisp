@@ -255,7 +255,7 @@
         (= sys 'len) (len a0)
         (= sys 'size) (size a0)
         #t (if (= (len args) 1)
-             (error `(syscall-not-found ,sys ,args))
+             (error `(syscall-not-found-with-1-arg ,sys ,args))
              (let [a1 (nth 1 args)]
                (cond
                  (= sys 'cons) (cons a0 a1)

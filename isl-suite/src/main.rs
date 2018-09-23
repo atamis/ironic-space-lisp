@@ -44,7 +44,10 @@ fn main() {
     let cases: &[(&str, Option<Literal>)] = &[
         ("1", Some(1.into())),
         ("asdfasdfasdf", None),
-        ("(+ 1 2)", Some(3.into())), // lol
+        ("(+)", None),
+        ("(+ 1)", None),
+        ("(+ 1 2)", Some(3.into())),
+        ("(+ 1 2 3)", None),
         ("(list 1)", Some(list_lit!(1))),
         ("(list 1 2)", Some(list_lit!(1, 2))),
         ("(list 1 2 3)", Some(list_lit!(1, 2, 3))),
