@@ -28,6 +28,7 @@ pub mod repl;
 pub mod self_hosted;
 pub mod size;
 pub mod syscall;
+mod util;
 pub mod vm;
 
 // std::usize::MAX

@@ -15,6 +15,7 @@ use data::Keyword;
 use data::Literal;
 use errors::*;
 use std::rc::Rc;
+use util::*;
 
 pub fn pass(a: &AST) -> Result<AST> {
     let mut lp = Pass {};
@@ -72,8 +73,11 @@ impl Pass {
                     ));
                 }
 
-                let new_args = self.multi_visit(args)?;
-                let mut terms = group_by_2(new_args);
+                let mut terms: Vec<(AST, AST)> = self
+                    .multi_visit(args)?
+                    .into_iter()
+                    .group_by_2(true)
+                    .collect();
                 terms.reverse();
 
                 Ok(Some(self.condify(terms)?))
@@ -84,20 +88,20 @@ impl Pass {
 }
 
 // WARN: panics if v.len() % 2 != 0
-fn group_by_2<T>(mut v: Vec<T>) -> Vec<(T, T)> {
-    assert!(v.len() % 2 == 0);
-    let mut out = Vec::with_capacity(v.len() / 2);
-
-    v.reverse();
-
-    while !v.is_empty() {
-        let t = (v.pop().unwrap(), v.pop().unwrap());
-
-        out.push(t);
-    }
-
-    out
-}
+//fn group_by_2<T>(mut v: Vec<T>) -> Vec<(T, T)> {
+//assert!(v.len() % 2 == 0);
+//let mut out = Vec::with_capacity(v.len() / 2);
+//
+//v.reverse();
+//
+//while !v.is_empty() {
+//let t = (v.pop().unwrap(), v.pop().unwrap());
+//
+//out.push(t);
+//}
+//
+//out
+//}
 
 impl ASTVisitor<AST> for Pass {
     fn value_expr(&mut self, l: &Literal) -> Result<AST> {
@@ -204,26 +208,6 @@ mod tests {
         );
 
         assert_eq!(p("(list)").unwrap(), AST::Value(list(vec![])),)
-    }
-
-    #[test]
-    fn test_group_by_2() {
-        let v = group_by_2(vec![1, 2, 3, 4, 5, 6]);
-        assert_eq!(v, vec![(1, 2), (3, 4), (5, 6)]);
-
-        assert_eq!(group_by_2::<usize>(vec![]), vec![]);
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_group_by_2_panics1() {
-        group_by_2(vec![1]);
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_group_by_2_panics2() {
-        group_by_2(vec![1, 2, 3]);
     }
 
     #[test]
