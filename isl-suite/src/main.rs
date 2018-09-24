@@ -19,27 +19,13 @@ use isl::self_hosted;
 
 use isl_suite::Evaler;
 use isl_suite::HostedEvaler;
-
-#[derive(Serialize, Debug)]
-struct SuiteRecord {
-    ok: bool,
-    actual: String,
-}
-
-#[derive(Serialize, Debug)]
-struct SuiteCase {
-    expr: String,
-    expected: String,
-    records: HashMap<String, SuiteRecord>,
-}
-
-#[derive(Serialize, Debug)]
-struct SuiteResult {
-    results: Vec<SuiteCase>,
-}
+use isl_suite::SuiteCase;
+use isl_suite::SuiteRecord;
+use isl_suite::SuiteResult;
 
 fn main() {
     let mut output_buffer = File::create("target/output.toml").unwrap();
+    let mut html_buffer = File::create("target/output.html").unwrap();
 
     let cases: &[(&str, Option<Literal>)] = &[
         ("1", Some(1.into())),
@@ -48,6 +34,7 @@ fn main() {
         ("(+ 1)", None),
         ("(+ 1 2)", Some(3.into())),
         ("(+ 1 2 3)", None),
+        ("(error 'error)", None),
         ("(list 1)", Some(list_lit!(1))),
         ("(list 1 2)", Some(list_lit!(1, 2))),
         ("(list 1 2 3)", Some(list_lit!(1, 2, 3))),
@@ -96,5 +83,9 @@ fn main() {
 
     output_buffer
         .write_all(toml::to_string_pretty(&result).unwrap().as_bytes())
+        .unwrap();
+
+    html_buffer
+        .write_all(isl_suite::render::render(&result).unwrap().as_bytes())
         .unwrap();
 }

@@ -1,5 +1,12 @@
 #[macro_use]
 extern crate isl;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+extern crate handlebars;
+extern crate toml;
+
+use std::collections::HashMap;
 
 use isl::ast;
 use isl::ast::passes::function_lifter;
@@ -12,6 +19,26 @@ use isl::interpreter;
 use isl::parser;
 use isl::self_hosted;
 use isl::vm;
+
+pub mod render;
+
+#[derive(Serialize, Debug)]
+pub struct SuiteRecord {
+    pub ok: bool,
+    pub actual: String,
+}
+
+#[derive(Serialize, Debug)]
+pub struct SuiteCase {
+    pub expr: String,
+    pub expected: String,
+    pub records: HashMap<String, SuiteRecord>,
+}
+
+#[derive(Serialize, Debug)]
+pub struct SuiteResult {
+    pub results: Vec<SuiteCase>,
+}
 
 pub trait Evaler {
     fn lit_eval(&mut self, lit: &[Literal]) -> Result<Literal>;

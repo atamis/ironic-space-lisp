@@ -1,0 +1,68 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8">
+
+<title>Suite Results</title>
+<meta name="description" content="The HTML5 Herald">
+<meta name="author" content="SitePoint">
+
+<link rel="stylesheet" href="css/styles.css?v=1.0">
+
+<style>
+ .ok-true {
+   background: #add8ad;
+ }
+
+ .ok-false {
+   background: #ffa7a7;
+ }
+</style>
+
+</head>
+
+<body>
+  <div>
+    <h1>Suite Results</h1>
+    <div>Suite results from the Ironic Space Lisp suite (<code>isl-suite/</code>).</div>
+    <div>
+      Suite cases have either an expected result, or <code>None</code>, indicating
+      that the implementations should return an error when evaluating this code.
+    </div>
+    <ul>
+      <li><code>hosted</code> ISL implemented interpreter running on the VM.</li>
+      <li><code>rustint</code> Interpreter written in Rust.</li>
+      <li><code>vm</code> VM and compiler implemented in Rust.</li>
+    </ul>
+  </div>
+  <div>
+    {{#each results}}
+    <div>
+      <h1>
+        <code>
+{{ expr }}
+        </code>
+      </h1>
+      <div>
+Expected: <code>{{ expected }}</code>
+      </div>
+      <div>
+        {{#each records}}
+        <div class="ok-{{this.ok}}">
+          <span>
+            {{@key}}
+          </span>
+          <div>
+            <code>
+{{actual}}
+            </code>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+    </div>
+    {{/each}}
+  </div>
+</body>
+</html>
