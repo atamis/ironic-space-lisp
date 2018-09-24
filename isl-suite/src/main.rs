@@ -4,7 +4,6 @@ extern crate isl;
 extern crate isl_suite;
 
 extern crate serde;
-#[macro_use]
 extern crate serde_derive;
 extern crate toml;
 
@@ -81,10 +80,12 @@ fn main() {
         });
     }
 
+    println!("Writing toml output");
     output_buffer
         .write_all(toml::to_string_pretty(&result).unwrap().as_bytes())
         .unwrap();
 
+    println!("Writing html output");
     html_buffer
         .write_all(isl_suite::render::render(&result).unwrap().as_bytes())
         .unwrap();

@@ -18,6 +18,21 @@
  .ok-false {
    background: #ffa7a7;
  }
+
+ code {
+   white-space: pre-wrap;
+ }
+
+ .cases {
+   display: grid;
+   grid-template-columns: repeat(3, 1fr);
+   grid-gap: 10px;
+   grid-auto-rows: minmax(100px, auto);
+ }
+
+ .impl-name {
+   font-weight: bold;
+ }
 </style>
 
 </head>
@@ -36,21 +51,17 @@
       <li><code>vm</code> VM and compiler implemented in Rust.</li>
     </ul>
   </div>
-  <div>
+  <div class="wrapper">
     {{#each results}}
-    <div>
-      <h1>
-        <code>
-{{ expr }}
-        </code>
-      </h1>
+    <div class="result">
+      <h1><code>{{ expr }}</code></h1>
       <div>
 Expected: <code>{{ expected }}</code>
       </div>
-      <div>
+      <div class="cases">
         {{#each records}}
         <div class="ok-{{this.ok}}">
-          <span>
+          <span class="impl-name">
             {{@key}}
           </span>
           <div>

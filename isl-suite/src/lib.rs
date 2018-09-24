@@ -114,8 +114,6 @@ impl Evaler for HostedEvaler {
             )
         );
 
-        println!("caller: {:?}", caller);
-
         let last = ast::ast(&[caller], vm.environment.peek()?)?;
 
         vm.import_jump(&compiler::pack_compile_lifted(&last)?);
