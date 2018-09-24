@@ -18,6 +18,7 @@ use isl::self_hosted;
 
 use isl_suite::Evaler;
 use isl_suite::HostedEvaler;
+use isl_suite::IntHosted;
 use isl_suite::SuiteCase;
 use isl_suite::SuiteRecord;
 use isl_suite::SuiteResult;
@@ -43,11 +44,17 @@ fn main() {
             "(def x 1) (def y (fn [] x)) (let [x 2] (y))",
             Some(1.into()),
         ),
+        (
+            // This was n = 100, but got stack overflows from it.
+            "(def f (fn (n) (if (= n 0) #t (f (- n 1))))) (f 10)",
+            Some(true.into()),
+        ),
     ];
     let mut evalers: Vec<(&str, Box<Evaler>)> = vec![
         ("vm", Box::new(self_hosted::empty_vm())),
         ("rustint", Box::new(interpreter::Interpreter::new())),
         ("hosted", Box::new(HostedEvaler::new())),
+        ("inthosted", Box::new(IntHosted::new())),
     ];
 
     let mut result = SuiteResult { results: vec![] };
@@ -56,6 +63,7 @@ fn main() {
         let lit = parser::parse(&s).unwrap();
         let mut records: HashMap<String, SuiteRecord> = HashMap::new();
         for (name, evaler) in evalers.iter_mut() {
+            //println!("{:}, {:?}", s, name);
             let real = evaler.lit_eval(&lit);
 
             let ok = match (&real, expected) {
@@ -73,11 +81,13 @@ fn main() {
 
             records.insert(name.to_string(), res);
         }
-        result.results.push(SuiteCase {
+        let case = SuiteCase {
             expr: s.to_string(),
             expected: format!("{:#?}", expected),
             records,
-        });
+        };
+
+        result.results.push(case);
     }
 
     println!("Writing toml output");

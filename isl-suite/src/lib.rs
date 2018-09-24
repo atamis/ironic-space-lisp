@@ -14,6 +14,7 @@ use isl::ast::passes::internal_macro;
 use isl::ast::passes::unbound;
 use isl::compiler;
 use isl::data::Literal;
+use isl::environment;
 use isl::errors::*;
 use isl::interpreter;
 use isl::parser;
@@ -97,27 +98,61 @@ impl HostedEvaler {
     }
 }
 
+fn hosted_launcher(lits: &[Literal], env: &environment::Env) -> Result<function_lifter::LiftedAST> {
+    let mut lits = lits.to_vec();
+    lits.insert(0, "do".into());
+
+    // (ret-v (eval (quote (do *lits)) (quote ())))
+    let caller = list_lit!(
+        "ret-v",
+        list_lit!(
+            "eval",
+            list_lit!("quote", lits),
+            list_lit!("quote", list_lit!())
+        )
+    );
+
+    let last = ast::ast(&[caller], &env)?;
+
+    Ok(last)
+}
+
 impl Evaler for HostedEvaler {
     fn lit_eval(&mut self, lits: &[Literal]) -> Result<Literal> {
         let vm = &mut self.0;
 
-        let mut lits = lits.to_vec();
-        lits.insert(0, "do".into());
-
-        // (ret-v (eval (quote (do *lits)) (quote ())))
-        let caller = list_lit!(
-            "ret-v",
-            list_lit!(
-                "eval",
-                list_lit!("quote", lits),
-                list_lit!("quote", list_lit!())
-            )
-        );
-
-        let last = ast::ast(&[caller], vm.environment.peek()?)?;
+        let last = hosted_launcher(lits, vm.environment.peek()?)?;
 
         vm.import_jump(&compiler::pack_compile_lifted(&last)?);
 
         vm.step_until_value(false)
+    }
+}
+
+pub struct IntHosted {
+    terp: interpreter::Interpreter,
+}
+
+impl IntHosted {
+    pub fn new() -> IntHosted {
+        let mut terp = interpreter::Interpreter::new();
+
+        let s = self_hosted::read_lisp().unwrap();
+
+        let lits = parser::parse(&s).unwrap();
+
+        let last = ast::ast(&lits, &terp.global).unwrap();
+
+        terp.import(&last);
+
+        println!("Error ignored!");
+
+        IntHosted { terp }
+    }
+}
+
+impl Evaler for IntHosted {
+    fn lit_eval(&mut self, lits: &[Literal]) -> Result<Literal> {
+        self.terp.import(&hosted_launcher(lits, &self.terp.global)?)
     }
 }

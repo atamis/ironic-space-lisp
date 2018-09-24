@@ -59,7 +59,7 @@ impl ASTVisitor<()> for KeywordSet {
             }
         }
 
-        self.multi_visit(exprs)?;
+        self.multi_visit(exprs).context("Do expressions")?;
         Ok(())
     }
 
@@ -69,7 +69,8 @@ impl ASTVisitor<()> for KeywordSet {
             c.insert(k.clone());
         }
 
-        c.visit(body)
+        c.visit(body).context("Visiting lambda body")?;
+        Ok(())
     }
 
     fn var_expr(&mut self, k: &Keyword) -> Result<()> {
@@ -81,8 +82,9 @@ impl ASTVisitor<()> for KeywordSet {
     }
 
     fn application_expr(&mut self, f: &Rc<AST>, args: &[AST]) -> Result<()> {
-        self.visit(f)?;
-        args.iter().map(|e| self.visit(e)).collect()
+        self.visit(f).context("Function applicable expr")?;
+        self.multi_visit(args).context("Arguments to application")?;
+        Ok(())
     }
 }
 
