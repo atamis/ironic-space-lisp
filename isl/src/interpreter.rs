@@ -154,9 +154,9 @@ impl Interpreter {
         let mut sys = syscall::SyscallRegistry::new();
         let mut global = Env::new();
 
-        vm::ingest_environment(&mut sys, &mut global, &syscall::list::Factory::new());
-        vm::ingest_environment(&mut sys, &mut global, &syscall::util::Factory::new());
-        vm::ingest_environment(&mut sys, &mut global, &syscall::math::Factory::new());
+        syscall::ingest_environment(&mut sys, &mut global, &syscall::list::Factory::new());
+        syscall::ingest_environment(&mut sys, &mut global, &syscall::util::Factory::new());
+        syscall::ingest_environment(&mut sys, &mut global, &syscall::math::Factory::new());
 
         (sys, global)
     }

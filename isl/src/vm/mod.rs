@@ -21,6 +21,55 @@ use syscall;
 use vm::bytecode::Bytecode;
 use vm::op::Op;
 
+#[derive(Clone, Debug)]
+pub enum VMState {
+    Done(Literal),
+    Stopped,
+    Running,
+    RunningUntil(usize),
+}
+
+impl VMState {
+    /// Can we permit execution while in this vm state?
+    fn can_run(&self) -> bool {
+        match self {
+            VMState::Running => true,
+            VMState::RunningUntil(i) if *i > 0 => true,
+            _ => false,
+        }
+    }
+
+    fn check_run(&mut self) -> Result<()> {
+        if let VMState::RunningUntil(0) = self {
+            *self = VMState::Stopped;
+        }
+
+        if self.can_run() {
+            Ok(())
+        } else {
+            Err(format_err!("Cannot execute VM while in state {:?}", self))
+        }
+    }
+
+    fn get_ret(&self) -> Option<Literal> {
+        if let VMState::Done(ref l) = self {
+            Some(l.clone())
+        } else {
+            None
+        }
+    }
+
+    fn cost(&mut self, cost: usize) {
+        if let VMState::RunningUntil(ref mut c) = self {
+            *c = c.saturating_sub(cost);
+        }
+
+        if let VMState::RunningUntil(0) = self {
+            *self = VMState::Stopped;
+        }
+    }
+}
+
 /// A non-reusable bytecode VM.
 ///
 /// Keeps track of data stack, frame stack, environment stack, and the code.
@@ -34,23 +83,7 @@ pub struct VM {
     sys: syscall::SyscallRegistry,
     /// The current local environment bindings.
     pub environment: EnvStack,
-}
-
-pub fn ingest_environment(
-    sys: &mut syscall::SyscallRegistry,
-    env: &mut Env,
-    fact: &syscall::SyscallFactory,
-) {
-    for (name, arity_opt, addr) in sys.ingest(fact) {
-        let f = match arity_opt {
-            Some(n) => Literal::Closure(n, addr),
-            None => Literal::Address(addr),
-        };
-
-        let f = Rc::new(f);
-
-        env.insert(name, f);
-    }
+    pub state: VMState,
 }
 
 impl VM {
@@ -88,21 +121,18 @@ impl VM {
     /// At this point, the stack is popped and returned. A failure to pop a value
     /// is treated as an error state. Propagates errors from [`VM::single_step()`]. If
     /// `print` is `true`, print the VM state on every state.
-    pub fn step_until_value(&mut self, print: bool) -> Result<data::Literal> {
-        loop {
-            if self.frames.is_empty() {
-                return self
-                    .stack
-                    .pop()
-                    .ok_or_else(|| err_msg("Frames empty, but no value to return"));
-            }
-
-            if print {
-                println!("{:?}", self);
-            }
-
-            self.single_step()?;
+    pub fn step_until_value(&mut self, _print: bool) -> Result<data::Literal> {
+        if self.state.can_run() {
+            return Err(err_msg("Already running"));
         }
+
+        self.state = VMState::Running;
+
+        self.state_step().context("While stepping until return")?;
+
+        self.state
+            .get_ret()
+            .ok_or_else(|| err_msg("No return value"))
     }
 
     /// Step until a resource is consumed. Each operation executed decrements a counter
@@ -115,49 +145,37 @@ impl VM {
     ///
     /// `Ok(Some(_))` if there was a top level return.
     pub fn step_until_cost(&mut self, max: usize) -> Result<Option<data::Literal>> {
-        let mut c = max;
-        loop {
-            // peek next op
-            let cost = match self
-                .pc_peek()
-                .context("Peeking pc while executing until cost")
-            {
-                Ok(op) => op.cost(),
-                Err(e) => {
-                    let pc = self
-                        .frames
-                        .last()
-                        .ok_or_else(|| err_msg("Stack empty, no counter"))?;
-                    if self.sys.contains(*pc) {
-                        self.sys.cost(*pc)
-                    } else {
-                        Err(e).context("Also failed syscall lookup")?;
-                        0
-                    }
-                }
-            };
-
-            // check cost
-            if c < cost {
-                return Ok(None);
-            }
-
-            // execute single step
-            self.single_step()
-                .context("Executing until cost exceeds max")?;
-
-            // check return
-            if self.frames.is_empty() {
-                return Ok(Some(
-                    self.stack
-                        .pop()
-                        .ok_or_else(|| err_msg("Frames empty, but no value to return"))?,
-                ));
-            }
-
-            // decr cost
-            c -= cost;
+        if self.state.can_run() {
+            return Err(err_msg("Already running"));
         }
+
+        self.state = VMState::RunningUntil(max);
+
+        self.state_step().context("While stepping until cost")?;
+
+        Ok(self.state.get_ret())
+    }
+
+    /// Step until the VM can no longer run.
+    ///
+    /// See [`step_until_cost()`] and [`step_until_value()`] for methods
+    /// that ensure the VM can be set to a running state, and then set it,
+    /// because `state_step` doesn't do that.
+    pub fn state_step(&mut self) -> Result<()> {
+        while self.state.can_run() {
+            self.single_step().context("Stepping in state_step")?;
+
+            if self.frames.is_empty() {
+                let res = self
+                    .stack
+                    .pop()
+                    .ok_or_else(|| err_msg("Frames empty, but no value to return"))?;
+
+                self.state = VMState::Done(res);
+            }
+        }
+
+        Ok(())
     }
 
     /// Manually jump the VM to an address. This returns an `Err` if the frame
@@ -177,6 +195,7 @@ impl VM {
         self.code = code;
         self.stack = vec![];
         self.frames = vec![(0, 0)];
+        self.state = VMState::Stopped;
     }
 
     /// Imports new code into the VM's [`Bytecode`] repo, jumps to the main
@@ -223,6 +242,8 @@ impl VM {
     /// error states. See `fn op_*` for raw implementations, and see  [ `Op` ]
     /// for high level descriptions of the operations.
     pub fn single_step(&mut self) -> Result<()> {
+        self.state.check_run().context("While single stepping")?;
+
         let pc = self.pcounter()?;
         // TODO: maybe don't look up program chunk first?
         let op = match self.code.addr(pc) {
@@ -235,6 +256,9 @@ impl VM {
                         "Invoking syscall {:?}, with stack {:?}",
                         pc, self.frames
                     ))?;
+
+                    self.state.cost(self.sys.cost(pc));
+
                     self.frames
                         .pop()
                         .ok_or_else(|| err_msg("Error popping stack after syscall"))?;
@@ -246,10 +270,17 @@ impl VM {
             }
         };
 
+        self.state.cost(op.cost());
+
         self.exec_op(op)
             .context(format_err!("While executing at {:?}", pc))?;
+
         Ok(())
     }
+
+    // Below here, we don't care about the state, vis a vie whether we execute
+    // or not, or whether we incur costs. We only care about it to adjust execution
+    // flow as a user would, to await data or halt execution.
 
     /// Execute a single operation, ignoring any already loaded code and ignoring the
     /// program counter. See [`VM::single_step()`] for more details.

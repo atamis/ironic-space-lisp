@@ -6,9 +6,12 @@
 // they don't _have_ to be pass by value.
 #![allow(clippy::needless_pass_by_value)]
 
+use std::rc::Rc;
+
 use data::Address;
 use data::Keyword;
 use data::Literal;
+use environment;
 use errors::*;
 use std::collections::HashMap;
 use std::fmt;
@@ -108,5 +111,22 @@ impl SyscallRegistry {
 impl fmt::Debug for SyscallRegistry {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "SyscallRegistry {{}}")
+    }
+}
+
+pub fn ingest_environment(
+    sys: &mut SyscallRegistry,
+    env: &mut environment::Env,
+    fact: &SyscallFactory,
+) {
+    for (name, arity_opt, addr) in sys.ingest(fact) {
+        let f = match arity_opt {
+            Some(n) => Literal::Closure(n, addr),
+            None => Literal::Address(addr),
+        };
+
+        let f = Rc::new(f);
+
+        env.insert(name, f);
     }
 }

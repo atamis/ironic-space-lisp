@@ -1,9 +1,10 @@
-use super::ingest_environment;
+use super::VMState;
 use super::VM;
 use data::Address;
 use data::Keyword;
 use data::Literal;
 use environment;
+use errors::*;
 use std::rc::Rc;
 use syscall;
 use vm::bytecode::Bytecode;
@@ -64,7 +65,7 @@ impl Builder {
         let mut sys = syscall::SyscallRegistry::new();
 
         for f in self.sys_facts {
-            ingest_environment(&mut sys, e.peek_mut().unwrap(), &*f);
+            syscall::ingest_environment(&mut sys, e.peek_mut().unwrap(), &*f);
         }
 
         for (k, v) in self.env {
@@ -77,7 +78,15 @@ impl Builder {
             stack: vec![],
             sys,
             environment: e,
+            state: VMState::Stopped,
         }
+    }
+
+    pub fn build_exec(self) -> (Result<Literal>, VM) {
+        let mut vm = self.build();
+        let res = vm.step_until_value(false);
+
+        (res, vm)
     }
 }
 
