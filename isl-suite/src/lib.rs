@@ -143,9 +143,9 @@ impl IntHosted {
 
         let last = ast::ast(&lits, &terp.global).unwrap();
 
+        // This returns an error, but it still works.
+        #[allow(unused_must_use)]
         terp.import(&last);
-
-        println!("Error ignored!");
 
         IntHosted { terp }
     }
