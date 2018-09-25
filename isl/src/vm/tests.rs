@@ -264,23 +264,23 @@ fn test_op_call_arity() {
 #[test]
 fn test_step_until() {
     let mut ret = VM::new(Bytecode::new(vec![vec![Op::Return]]));
-    assert!(ret.step_until_value(false).is_err());
+    assert!(ret.step_until_value().is_err());
 
     let mut ret = VM::new(Bytecode::new(vec![vec![
         Op::Lit(Literal::Number(0)),
         Op::Return,
     ]]));
 
-    assert_eq!(ret.step_until_value(false).unwrap(), Literal::Number(0));
+    assert_eq!(ret.step_until_value().unwrap(), Literal::Number(0));
 
     // lol
         /*let mut never = VM::new(Bytecode::new(vec![vec![Op::Lit(Literal::Address((0, 0))),
                                                       Op::Jump,
                                                       Op::Return]]));
-        assert_never_terminates!(never.step_until_value(false));*/
+        assert_never_terminates!(never.step_until_value());*/
 
     //let mut empty = VM::new(Bytecode::new(vec![vec![]]));
-    assert!(ret.step_until_value(false).is_err());
+    assert!(ret.step_until_value().is_err());
 }
 
 #[test]

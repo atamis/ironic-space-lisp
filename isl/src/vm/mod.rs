@@ -14,7 +14,6 @@ pub use self::builder::Builder;
 use data;
 use data::Address;
 use data::Literal;
-use environment::Env;
 use environment::EnvStack;
 use errors::*;
 use syscall;
@@ -70,6 +69,21 @@ impl VMState {
     }
 }
 
+#[derive(Debug)]
+pub struct VMConfig {
+    reset_on_error: bool,
+    print_trace: bool,
+}
+
+impl Default for VMConfig {
+    fn default() -> Self {
+        VMConfig {
+            reset_on_error: true,
+            print_trace: false,
+        }
+    }
+}
+
 /// A non-reusable bytecode VM.
 ///
 /// Keeps track of data stack, frame stack, environment stack, and the code.
@@ -84,6 +98,7 @@ pub struct VM {
     /// The current local environment bindings.
     pub environment: EnvStack,
     pub state: VMState,
+    conf: VMConfig,
 }
 
 impl VM {
@@ -108,27 +123,23 @@ impl VM {
         Ok(a)
     }
 
-    fn pc_peek(&self) -> Result<Op> {
-        let pc = self
-            .frames
-            .last()
-            .ok_or_else(|| err_msg("Stack empty, no counter"))?;
-
-        self.code.addr(*pc)
-    }
-
     /// Step until a "top-level" return, which is when the frame stack is empty.
     /// At this point, the stack is popped and returned. A failure to pop a value
     /// is treated as an error state. Propagates errors from [`VM::single_step()`]. If
     /// `print` is `true`, print the VM state on every state.
-    pub fn step_until_value(&mut self, _print: bool) -> Result<data::Literal> {
+    pub fn step_until_value(&mut self) -> Result<data::Literal> {
         if self.state.can_run() {
             return Err(err_msg("Already running"));
         }
 
         self.state = VMState::Running;
 
-        self.state_step().context("While stepping until return")?;
+        if let Err(e) = self.state_step() {
+            if self.conf.reset_on_error {
+                self.reset_exec();
+            }
+            return Err(e.context("While stepping until return").into());
+        }
 
         self.state
             .get_ret()
@@ -195,6 +206,13 @@ impl VM {
         self.code = code;
         self.stack = vec![];
         self.frames = vec![(0, 0)];
+        self.state = VMState::Stopped;
+    }
+
+    /// Reset the execution state, throwing the existing data stack, frame stack, and state.
+    pub fn reset_exec(&mut self) {
+        self.stack = vec![];
+        self.frames = vec![];
         self.state = VMState::Stopped;
     }
 
@@ -271,6 +289,10 @@ impl VM {
         };
 
         self.state.cost(op.cost());
+
+        if self.conf.print_trace {
+            println!("Trace: {:?}", self);
+        }
 
         self.exec_op(op)
             .context(format_err!("While executing at {:?}", pc))?;

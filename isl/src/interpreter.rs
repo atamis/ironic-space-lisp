@@ -12,7 +12,6 @@ use data::Literal;
 use environment::Env;
 use errors::*;
 use syscall;
-use vm;
 
 #[derive(Debug)]
 pub struct Interpreter {

@@ -53,7 +53,7 @@ impl Evaler for vm::VM {
 
         self.import_jump(&code);
 
-        self.step_until_value(false)
+        self.step_until_value()
     }
 }
 
@@ -92,7 +92,7 @@ impl HostedEvaler {
 
         vm.import_jump(&code);
 
-        vm.step_until_value(false).unwrap();
+        vm.step_until_value().unwrap();
 
         HostedEvaler(vm)
     }
@@ -125,7 +125,7 @@ impl Evaler for HostedEvaler {
 
         vm.import_jump(&compiler::pack_compile_lifted(&last)?);
 
-        vm.step_until_value(false)
+        vm.step_until_value()
     }
 }
 
@@ -134,6 +134,7 @@ pub struct IntHosted {
 }
 
 impl IntHosted {
+    #[allow(unused_must_use)]
     pub fn new() -> IntHosted {
         let mut terp = interpreter::Interpreter::new();
 
@@ -144,7 +145,6 @@ impl IntHosted {
         let last = ast::ast(&lits, &terp.global).unwrap();
 
         // This returns an error, but it still works.
-        #[allow(unused_must_use)]
         terp.import(&last);
 
         IntHosted { terp }

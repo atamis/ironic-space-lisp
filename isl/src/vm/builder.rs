@@ -1,3 +1,4 @@
+use super::VMConfig;
 use super::VMState;
 use super::VM;
 use data::Address;
@@ -17,6 +18,7 @@ pub struct Builder {
     codes: Vec<Bytecode>,
     sys_facts: Vec<Box<syscall::SyscallFactory>>,
     env: Vec<(Keyword, Literal)>,
+    conf: VMConfig,
 }
 
 impl Builder {
@@ -25,6 +27,7 @@ impl Builder {
             codes: vec![],
             sys_facts: vec![],
             env: vec![],
+            conf: Default::default(),
         }
     }
 
@@ -48,6 +51,18 @@ impl Builder {
 
     pub fn env(&mut self, k: Keyword, v: Literal) -> &mut Builder {
         self.env.push((k, v));
+        self
+    }
+
+    // Config
+
+    pub fn reset_on_error(&mut self, reset: bool) -> &mut Self {
+        self.conf.reset_on_error = reset;
+        self
+    }
+
+    pub fn print_trace(&mut self, print: bool) -> &mut Self {
+        self.conf.print_trace = print;
         self
     }
 
@@ -79,12 +94,13 @@ impl Builder {
             sys,
             environment: e,
             state: VMState::Stopped,
+            conf: self.conf,
         }
     }
 
     pub fn build_exec(self) -> (Result<Literal>, VM) {
         let mut vm = self.build();
-        let res = vm.step_until_value(false);
+        let res = vm.step_until_value();
 
         (res, vm)
     }

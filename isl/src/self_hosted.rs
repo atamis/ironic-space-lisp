@@ -54,16 +54,13 @@ pub fn self_hosted() -> Result<()> {
 
     vm.import_jump(&code);
 
-    println!("{:?}", vm.step_until_value(false).unwrap());
+    println!("{:?}", vm.step_until_value().unwrap());
 
     let double = make_double(&lits, vm.environment.peek().unwrap()).unwrap();
 
     vm.import_jump(&double);
 
-    println!(
-        "hosted: {:?}",
-        vm.step_until_value(false)?.ensure_list()?[1]
-    );
+    println!("hosted: {:?}", vm.step_until_value()?.ensure_list()?[1]);
 
     Ok(())
 }

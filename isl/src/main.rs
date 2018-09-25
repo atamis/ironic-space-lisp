@@ -43,7 +43,7 @@ fn exec(content: &str) -> Result<()> {
         let code = compiler::pack_compile_lifted(&last).context("Packing lifted ast")?;
 
         vm.import_jump(&code);
-        let res = vm.step_until_value(false);
+        let res = vm.step_until_value();
 
         match res {
             Ok(x) => println!("{:#?}", x),

@@ -10,6 +10,7 @@ pub trait UtilTools: Iterator {
     }
 }
 
+#[allow(dead_code)]
 pub fn group_by_2<I>(iter: I, aggressive: bool) -> GroupBy2<I>
 where
     I: Iterator,
