@@ -3,7 +3,7 @@ use ast::Def;
 use ast::AST;
 use data::Keyword;
 use data::Literal;
-use environment::Env;
+use env::Env;
 use errors::*;
 use im::hashset;
 use std::rc::Rc;

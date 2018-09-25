@@ -20,7 +20,7 @@ pub mod ast;
 pub mod compiler;
 #[macro_use]
 pub mod data;
-pub mod environment;
+pub mod env;
 pub mod errors;
 pub mod interpreter;
 pub mod parser;

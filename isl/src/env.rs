@@ -113,9 +113,8 @@ impl EnvStack {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use data::Literal;
-    use environment::Env;
-    use environment::EnvStack;
     use std::rc::Rc;
 
     #[test]

@@ -2,7 +2,7 @@ use ast::ast;
 use ast::LiftedAST;
 use compiler;
 use data;
-use environment;
+use env;
 use errors::*;
 use parser;
 use vm;
@@ -24,7 +24,7 @@ pub fn empty_vm() -> vm::VM {
     builder.build()
 }
 
-fn make_double(lits: &[data::Literal], e: &environment::Env) -> Result<bytecode::Bytecode> {
+fn make_double(lits: &[data::Literal], e: &env::Env) -> Result<bytecode::Bytecode> {
     let mut d = Vec::with_capacity(lits.len() + 1);
     let mut new_lits: Vec<data::Literal> = lits.into_iter().cloned().collect();
     d.push(data::Literal::Keyword("do".to_string()));

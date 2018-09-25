@@ -4,7 +4,7 @@ use super::VM;
 use data::Address;
 use data::Keyword;
 use data::Literal;
-use environment;
+use env;
 use errors::*;
 use std::rc::Rc;
 use syscall;
@@ -76,7 +76,7 @@ impl Builder {
 
         code.chunks[0] = build_entry_chunk(&entries);
 
-        let mut e = environment::EnvStack::new();
+        let mut e = env::EnvStack::new();
         let mut sys = syscall::SyscallRegistry::new();
 
         for f in self.sys_facts {

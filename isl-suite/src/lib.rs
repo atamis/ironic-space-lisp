@@ -14,7 +14,7 @@ use isl::ast::passes::internal_macro;
 use isl::ast::passes::unbound;
 use isl::compiler;
 use isl::data::Literal;
-use isl::environment;
+use isl::env;
 use isl::errors::*;
 use isl::interpreter;
 use isl::parser;
@@ -98,7 +98,7 @@ impl HostedEvaler {
     }
 }
 
-fn hosted_launcher(lits: &[Literal], env: &environment::Env) -> Result<function_lifter::LiftedAST> {
+fn hosted_launcher(lits: &[Literal], env: &env::Env) -> Result<function_lifter::LiftedAST> {
     let mut lits = lits.to_vec();
     lits.insert(0, "do".into());
 

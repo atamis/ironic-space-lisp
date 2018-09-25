@@ -14,7 +14,7 @@ pub use self::builder::Builder;
 use data;
 use data::Address;
 use data::Literal;
-use environment::EnvStack;
+use env::EnvStack;
 use errors::*;
 use syscall;
 use vm::bytecode::Bytecode;

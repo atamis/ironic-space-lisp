@@ -12,7 +12,7 @@ use std::rc::Rc;
 use data;
 use data::Keyword;
 use data::Literal;
-use environment;
+use env;
 use errors::*;
 
 pub mod passes;
@@ -22,7 +22,7 @@ use self::passes::internal_macro;
 use self::passes::unbound;
 
 /// Parse several [`Literal`]s into a [`LiftedAST`].
-pub fn ast(lits: &[data::Literal], e: &environment::Env) -> Result<function_lifter::LiftedAST> {
+pub fn ast(lits: &[data::Literal], e: &env::Env) -> Result<function_lifter::LiftedAST> {
     let last = {
         let ast = parse_multi(&lits).context("Multiparsing literals")?;
         let ast = internal_macro::pass(&ast).context("Expanding internal macros")?;

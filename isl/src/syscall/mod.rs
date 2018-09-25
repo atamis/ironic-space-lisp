@@ -11,7 +11,7 @@ use std::rc::Rc;
 use data::Address;
 use data::Keyword;
 use data::Literal;
-use environment;
+use env;
 use errors::*;
 use std::collections::HashMap;
 use std::fmt;
@@ -114,11 +114,7 @@ impl fmt::Debug for SyscallRegistry {
     }
 }
 
-pub fn ingest_environment(
-    sys: &mut SyscallRegistry,
-    env: &mut environment::Env,
-    fact: &SyscallFactory,
-) {
+pub fn ingest_environment(sys: &mut SyscallRegistry, env: &mut env::Env, fact: &SyscallFactory) {
     for (name, arity_opt, addr) in sys.ingest(fact) {
         let f = match arity_opt {
             Some(n) => Literal::Closure(n, addr),

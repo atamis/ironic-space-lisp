@@ -1,6 +1,6 @@
 //! Runtime size of data values
 use data;
-use environment::EnvStack;
+use env::EnvStack;
 use im::Vector;
 use std::mem::size_of;
 use vm;
