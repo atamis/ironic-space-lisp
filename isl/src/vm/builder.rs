@@ -84,7 +84,7 @@ impl Builder {
         }
 
         for (k, v) in self.env {
-            e.insert(k, Rc::new(v)).unwrap();
+            e.insert(k, v).unwrap();
         }
 
         VM {

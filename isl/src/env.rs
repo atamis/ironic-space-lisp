@@ -19,7 +19,7 @@ impl fmt::Debug for EnvStack {
 ///
 /// Currently maintaints [`Rc`] pointers to the [`Literal`](data::Literal),
 /// but this isn't necessary.
-pub type Env = HashMap<String, Rc<data::Literal>>;
+pub type Env = HashMap<String, data::Literal>;
 
 /// Represents multiple nested environment bindings.
 #[derive(Default)]
@@ -35,7 +35,7 @@ impl EnvStack {
     }
 
     /// Insert a new `(k, v)` pair into the top environment.
-    pub fn insert(&mut self, k: String, v: Rc<data::Literal>) -> Result<()> {
+    pub fn insert(&mut self, k: String, v: data::Literal) -> Result<()> {
         self.envs
             .last_mut()
             .ok_or_else(|| err_msg("No envs to insert into"))?
@@ -45,13 +45,13 @@ impl EnvStack {
 
     #[allow(dead_code)]
     pub fn easy_insert(&mut self, k: &str, v: data::Literal) -> Result<()> {
-        self.insert(k.to_string(), Rc::new(v))
+        self.insert(k.to_string(), v)
     }
 
     /// Get the value associated with a key. Returns `Err()` if not found.
-    pub fn get(&self, k: &str) -> Result<Rc<data::Literal>> {
+    pub fn get(&self, k: &str) -> Result<&data::Literal> {
         match self.peek()?.get(k) {
-            Some(r) => Ok(Rc::clone(r)),
+            Some(r) => Ok(&r),
             None => Err(format_err!("Binding not found for {:}", k)),
         }
     }
@@ -119,7 +119,6 @@ mod tests {
 
     #[test]
     fn test_env() {
-        let n = |x| Rc::new(Literal::Number(x));
         let mut root = Env::new();
 
         let s1 = "test1".to_string();
@@ -130,24 +129,22 @@ mod tests {
 
         assert!(root.get(&s1).is_none());
 
-        root.insert(s1, n(0));
+        root.insert(s1, 0.into());
 
-        assert_eq!(*root.get(&s11).unwrap(), n(0));
+        assert_eq!(*root.get(&s11).unwrap(), 0.into());
 
-        let l1 = root.update(s2, n(1));
+        let l1 = root.update(s2, 1.into());
 
-        assert_eq!(*l1.get(&s21).unwrap(), n(1));
+        assert_eq!(*l1.get(&s21).unwrap(), 1.into());
 
-        assert_eq!(*l1.get(&s11).unwrap(), n(0));
+        assert_eq!(*l1.get(&s11).unwrap(), 0.into());
 
-        assert_eq!(*root.get(&s11).unwrap(), n(0));
+        assert_eq!(*root.get(&s11).unwrap(), 0.into());
         assert!(root.get(&s21).is_none());
     }
 
     #[test]
     fn test_env_stack() {
-        let n = |x| Rc::new(Literal::Number(x));
-
         let mut root = EnvStack::new();
 
         let s1 = "test1".to_string();
@@ -158,49 +155,45 @@ mod tests {
 
         assert!(root.get(&s1).is_err());
 
-        root.insert(s1, n(0)).unwrap();
+        root.insert(s1, 0.into()).unwrap();
 
-        assert_eq!(root.get(&s11).unwrap(), n(0));
+        assert_eq!(*root.get(&s11).unwrap(), 0.into());
 
         root.push();
 
-        root.insert(s2, n(1)).unwrap();
+        root.insert(s2, 1.into()).unwrap();
 
-        assert_eq!(root.get(&s21).unwrap(), n(1));
+        assert_eq!(*root.get(&s21).unwrap(), 1.into());
 
-        assert_eq!(root.get(&s11).unwrap(), n(0));
+        assert_eq!(*root.get(&s11).unwrap(), 0.into());
 
         root.pop().unwrap();
 
-        assert_eq!(root.get(&s11).unwrap(), n(0));
+        assert_eq!(*root.get(&s11).unwrap(), 0.into());
         assert!(root.get(&s21).is_err());
-    }
-
-    fn n(n: u32) -> Rc<Literal> {
-        Rc::new(Literal::Number(n))
     }
 
     #[test]
     fn test_diff_stack() {
         let mut e = EnvStack::new();
 
-        e.insert("test0".to_string(), n(0)).unwrap();
+        e.insert("test0".to_string(), 0.into()).unwrap();
         e.push();
-        e.insert("test1".to_string(), n(1)).unwrap();
-        e.insert("test2".to_string(), n(2)).unwrap();
+        e.insert("test1".to_string(), 1.into()).unwrap();
+        e.insert("test2".to_string(), 2.into()).unwrap();
         e.push();
         e.push();
-        e.insert("test3".to_string(), n(3)).unwrap();
+        e.insert("test3".to_string(), 3.into()).unwrap();
 
         let ds = e.diff_stack();
 
-        assert_eq!(ds[0], hashmap!{"test0".to_string() => n(0)});
+        assert_eq!(ds[0], hashmap!{"test0".to_string() => 0.into()});
         assert_eq!(
             ds[1],
-            hashmap!{"test1".to_string() => n(1), "test2".to_string() => n(2)}
+            hashmap!{"test1".to_string() => 1.into(), "test2".to_string() => 2.into()}
         );
         assert_eq!(ds[2], hashmap!{});
-        assert_eq!(ds[3], hashmap!{"test3".to_string() => n(3)});
+        assert_eq!(ds[3], hashmap!{"test3".to_string() => 3.into()});
 
         assert_eq!(EnvStack::new().diff_stack(), [hashmap!{}]);
     }

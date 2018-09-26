@@ -95,7 +95,7 @@ impl<'a, 'b> ASTVisitor<Literal> for Context<'a, 'b> {
             .get(k)
             .ok_or_else(|| format_err!("While accessing var {:} in env {:?}", k, self.env))?;
 
-        Ok((**r).clone())
+        Ok((*r).clone())
     }
 
     fn application_expr(&mut self, f: &Rc<AST>, args: &[AST]) -> Result<Literal> {
@@ -115,7 +115,7 @@ impl<'a, 'b> DefVisitor<Literal> for Context<'a, 'b> {
         let res = self
             .visit(value)
             .context(format_err!("While evaluating def value for {:}", name))?;
-        self.env.insert(name.to_string(), Rc::new(res.clone()));
+        self.env.insert(name.to_string(), res.clone());
         Ok(res)
     }
 }
@@ -183,7 +183,7 @@ impl Interpreter {
         let mut arg_binding = self.global.clone();
 
         for (name, arg) in astfn.args.iter().cloned().zip(args) {
-            arg_binding.insert(name, Rc::new(arg));
+            arg_binding.insert(name, arg);
         }
 
         let mut fn_ctx = Context::new(self, &mut arg_binding);

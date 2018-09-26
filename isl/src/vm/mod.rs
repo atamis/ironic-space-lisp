@@ -404,7 +404,8 @@ impl VM {
 
         let mut val = self.environment.get(&keyword)?;
 
-        let val = Rc::make_mut(&mut val);
+        // TODO:
+        //let val = Rc::make_mut(&mut val);
 
         self.stack.push(val.clone());
         Ok(())
@@ -421,7 +422,7 @@ impl VM {
             .pop()
             .ok_or_else(|| err_msg("Attempted to pop stack for value for store"))?;
 
-        self.environment.insert(keyword, Rc::new(value))?;
+        self.environment.insert(keyword, value)?;
 
         Ok(())
     }

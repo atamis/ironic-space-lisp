@@ -140,9 +140,7 @@ fn test_op_load() {
     let mut vm = VM::new(Bytecode::new(vec![vec![]]));
 
     assert!(vm.environment.get("test").is_err());
-    vm.environment
-        .insert("test".to_string(), Rc::new(Literal::Number(0)))
-        .unwrap();
+    vm.environment.insert("test".to_string(), 0.into()).unwrap();
     assert_eq!(*vm.environment.get("test").unwrap(), Literal::Number(0));
     vm.op_lit(Literal::Keyword("test".to_string())).unwrap();
     vm.op_load().unwrap();
@@ -165,7 +163,7 @@ fn test_op_pushenv_popenv() {
     let mut vm = VM::new(Bytecode::new(vec![vec![]]));
 
     vm.environment
-        .insert("test1".to_string(), Rc::new(Literal::Number(0)))
+        .insert("test1".to_string(), 0.into())
         .unwrap();
     assert!(vm.environment.get("test2").is_err());
 
@@ -174,7 +172,7 @@ fn test_op_pushenv_popenv() {
     assert_eq!(*vm.environment.get("test1").unwrap(), Literal::Number(0));
 
     vm.environment
-        .insert("test2".to_string(), Rc::new(Literal::Number(1)))
+        .insert("test2".to_string(), 1.into())
         .unwrap();
     assert_eq!(*vm.environment.get("test2").unwrap(), Literal::Number(1));
     vm.op_lit(Literal::Keyword("test1".to_string())).unwrap();

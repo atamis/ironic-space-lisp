@@ -121,8 +121,6 @@ pub fn ingest_environment(sys: &mut SyscallRegistry, env: &mut env::Env, fact: &
             None => Literal::Address(addr),
         };
 
-        let f = Rc::new(f);
-
         env.insert(name, f);
     }
 }
