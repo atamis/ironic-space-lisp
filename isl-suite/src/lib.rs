@@ -153,6 +153,9 @@ impl IntHosted {
 
 impl Evaler for IntHosted {
     fn lit_eval(&mut self, lits: &[Literal]) -> Result<Literal> {
-        self.terp.import(&hosted_launcher(lits, &self.terp.global)?)
+        match self.terp.import(&hosted_launcher(lits, &self.terp.global)?) {
+            Ok(r) => Ok(r),
+            Err(e) => Err(err_msg(format!("Elided error: {}", e))),
+        }
     }
 }

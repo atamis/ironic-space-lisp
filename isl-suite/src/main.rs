@@ -49,6 +49,9 @@ fn main() {
             "(def f (fn (n) (if (= n 0) #t (f (- n 1))))) (f 10)",
             Some(true.into()),
         ),
+        ("(def f (fn [x y] x)) (f 1)", None),
+        ("(def f (fn [x y] x)) (f 1 2)", Some(1.into())),
+        ("(def f (fn [x y] x)) (f 1 2 3)", None),
     ];
     let mut evalers: Vec<(&str, Box<Evaler>)> = vec![
         ("vm", Box::new(self_hosted::empty_vm())),
