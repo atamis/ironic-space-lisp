@@ -2,7 +2,6 @@
 //!
 //! This leverages immutable [`HashMap`]s from the [`im`](im) crate.
 use im::hashmap::HashMap;
-use std::rc::Rc;
 
 use data;
 use errors::*;

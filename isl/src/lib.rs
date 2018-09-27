@@ -15,6 +15,8 @@ extern crate test;
 extern crate derive_is_enum_variant;
 #[macro_use]
 extern crate nom;
+extern crate futures;
+extern crate tokio;
 
 pub mod ast;
 pub mod compiler;
@@ -22,6 +24,7 @@ pub mod compiler;
 pub mod data;
 pub mod env;
 pub mod errors;
+pub mod exec;
 pub mod interpreter;
 pub mod parser;
 pub mod repl;

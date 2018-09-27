@@ -6,7 +6,6 @@ use data::Keyword;
 use data::Literal;
 use env;
 use errors::*;
-use std::rc::Rc;
 use syscall;
 use vm::bytecode::Bytecode;
 use vm::bytecode::Chunk;
@@ -100,6 +99,9 @@ impl Builder {
 
     pub fn build_exec(self) -> (Result<Literal>, VM) {
         let mut vm = self.build();
+
+        vm.code.dissassemble();
+
         let res = vm.step_until_value();
 
         (res, vm)
@@ -114,6 +116,10 @@ fn build_entry_chunk(entries: &[Address]) -> Chunk {
         if idx < entries.len() - 1 {
             ops.push(Op::Pop);
         }
+    }
+
+    if entries.is_empty() {
+        ops.push(Op::Lit(false.into()));
     }
 
     ops.push(Op::Return);

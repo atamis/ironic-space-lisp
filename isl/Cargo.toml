@@ -8,8 +8,10 @@ default-run = "isl"
 
 [dependencies]
 failure = "0.1.2"
-im = "11.0.1"
+im = "12.1.0"
 rustyline = "2.0.0"
 clap = "~2.32"
 derive_is_enum_variant = "0.1.1"
 nom = "^4.0"
+futures-preview = "0.2.1"
+tokio = "0.1.8"

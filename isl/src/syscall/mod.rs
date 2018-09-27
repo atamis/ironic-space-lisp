@@ -6,8 +6,6 @@
 // they don't _have_ to be pass by value.
 #![allow(clippy::needless_pass_by_value)]
 
-use std::rc::Rc;
-
 use data::Address;
 use data::Keyword;
 use data::Literal;
@@ -22,19 +20,19 @@ pub mod math;
 pub mod util;
 
 /// A syscall that mutates a stack directly.
-pub type StackFn = Fn(&mut Vec<Literal>) -> Result<()>;
+pub type StackFn = Box<Fn(&mut Vec<Literal>) -> Result<()> + Send + 'static>;
 
 /// A syscall that takes 1 value and returns 1 value.
-pub type A1Fn = Fn(Literal) -> Result<Literal>;
+pub type A1Fn = Box<Fn(Literal) -> Result<Literal> + Send + 'static>;
 
 /// A syscall that takes 2 values and returns 1 value.
-pub type A2Fn = Fn(Literal, Literal) -> Result<Literal>;
+pub type A2Fn = Box<Fn(Literal, Literal) -> Result<Literal> + Send + 'static>;
 
 /// Tagged pointers to syscall implementations.
 pub enum Syscall {
-    Stack(Box<StackFn>),
-    A1(Box<A1Fn>),
-    A2(Box<A2Fn>),
+    Stack(StackFn),
+    A1(A1Fn),
+    A2(A2Fn),
 }
 
 impl Syscall {

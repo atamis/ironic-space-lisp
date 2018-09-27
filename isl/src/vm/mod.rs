@@ -7,8 +7,6 @@ pub mod op;
 #[cfg(test)]
 mod tests;
 
-use std::rc::Rc;
-
 pub use self::builder::Builder;
 
 use data;
@@ -402,10 +400,7 @@ impl VM {
             .ok_or_else(|| err_msg("Attempted to pop stack for keyword for load"))?
             .ensure_keyword()?;
 
-        let mut val = self.environment.get(&keyword)?;
-
-        // TODO:
-        //let val = Rc::make_mut(&mut val);
+        let val = self.environment.get(&keyword)?;
 
         self.stack.push(val.clone());
         Ok(())
