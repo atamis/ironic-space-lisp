@@ -102,7 +102,8 @@ impl SyscallRegistry {
                 let a = (usize::MAX - self.idx, 0);
                 self.idx += 1;
                 (name, arity, a)
-            }).collect()
+            })
+            .collect()
     }
 }
 

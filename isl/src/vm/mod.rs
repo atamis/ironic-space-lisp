@@ -123,8 +123,9 @@ impl VM {
 
     /// Step until a "top-level" return, which is when the frame stack is empty.
     /// At this point, the stack is popped and returned. A failure to pop a value
-    /// is treated as an error state. Propagates errors from [`VM::single_step()`]. If
-    /// `print` is `true`, print the VM state on every state.
+    /// is treated as an error state. Propagates errors from [`VM::single_step()`].
+    ///
+    /// Warning: this doesn't handle waiting properly.
     pub fn step_until_value(&mut self) -> Result<data::Literal> {
         if self.state.can_run() {
             return Err(err_msg("Already running"));

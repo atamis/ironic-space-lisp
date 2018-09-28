@@ -1,14 +1,13 @@
 //! Runtime data definitions
-///
-/// For the singleton `Literal` structs (Number, Boolean, Address, keyword, List),
-/// this module implemented `From` on the base Rust data types to ease literal
-/// construction.
+//!
+//! For the singleton `Literal` structs (Number, Boolean, Address, keyword, List),
+//! this module implemented `From` on the base Rust data types to ease literal
+//! construction.
 
+use errors::*;
 #[doc(hidden)]
 pub use im::vector::Vector;
 use std::fmt;
-
-use errors::*;
 
 /// A data type used to represent a code location.
 ///
@@ -246,7 +245,8 @@ mod tests {
             list(vec![
                 Literal::Keyword("test".to_string()),
                 Literal::Number(1)
-            ]).contains(&Literal::Number(1))
+            ])
+            .contains(&Literal::Number(1))
         );
 
         assert!(
@@ -256,7 +256,8 @@ mod tests {
         assert!(
             list(vec![list(vec![list(vec![list(vec![list(vec![
                 Literal::Number(1)
-            ])])])])]).contains(&Literal::Number(1))
+            ])])])])])
+            .contains(&Literal::Number(1))
         );
 
         assert!(

@@ -183,7 +183,8 @@ pub trait LASTVisitor<T> {
                 }?;
 
                 Ok(res)
-            }).collect::<Result<_>>()
+            })
+            .collect::<Result<_>>()
             .context("While visiting LiftedAST")?;
 
         Ok(rs)

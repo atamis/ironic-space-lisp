@@ -90,8 +90,10 @@ impl Bytecode {
                             Op::Lit(Literal::Closure(*arity, ((a1 + new_chunk_idx), *a2)))
                         }
                         x => x.clone(),
-                    }).collect(),
-            }).collect();
+                    })
+                    .collect(),
+            })
+            .collect();
 
         self.chunks.append(&mut new_chunks);
 

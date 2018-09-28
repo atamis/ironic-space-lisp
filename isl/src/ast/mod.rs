@@ -30,7 +30,8 @@ pub fn ast(lits: &[data::Literal], e: &env::Env) -> Result<function_lifter::Lift
         unbound::pass(&ast, e).context("Checking unbound variables")?;
 
         function_lifter::lift_functions(&ast).context("Lifting functions")
-    }.context("While parsing multiple literals")?;
+    }
+    .context("While parsing multiple literals")?;
 
     Ok(last)
 }
@@ -52,7 +53,8 @@ pub trait DefVisitor<R> {
                     .visit_def(&def.name, &def.value)
                     .context(format!("While parsing def #{:}", i))?;
                 Ok(a)
-            }).collect::<Result<_>>()?;
+            })
+            .collect::<Result<_>>()?;
 
         Ok(rs)
     }
@@ -130,7 +132,8 @@ pub trait ASTVisitor<R> {
                     .visit(ast)
                     .context(format!("While parsing multi expression {:}", i))?;
                 Ok(a)
-            }).collect::<Result<_>>()?;
+            })
+            .collect::<Result<_>>()?;
 
         Ok(rs)
     }
@@ -160,7 +163,8 @@ pub fn parse_multi(exprs: &[Literal]) -> Result<AST> {
         .map(|(i, lit)| {
             let a = parse(&lit).context(format!("While parsing literal #{:}", i))?;
             Ok(a)
-        }).collect::<Result<_>>()?;
+        })
+        .collect::<Result<_>>()?;
 
     match asts.len() {
         1 => Ok(asts.remove(0)),

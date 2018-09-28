@@ -77,7 +77,8 @@ mod tests {
                     Op::CallArity(1),
                     Op::Return,
                 ]]),
-            ).unwrap();
+            )
+            .unwrap();
 
         assert_eq!(lit, 1.into());
     }
