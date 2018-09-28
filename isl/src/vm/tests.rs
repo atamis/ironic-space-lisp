@@ -128,12 +128,12 @@ fn test_jumpcond_errors() {
     assert!(vm.op_jumpcond().is_err());
 
     // Now uses Literal::truthy, which is defined for all values.
-        /*let mut vm = VM::new(Bytecode::new(vec![vec![]]));
-
-        vm.op_lit(Literal::Address((6, 0))).unwrap();
-        vm.op_lit(Literal::Address((5, 0))).unwrap();
-        vm.op_lit(Literal::Number(1)).unwrap();
-        assert!(vm.op_jumpcond().is_err());*/}
+    /*let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+    
+    vm.op_lit(Literal::Address((6, 0))).unwrap();
+    vm.op_lit(Literal::Address((5, 0))).unwrap();
+    vm.op_lit(Literal::Number(1)).unwrap();
+    assert!(vm.op_jumpcond().is_err());*/}
 
 #[test]
 fn test_op_load() {
@@ -221,6 +221,19 @@ fn test_op_make_closure() {
 }
 
 #[test]
+fn test_wait() {
+    let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+    vm.state = VMState::Running;
+
+    vm.op_wait().unwrap();
+
+    assert_eq!(vm.state, VMState::Waiting);
+    assert!(!vm.state.can_run());
+
+    vm.answer_waiting(1.into()).unwrap();
+}
+
+#[test]
 fn test_op_call_closure() {
     let mut vm = VM::new(Bytecode::new(vec![vec![]]));
     vm.op_lit(Literal::Closure(2, (0, 0))).unwrap();
@@ -272,10 +285,10 @@ fn test_step_until() {
     assert_eq!(ret.step_until_value().unwrap(), Literal::Number(0));
 
     // lol
-        /*let mut never = VM::new(Bytecode::new(vec![vec![Op::Lit(Literal::Address((0, 0))),
-                                                      Op::Jump,
-                                                      Op::Return]]));
-        assert_never_terminates!(never.step_until_value());*/
+    /*let mut never = VM::new(Bytecode::new(vec![vec![Op::Lit(Literal::Address((0, 0))),
+                                                  Op::Jump,
+                                                  Op::Return]]));
+    assert_never_terminates!(never.step_until_value());*/
 
     //let mut empty = VM::new(Bytecode::new(vec![vec![]]));
     assert!(ret.step_until_value().is_err());
@@ -313,6 +326,17 @@ fn test_step_until_cost() {
 
     assert!(res.is_ok());
     assert!(res.unwrap().is_none());
+}
+
+#[test]
+fn test_step_until_value_waiting() {
+    let mut vm = VM::new(Bytecode::new(vec![vec![Op::Wait, Op::Return]]));
+    assert_eq!(vm.step_until_cost(10000).unwrap(), None);
+    assert_eq!(vm.state, VMState::Waiting);
+    vm.answer_waiting(1.into()).unwrap();
+    assert_eq!(vm.step_until_cost(10000).unwrap(), Some(1.into()));
+    assert_eq!(vm.state, VMState::Done(1.into()));
+    assert!(vm.answer_waiting(false.into()).is_err());
 }
 
 #[test]

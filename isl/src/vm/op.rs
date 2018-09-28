@@ -66,6 +66,11 @@ pub enum Op {
     ///
     /// parameter: arity
     CallArity(usize),
+
+    /// Wait for an external message.
+    ///
+    /// Puts the next message recieved onto the stack.
+    Wait,
 }
 
 impl Op {
@@ -85,6 +90,7 @@ impl Op {
             Op::Pop => "Pop",
             Op::MakeClosure => "MkClosure",
             Op::CallArity(_) => "CallArity",
+            Op::Wait => "Wait",
         }
     }
 
@@ -110,6 +116,7 @@ impl fmt::Debug for Op {
             Op::Pop => write!(f, "oP"),
             Op::MakeClosure => write!(f, "oMkC"),
             Op::CallArity(a) => write!(f, "oC{:}", a),
+            Op::Wait => write!(f, "oW"),
         }
     }
 }

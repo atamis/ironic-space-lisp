@@ -18,12 +18,13 @@ use syscall;
 use vm::bytecode::Bytecode;
 use vm::op::Op;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum VMState {
     Done(Literal),
     Stopped,
     Running,
     RunningUntil(usize),
+    Waiting,
 }
 
 impl VMState {
@@ -252,6 +253,20 @@ impl VM {
         }
     }
 
+    pub fn answer_waiting(&mut self, a: Literal) -> Result<()> {
+        if self.state != VMState::Waiting {
+            return Err(format_err!(
+                "Can't answer waiting when in state {:?}",
+                self.state
+            ));
+        }
+
+        self.stack.push(a);
+        self.state = VMState::Stopped;
+
+        Ok(())
+    }
+
     /// Execute a single operation. Returns an `Err` if an error was encountered,
     /// or `Ok(())` if it was successful. No particular attempt has been made to make
     /// `Err`s survivable, but no particular attempt has been made to prevent further
@@ -325,6 +340,7 @@ impl VM {
             Op::CallArity(a) => self
                 .op_call_arity(a)
                 .context("Executing operation call-arity")?,
+            Op::Wait => self.op_wait().context("Executing operation wait")?,
         }
         Ok(())
     }
@@ -487,6 +503,11 @@ impl VM {
 
         self.frames.push(addr);
 
+        Ok(())
+    }
+
+    fn op_wait(&mut self) -> Result<()> {
+        self.state = VMState::Waiting;
         Ok(())
     }
 }
