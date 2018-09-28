@@ -28,6 +28,16 @@ pub fn address_inc(a: &mut Address) {
     a.1 += 1;
 }
 
+#[derive(Eq, PartialEq, Clone, Copy, PartialOrd, Hash, Debug)]
+pub struct Pid(usize);
+
+impl Pid {
+    pub fn gen() -> Pid {
+        use rand::prelude::*;
+        Pid(thread_rng().gen())
+    }
+}
+
 /// Enum representing valid runtime values for Ironic Space Lisp.
 #[derive(Clone, Eq, PartialEq, is_enum_variant)]
 pub enum Literal {
@@ -54,6 +64,7 @@ impl fmt::Debug for Literal {
             Literal::Keyword(k) => write!(f, ":{:}", k),
             Literal::List(ref v) => write!(f, "{:?}", v),
             Literal::Closure(arity, address) => write!(f, "{:?}/{:}", address, arity),
+            Literal::Pid(Pid(n)) => write!(f, "<{}>", n),
         }
     }
 }
@@ -127,6 +138,14 @@ impl Literal {
             Ok(v.clone())
         } else {
             Err(format_err!("Type error, expected list, got {:?}", self))
+        }
+    }
+
+    pub fn ensure_pid(&self) -> Result<Pid> {
+        if let Literal::Pid(n) = self {
+            Ok(*n)
+        } else {
+            Err(format_err!("Type error, expected pid, got {:?}", self))
         }
     }
 

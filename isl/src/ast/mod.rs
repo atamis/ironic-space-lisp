@@ -191,6 +191,7 @@ pub fn parse(e: &Literal) -> Result<AST> {
         Literal::Number(_) => Ok(AST::Value(e.clone())),
         Literal::Address(_) => Err(err_msg("Address literals not supported")),
         Literal::Closure(_, _) => Err(err_msg("Closure literals not supported")),
+        Literal::Pid(_) => Err(err_msg("Pid literals are not supported")),
     }
 }
 
