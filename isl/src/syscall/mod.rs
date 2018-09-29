@@ -20,13 +20,13 @@ pub mod math;
 pub mod util;
 
 /// A syscall that mutates a stack directly.
-pub type StackFn = Box<Fn(&mut Vec<Literal>) -> Result<()> + Send + 'static>;
+pub type StackFn = Box<Fn(&mut Vec<Literal>) -> Result<()> + Send + Sync + 'static>;
 
 /// A syscall that takes 1 value and returns 1 value.
-pub type A1Fn = Box<Fn(Literal) -> Result<Literal> + Send + 'static>;
+pub type A1Fn = Box<Fn(Literal) -> Result<Literal> + Send + Sync + 'static>;
 
 /// A syscall that takes 2 values and returns 1 value.
-pub type A2Fn = Box<Fn(Literal, Literal) -> Result<Literal> + Send + 'static>;
+pub type A2Fn = Box<Fn(Literal, Literal) -> Result<Literal> + Sync + Send + 'static>;
 
 /// Tagged pointers to syscall implementations.
 pub enum Syscall {

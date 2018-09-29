@@ -114,7 +114,6 @@ impl EnvStack {
 mod tests {
     use super::*;
     use data::Literal;
-    use std::rc::Rc;
 
     #[test]
     fn test_env() {

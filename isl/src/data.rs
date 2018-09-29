@@ -47,6 +47,7 @@ pub enum Literal {
     Keyword(Keyword),
     List(Vector<Literal>),
     Closure(usize, Address),
+    Pid(Pid),
 }
 
 /// Helper function for constructing lists [`Literal`].

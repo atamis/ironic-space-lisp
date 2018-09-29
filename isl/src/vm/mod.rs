@@ -49,7 +49,7 @@ impl VMState {
         }
     }
 
-    fn get_ret(&self) -> Option<Literal> {
+    pub fn get_ret(&self) -> Option<Literal> {
         if let VMState::Done(ref l) = self {
             Some(l.clone())
         } else {

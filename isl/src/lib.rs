@@ -16,7 +16,9 @@ extern crate derive_is_enum_variant;
 #[macro_use]
 extern crate nom;
 extern crate futures;
+extern crate rand;
 extern crate tokio;
+extern crate tokio_channel;
 
 pub mod ast;
 pub mod compiler;

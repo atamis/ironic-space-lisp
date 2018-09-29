@@ -1,9 +1,10 @@
-use vm;
-
 use data::Literal;
 use errors::*;
 use tokio::prelude::future::{loop_fn, ok, Future, Loop};
+use tokio::prelude::stream::Stream;
 use tokio::runtime::Runtime;
+use tokio_channel::mpsc;
+use vm;
 
 pub struct Exec {
     runtime: Runtime,
@@ -11,30 +12,56 @@ pub struct Exec {
 
 impl Exec {
     pub fn new() -> Exec {
-        Exec {
-            runtime: Runtime::new().unwrap(),
-        }
+        let runtime = Runtime::new().unwrap();
+
+        Exec { runtime }
     }
 
-    pub fn sched(&mut self, vm: vm::VM, code: vm::bytecode::Bytecode) -> Result<(vm::VM, Literal)> {
-        let f = loop_fn(vm, move |mut vm| {
-            vm.import_jump(&code);
+    /// Schedule a VM for execution on some bytecode.
+    pub fn sched(
+        &mut self,
+        mut vm: vm::VM,
+        code: vm::bytecode::Bytecode,
+    ) -> Result<(vm::VM, Literal)> {
+        use vm::VMState;
 
-            ok(vm).and_then(|mut vm| {
-                let res = vm.step_until_cost(10000);
+        let (mut tx, rx) = mpsc::channel::<Literal>(10);
+        tx.try_send("dummy-message".into()).unwrap();
 
-                match res {
-                    Ok(Some(ret)) => Ok(Loop::Break((vm, ret))),
-                    Ok(None) => Ok(Loop::Continue(vm)),
-                    Err(e) => Err(e),
-                }
-            })
+        vm.import_jump(&code);
+
+        let f = loop_fn((vm, rx), move |(vm, rx)| {
+            ok((vm, rx)).and_then(
+                |(mut vm, rx)| -> Box<
+                    Future<
+                            Item = Loop<(vm::VM, Literal), (vm::VM, mpsc::Receiver<Literal>)>,
+                            Error = failure::Error,
+                        > + Send,
+                > {
+                    vm.state = VMState::RunningUntil(100);
+                    vm.state_step().unwrap();
+
+                    if let VMState::Done(_) = vm.state {
+                        let l = { vm.state.get_ret().unwrap() };
+                        return Box::new(ok(Loop::Break((vm, l))));
+                    }
+
+                    if let VMState::Stopped = vm.state {
+                        return Box::new(ok(Loop::Continue((vm, rx))));
+                    }
+
+                    if let VMState::Waiting = vm.state {
+                        return Box::new(rx.into_future().then(|res| {
+                            let (opt_lit, rx) = res.unwrap();
+                            vm.answer_waiting(opt_lit.unwrap()).unwrap();
+                            Ok(Loop::Continue((vm, rx)))
+                        }));
+                    }
+
+                    panic!("VM state not done, stopped, or waiting");
+                },
+            )
         });
-
-        /*let f = f.then(|res| {
-            println!("{:?}", res);
-            ok::<(), ()>(())
-        });*/
 
         self.runtime.block_on(f)
     }
@@ -71,7 +98,8 @@ mod tests {
             .sched(
                 vm,
                 vm::bytecode::Bytecode::new(vec![vec![
-                    Op::Lit(1.into()),
+                    //Op::Lit(1.into()),
+                    Op::Wait,
                     Op::Lit("print".into()),
                     Op::Load,
                     Op::CallArity(1),
@@ -80,6 +108,7 @@ mod tests {
             )
             .unwrap();
 
-        assert_eq!(lit, 1.into());
+        assert_eq!(lit, "dummy-message".into());
+        println!("{:?}", lit);
     }
 }
