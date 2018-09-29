@@ -1,20 +1,56 @@
+use data;
 use data::Literal;
 use errors::*;
+use std::collections::HashMap;
 use tokio::prelude::future::{loop_fn, ok, Future, Loop};
 use tokio::prelude::stream::Stream;
 use tokio::runtime::Runtime;
 use tokio_channel::mpsc;
 use vm;
 
+type RouterState = HashMap<data::Pid, mpsc::Sender<Literal>>;
+
+enum RouterMessage {
+    Close(data::Pid),
+    Register(data::Pid, mpsc::Sender<Literal>),
+    Send(data::Pid, Literal),
+}
+
 pub struct Exec {
     runtime: Runtime,
+    router_chan: mpsc::Sender<RouterMessage>,
 }
 
 impl Exec {
     pub fn new() -> Exec {
-        let runtime = Runtime::new().unwrap();
+        let mut runtime = Runtime::new().unwrap();
 
-        Exec { runtime }
+        let (tx, rx) = mpsc::channel::<RouterMessage>(10);
+
+        let f = rx
+            .fold(RouterState::new(), |mut state, msg| {
+                match msg {
+                    RouterMessage::Close(p) => {
+                        state.remove(&p);
+                    }
+                    RouterMessage::Register(p, tx) => {
+                        state.insert(p, tx);
+                    }
+                    RouterMessage::Send(p, l) => state.get_mut(&p).unwrap().try_send(l).unwrap(),
+                };
+                ok(state)
+            })
+            .then(|x| {
+                println!("Router exited: {:?}", x);
+                ok::<(), ()>(())
+            });
+
+        runtime.spawn(f);
+
+        Exec {
+            runtime,
+            router_chan: tx,
+        }
     }
 
     /// Schedule a VM for execution on some bytecode.
@@ -26,7 +62,14 @@ impl Exec {
         use vm::VMState;
 
         let (mut tx, rx) = mpsc::channel::<Literal>(10);
-        tx.try_send("dummy-message".into()).unwrap();
+        let pid = data::Pid::gen();
+
+        self.router_chan
+            .try_send(RouterMessage::Register(pid, tx))
+            .unwrap();
+        self.router_chan
+            .try_send(RouterMessage::Send(pid, "dummy-message".into()))
+            .unwrap();
 
         vm.import_jump(&code);
 
