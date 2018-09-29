@@ -1,4 +1,5 @@
 use super::*;
+use data;
 use test::Bencher;
 
 #[test]
@@ -221,19 +222,6 @@ fn test_op_make_closure() {
 }
 
 #[test]
-fn test_wait() {
-    let mut vm = VM::new(Bytecode::new(vec![vec![]]));
-    vm.state = VMState::Running;
-
-    vm.op_wait().unwrap();
-
-    assert_eq!(vm.state, VMState::Waiting);
-    assert!(!vm.state.can_run());
-
-    vm.answer_waiting(1.into()).unwrap();
-}
-
-#[test]
 fn test_op_call_closure() {
     let mut vm = VM::new(Bytecode::new(vec![vec![]]));
     vm.op_lit(Literal::Closure(2, (0, 0))).unwrap();
@@ -270,6 +258,64 @@ fn test_op_call_arity() {
     assert!(vm.op_call_arity(2).is_ok());
 
     assert_eq!(*vm.frames.last().unwrap(), (0, 0));
+}
+
+#[test]
+fn test_wait() {
+    let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+    vm.state = VMState::Running;
+
+    vm.op_wait().unwrap();
+
+    assert_eq!(vm.state, VMState::Waiting);
+    assert!(!vm.state.can_run());
+
+    vm.answer_waiting(1.into()).unwrap();
+}
+
+#[test]
+fn test_pid() {
+    use exec;
+    use tokio_channel::mpsc;
+
+    let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+
+    vm.op_pid().unwrap();
+
+    assert_eq!(*vm.stack.last().unwrap(), false.into());
+
+    let (tx, _) = mpsc::channel::<exec::RouterMessage>(10);
+
+    vm.proc = Some(exec::ProcInfo {
+        pid: data::Pid(0),
+        chan: tx,
+    });
+
+    vm.op_pid().unwrap();
+
+    assert_eq!(*vm.stack.last().unwrap(), data::Pid(0).into());
+}
+
+#[test]
+fn test_send() {
+    use exec;
+    use tokio::prelude::*;
+    use tokio_channel::mpsc;
+
+    let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+
+    let (tx, rx) = mpsc::channel::<exec::RouterMessage>(10);
+
+    vm.proc = Some(exec::ProcInfo {
+        pid: data::Pid(0),
+        chan: tx,
+    });
+
+    vm.op_lit("test-message".into()).unwrap();
+    vm.op_pid().unwrap();
+    vm.op_send().unwrap();
+
+    let msg = rx.wait().next().unwrap();
 }
 
 #[test]

@@ -71,6 +71,16 @@ pub enum Op {
     ///
     /// Puts the next message recieved onto the stack.
     Wait,
+
+    /// Send an external message.
+    ///
+    /// `<data pid>`
+    Send,
+
+    /// Returns the Pid of this VM, if available.
+    ///
+    /// Puts this VM's Pid on the stack, or #f if the VM has no Pid.
+    Pid,
 }
 
 impl Op {
@@ -91,6 +101,8 @@ impl Op {
             Op::MakeClosure => "MkClosure",
             Op::CallArity(_) => "CallArity",
             Op::Wait => "Wait",
+            Op::Send => "Send",
+            Op::Pid => "Pid",
         }
     }
 
@@ -116,7 +128,9 @@ impl fmt::Debug for Op {
             Op::Pop => write!(f, "oP"),
             Op::MakeClosure => write!(f, "oMkC"),
             Op::CallArity(a) => write!(f, "oC{:}", a),
-            Op::Wait => write!(f, "oW"),
+            Op::Wait => write!(f, "o<"),
+            Op::Send => write!(f, "o>"),
+            Op::Pid => write!(f, "oMe"),
         }
     }
 }

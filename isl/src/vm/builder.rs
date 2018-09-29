@@ -94,6 +94,7 @@ impl Builder {
             environment: e,
             state: VMState::Stopped,
             conf: self.conf,
+            proc: None,
         }
     }
 

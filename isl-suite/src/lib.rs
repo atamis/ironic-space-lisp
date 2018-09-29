@@ -129,6 +129,7 @@ impl Evaler for HostedEvaler {
     }
 }
 
+#[derive(Default)]
 pub struct IntHosted {
     terp: interpreter::Interpreter,
 }

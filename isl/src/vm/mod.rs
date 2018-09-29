@@ -14,6 +14,7 @@ use data::Address;
 use data::Literal;
 use env::EnvStack;
 use errors::*;
+use exec;
 use syscall;
 use vm::bytecode::Bytecode;
 use vm::op::Op;
@@ -98,6 +99,7 @@ pub struct VM {
     pub environment: EnvStack,
     pub state: VMState,
     conf: VMConfig,
+    pub proc: Option<exec::ProcInfo>,
 }
 
 impl VM {
@@ -336,11 +338,13 @@ impl VM {
             Op::Pop => self.op_pop().context("Executing operation pop")?,
             Op::MakeClosure => self
                 .op_make_closure()
-                .context("Executing operation make-closujre")?,
+                .context("Executing operation make-closure")?,
             Op::CallArity(a) => self
                 .op_call_arity(a)
                 .context("Executing operation call-arity")?,
             Op::Wait => self.op_wait().context("Executing operation wait")?,
+            Op::Send => self.op_send().context("Executing operation send")?,
+            Op::Pid => self.op_pid().context("Executing operation pid")?,
         }
         Ok(())
     }
@@ -509,5 +513,38 @@ impl VM {
     fn op_wait(&mut self) -> Result<()> {
         self.state = VMState::Waiting;
         Ok(())
+    }
+
+    fn op_send(&mut self) -> Result<()> {
+        let pid = self
+            .stack
+            .pop()
+            .ok_or_else(|| err_msg("Attempted to pop stack for send destination"))?
+            .ensure_pid()?;
+        let msg = self
+            .stack
+            .pop()
+            .ok_or_else(|| err_msg("Attempted to pop stack for message to send"))?;
+
+        let proc = self
+            .proc
+            .as_mut()
+            .ok_or_else(|| err_msg("Sending without procinfo"))?;
+
+        proc.chan
+            .try_send(exec::RouterMessage::Send(pid, msg))
+            .context("Error sending on router channel")?;
+
+        Ok(())
+    }
+
+    fn op_pid(&mut self) -> Result<()> {
+        if let Some(ref proc) = self.proc {
+            self.stack.push(proc.pid.into());
+            Ok(())
+        } else {
+            self.stack.push(false.into());
+            Ok(())
+        }
     }
 }

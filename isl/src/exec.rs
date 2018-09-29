@@ -8,9 +8,16 @@ use tokio::runtime::Runtime;
 use tokio_channel::mpsc;
 use vm;
 
+#[derive(Debug)]
+pub struct ProcInfo {
+    pub pid: data::Pid,
+    pub chan: mpsc::Sender<RouterMessage>,
+}
+
 type RouterState = HashMap<data::Pid, mpsc::Sender<Literal>>;
 
-enum RouterMessage {
+#[derive(Debug)]
+pub enum RouterMessage {
     Close(data::Pid),
     Register(data::Pid, mpsc::Sender<Literal>),
     Send(data::Pid, Literal),
@@ -57,12 +64,17 @@ impl Exec {
     pub fn sched(
         &mut self,
         mut vm: vm::VM,
-        code: vm::bytecode::Bytecode,
+        code: &vm::bytecode::Bytecode,
     ) -> Result<(vm::VM, Literal)> {
         use vm::VMState;
 
-        let (mut tx, rx) = mpsc::channel::<Literal>(10);
+        let (tx, rx) = mpsc::channel::<Literal>(10);
         let pid = data::Pid::gen();
+
+        vm.proc = Some(ProcInfo {
+            pid,
+            chan: self.router_chan.clone(),
+        });
 
         self.router_chan
             .try_send(RouterMessage::Register(pid, tx))
@@ -86,6 +98,8 @@ impl Exec {
 
                     if let VMState::Done(_) = vm.state {
                         let l = { vm.state.get_ret().unwrap() };
+                        // TODO: deregister with the router
+                        vm.proc = None;
                         return Box::new(ok(Loop::Break((vm, l))));
                     }
 
@@ -116,6 +130,12 @@ impl Exec {
     }
 }
 
+impl Default for Exec {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -140,7 +160,7 @@ mod tests {
         let (_, lit) = exec
             .sched(
                 vm,
-                vm::bytecode::Bytecode::new(vec![vec![
+                &vm::bytecode::Bytecode::new(vec![vec![
                     //Op::Lit(1.into()),
                     Op::Wait,
                     Op::Lit("print".into()),
@@ -153,5 +173,29 @@ mod tests {
 
         assert_eq!(lit, "dummy-message".into());
         println!("{:?}", lit);
+    }
+
+    #[test]
+    fn test_pid_send() {
+        let mut exec = Exec::new();
+
+        let mut vm = empty_vm();
+
+        let (_, lit) = exec
+            .sched(
+                vm,
+                &vm::bytecode::Bytecode::new(vec![vec![
+                    Op::Wait,
+                    Op::Pop, // throw away dummy message
+                    Op::Lit("from-myself".into()),
+                    Op::Pid,
+                    Op::Send,
+                    Op::Wait,
+                    Op::Return,
+                ]]),
+            )
+            .unwrap();
+
+        assert_eq!(lit, "from-myself".into());
     }
 }

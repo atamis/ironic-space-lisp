@@ -29,7 +29,7 @@ pub fn address_inc(a: &mut Address) {
 }
 
 #[derive(Eq, PartialEq, Clone, Copy, PartialOrd, Hash, Debug)]
-pub struct Pid(usize);
+pub struct Pid(pub usize);
 
 impl Pid {
     pub fn gen() -> Pid {
@@ -210,6 +210,12 @@ impl From<Vector<Literal>> for Literal {
 impl From<Vec<Literal>> for Literal {
     fn from(v: Vec<Literal>) -> Literal {
         list(v)
+    }
+}
+
+impl From<Pid> for Literal {
+    fn from(p: Pid) -> Literal {
+        Literal::Pid(p)
     }
 }
 
