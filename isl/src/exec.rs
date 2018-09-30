@@ -1,3 +1,6 @@
+//! Parallel processing environment for ISL VMs.
+//!
+//! Warning: this code calls `unwrap` constantly, and probably panics all the time.
 use data;
 use data::Literal;
 use errors::*;
@@ -8,8 +11,10 @@ use tokio::runtime::Runtime;
 use tokio_channel::mpsc;
 use vm;
 
+/// A channel to the message router.
 pub type RouterChan = mpsc::Sender<RouterMessage>;
 
+/// Inserted into VMs to allow them to send messages to the router, and know their Pid.
 #[derive(Debug)]
 pub struct ProcInfo {
     pub pid: data::Pid,
@@ -18,13 +23,21 @@ pub struct ProcInfo {
 
 type RouterState = HashMap<data::Pid, mpsc::Sender<Literal>>;
 
+/// Messages you can send to the router.
 #[derive(Debug)]
 pub enum RouterMessage {
+    /// Deregister a Pid.
     Close(data::Pid),
+    /// Register a Pid with a Sender channel.
     Register(data::Pid, mpsc::Sender<Literal>),
+    /// Send some data to the channel associated with a Pid.
     Send(data::Pid, Literal),
 }
 
+/// Represents a handle on a Router.
+///
+/// Automatically manages registration and deregistration. Can't implement clone
+/// because the channel receiver can't be cloned.
 pub struct RouterHandle {
     pid: data::Pid,
     rx: Option<mpsc::Receiver<Literal>>,
@@ -32,6 +45,7 @@ pub struct RouterHandle {
 }
 
 impl RouterHandle {
+    /// Register with a router, returning the handle.
     pub fn new(mut chan: RouterChan) -> RouterHandle {
         let pid = data::Pid::gen();
         let (tx, rx) = mpsc::channel::<Literal>(10);
@@ -44,6 +58,7 @@ impl RouterHandle {
         }
     }
 
+    /// Returns a future that resolves to the next message this handle receives, and the handle.
     pub fn receive(mut self) -> impl Future<Item = (Literal, RouterHandle), Error = ()> {
         use std::mem;
         let rx = mem::replace(&mut self.rx, None).unwrap();
@@ -55,10 +70,12 @@ impl RouterHandle {
         })
     }
 
+    /// Send a message through  to a pid.
     pub fn send(&mut self, pid: data::Pid, msg: Literal) {
         self.router.try_send(RouterMessage::Send(pid, msg)).unwrap()
     }
 
+    /// Returns a procinfo suitable for inserting into a VM associated with this handle.
     pub fn get_procinfo(&self) -> ProcInfo {
         ProcInfo {
             pid: self.pid,
@@ -75,6 +92,9 @@ impl Drop for RouterHandle {
     }
 }
 
+/// Spawn a router on the runtime.
+///
+/// Routers respond to router messages sent on the sender channel this function returns.
 pub fn router(runtime: &mut Runtime) -> mpsc::Sender<RouterMessage> {
     let (tx, rx) = mpsc::channel::<RouterMessage>(10);
 
@@ -101,12 +121,14 @@ pub fn router(runtime: &mut Runtime) -> mpsc::Sender<RouterMessage> {
     tx
 }
 
+/// Holds handles to its Runtime and router.
 pub struct Exec {
     runtime: Runtime,
     router_chan: RouterChan,
 }
 
 impl Exec {
+    /// Spawn and take ownership of a Runtime and router.
     pub fn new() -> Exec {
         let mut runtime = Runtime::new().unwrap();
 
@@ -118,6 +140,7 @@ impl Exec {
         }
     }
 
+    /// Get a new router handle to this Exec's Router.
     pub fn get_handle(&self) -> RouterHandle {
         RouterHandle::new(self.router_chan.clone())
     }
@@ -177,8 +200,7 @@ impl Exec {
         self.runtime.block_on(f)
     }
 
-    pub fn run(&mut self) {}
-
+    /// Wait for all futures to resolve.
     pub fn wait(self) {
         self.runtime.shutdown_on_idle().wait().unwrap();
     }
