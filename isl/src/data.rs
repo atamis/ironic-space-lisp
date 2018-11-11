@@ -267,29 +267,23 @@ mod tests {
         assert!(!Literal::Number(1).contains(&Literal::Number(2)));
 
         assert!(list(vec![Literal::Number(1)]).contains(&Literal::Number(1)));
-        assert!(
-            list(vec![
-                Literal::Keyword("test".to_string()),
-                Literal::Number(1)
-            ])
-            .contains(&Literal::Number(1))
-        );
+        assert!(list(vec![
+            Literal::Keyword("test".to_string()),
+            Literal::Number(1)
+        ])
+        .contains(&Literal::Number(1)));
 
         assert!(
             !list(vec![list(vec![list(vec![list(vec![list(vec![])])])])])
                 .contains(&Literal::Number(1))
         );
-        assert!(
-            list(vec![list(vec![list(vec![list(vec![list(vec![
-                Literal::Number(1)
-            ])])])])])
-            .contains(&Literal::Number(1))
-        );
+        assert!(list(vec![list(vec![list(vec![list(vec![list(vec![
+            Literal::Number(1)
+        ])])])])])
+        .contains(&Literal::Number(1)));
 
-        assert!(
-            list(vec![Literal::Keyword("test".to_string())])
-                .contains(&Literal::Keyword("test".to_string()))
-        )
+        assert!(list(vec![Literal::Keyword("test".to_string())])
+            .contains(&Literal::Keyword("test".to_string())))
     }
 
     #[test]

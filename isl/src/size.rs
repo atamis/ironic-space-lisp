@@ -17,11 +17,12 @@ pub trait DataSize {
 
 impl DataSize for data::Literal {
     fn data_size(&self) -> usize {
-        size_of::<data::Literal>() + if let data::Literal::List(v) = self {
-            v.data_size()
-        } else {
-            0
-        }
+        size_of::<data::Literal>()
+            + if let data::Literal::List(v) = self {
+                v.data_size()
+            } else {
+                0
+            }
     }
 }
 
