@@ -21,6 +21,39 @@ pub use self::passes::function_lifter::LiftedAST;
 use self::passes::internal_macro;
 use self::passes::unbound;
 
+/// Representation of Lisp code in terms of special forms and applications.
+#[derive(Debug, PartialEq)]
+pub enum AST {
+    Value(Literal),
+    If {
+        pred: Rc<AST>,
+        then: Rc<AST>,
+        els: Rc<AST>,
+    },
+    Def(Rc<Def>),
+    Let {
+        defs: Vec<Def>,
+        body: Rc<AST>,
+    },
+    Do(Vec<AST>),
+    Lambda {
+        args: Vec<Keyword>,
+        body: Rc<AST>,
+    },
+    Var(Keyword),
+    Application {
+        f: Rc<AST>,
+        args: Vec<AST>,
+    },
+}
+
+/// Represents a "definition", either a local binding or a top level definition.
+#[derive(Debug, PartialEq)]
+pub struct Def {
+    pub name: Keyword,
+    pub value: AST,
+}
+
 /// Parse several [`Literal`]s into a [`LiftedAST`].
 pub fn ast(lits: &[data::Literal], e: &env::Env) -> Result<function_lifter::LiftedAST> {
     let last = {
@@ -34,13 +67,6 @@ pub fn ast(lits: &[data::Literal], e: &env::Env) -> Result<function_lifter::Lift
     .context("While parsing multiple literals")?;
 
     Ok(last)
-}
-
-/// Represents a "definition", either a local binding or a top level definition.
-#[derive(Debug, PartialEq)]
-pub struct Def {
-    pub name: Keyword,
-    pub value: AST,
 }
 
 pub trait DefVisitor<R> {
@@ -67,32 +93,6 @@ pub trait DefVisitor<R> {
     }
 
     fn visit_def(&mut self, name: &str, value: &AST) -> Result<R>;
-}
-
-/// Representation of Lisp code in terms of special forms and applications.
-#[derive(Debug, PartialEq)]
-pub enum AST {
-    Value(Literal),
-    If {
-        pred: Rc<AST>,
-        then: Rc<AST>,
-        els: Rc<AST>,
-    },
-    Def(Rc<Def>),
-    Let {
-        defs: Vec<Def>,
-        body: Rc<AST>,
-    },
-    Do(Vec<AST>),
-    Lambda {
-        args: Vec<Keyword>,
-        body: Rc<AST>,
-    },
-    Var(Keyword),
-    Application {
-        f: Rc<AST>,
-        args: Vec<AST>,
-    },
 }
 
 /// Traverse an AST, optionally producing a value alongside errors.
