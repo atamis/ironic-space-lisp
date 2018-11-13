@@ -99,7 +99,7 @@ pub struct VM {
     pub environment: EnvStack,
     pub state: VMState,
     conf: VMConfig,
-    pub proc: Option<exec::ProcInfo>,
+    pub proc: Option<Box<exec::ExecHandle>>,
 }
 
 impl VM {
@@ -531,16 +531,14 @@ impl VM {
             .as_mut()
             .ok_or_else(|| err_msg("Sending without procinfo"))?;
 
-        proc.chan
-            .try_send(exec::RouterMessage::Send(pid, msg))
-            .context("Error sending on router channel")?;
+        proc.send(pid, msg)?;
 
         Ok(())
     }
 
     fn op_pid(&mut self) -> Result<()> {
-        if let Some(ref proc) = self.proc {
-            self.stack.push(proc.pid.into());
+        if let Some(ref mut proc) = self.proc {
+            self.stack.push(proc.get_pid().into());
             Ok(())
         } else {
             self.stack.push(false.into());

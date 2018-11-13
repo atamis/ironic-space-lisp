@@ -5,6 +5,7 @@ use data;
 use data::Literal;
 use errors::*;
 use std::collections::HashMap;
+use std::fmt;
 use tokio::prelude::future::{loop_fn, ok, Future, Loop};
 use tokio::prelude::stream::Stream;
 use tokio::runtime::Runtime;
@@ -19,6 +20,37 @@ pub type RouterChan = mpsc::Sender<RouterMessage>;
 pub struct ProcInfo {
     pub pid: data::Pid,
     pub chan: RouterChan,
+}
+
+pub trait ExecHandle: Send + Sync + fmt::Debug {
+    fn get_pid(&mut self) -> data::Pid;
+    fn send(&mut self, recv: data::Pid, msg: Literal) -> Result<()>;
+    fn spawn(&mut self, vm: vm::VM) -> Result<data::Pid>;
+}
+
+impl ExecHandle for ProcInfo {
+    fn get_pid(&mut self) -> data::Pid {
+        self.pid
+    }
+
+    fn send(&mut self, recv: data::Pid, msg: Literal) -> Result<()> {
+        Ok(self
+            .chan
+            .try_send(RouterMessage::Send(recv, msg))
+            .context("Error sending on router channel")?)
+    }
+
+    fn spawn(&mut self, vm: vm::VM) -> Result<data::Pid> {
+        //let builder = builder::Builder::new();
+        //builder.code(vm.code.clone()).default_libs().;
+
+        let (pid, f) = exec_future(vm, &self.chan);
+        let f = f.then(|_| ok(()));
+
+        tokio::spawn(f);
+
+        Ok(pid)
+    }
 }
 
 type RouterState = HashMap<data::Pid, mpsc::Sender<Literal>>;
@@ -121,6 +153,65 @@ pub fn router(runtime: &mut Runtime) -> mpsc::Sender<RouterMessage> {
     tx
 }
 
+fn exec_future(
+    mut vm: vm::VM,
+    router: &RouterChan,
+) -> (
+    data::Pid,
+    Box<Future<Item = (vm::VM, data::Literal), Error = failure::Error> + 'static + Send>,
+) {
+    use vm::VMState;
+
+    let mut handle = RouterHandle::new(router.clone());
+
+    let proc = handle.get_procinfo();
+
+    let pid = proc.pid;
+
+    vm.proc = Some(Box::new(proc));
+
+    handle
+        .router
+        .try_send(RouterMessage::Send(handle.pid, "dummy-message".into()))
+        .unwrap();
+
+    let f = loop_fn((vm, handle), move |(vm, handle)| {
+        ok((vm, handle)).and_then(
+            |(mut vm, handle)| -> Box<
+                Future<
+                        Item = Loop<(vm::VM, Literal), (vm::VM, RouterHandle)>,
+                        Error = failure::Error,
+                    > + Send,
+            > {
+                vm.state = VMState::RunningUntil(100);
+                vm.state_step().unwrap();
+
+                if let VMState::Done(_) = vm.state {
+                    let l = { vm.state.get_ret().unwrap() };
+                    vm.proc = None;
+                    return Box::new(ok(Loop::Break((vm, l))));
+                }
+
+                if let VMState::Stopped = vm.state {
+                    return Box::new(ok(Loop::Continue((vm, handle))));
+                }
+
+                if let VMState::Waiting = vm.state {
+                    return Box::new(handle.receive().then(|res| {
+                        let (opt_lit, handle) = res.unwrap();
+                        vm.answer_waiting(opt_lit).unwrap();
+                        Ok(Loop::Continue((vm, handle)))
+                    }));
+                }
+
+                panic!("VM state not done, stopped, or waiting");
+            },
+        )
+    });
+
+    (pid, Box::new(f))
+}
+
 /// Holds handles to its Runtime and router.
 pub struct Exec {
     runtime: Runtime,
@@ -151,51 +242,8 @@ impl Exec {
         mut vm: vm::VM,
         code: &vm::bytecode::Bytecode,
     ) -> Result<(vm::VM, Literal)> {
-        use vm::VMState;
-
-        let handle = RouterHandle::new(self.router_chan.clone());
-
-        vm.proc = Some(handle.get_procinfo());
-
-        self.router_chan
-            .try_send(RouterMessage::Send(handle.pid, "dummy-message".into()))
-            .unwrap();
-
-        vm.import_jump(&code);
-
-        let f = loop_fn((vm, handle), move |(vm, handle)| {
-            ok((vm, handle)).and_then(
-                |(mut vm, handle)| -> Box<
-                    Future<
-                            Item = Loop<(vm::VM, Literal), (vm::VM, RouterHandle)>,
-                            Error = failure::Error,
-                        > + Send,
-                > {
-                    vm.state = VMState::RunningUntil(100);
-                    vm.state_step().unwrap();
-
-                    if let VMState::Done(_) = vm.state {
-                        let l = { vm.state.get_ret().unwrap() };
-                        vm.proc = None;
-                        return Box::new(ok(Loop::Break((vm, l))));
-                    }
-
-                    if let VMState::Stopped = vm.state {
-                        return Box::new(ok(Loop::Continue((vm, handle))));
-                    }
-
-                    if let VMState::Waiting = vm.state {
-                        return Box::new(handle.receive().then(|res| {
-                            let (opt_lit, handle) = res.unwrap();
-                            vm.answer_waiting(opt_lit).unwrap();
-                            Ok(Loop::Continue((vm, handle)))
-                        }));
-                    }
-
-                    panic!("VM state not done, stopped, or waiting");
-                },
-            )
-        });
+        vm.import_jump(code);
+        let (_, f) = exec_future(vm, &self.router_chan);
 
         self.runtime.block_on(f)
     }

@@ -18,6 +18,7 @@ pub struct Builder {
     sys_facts: Vec<Box<syscall::SyscallFactory>>,
     env: Vec<(Keyword, Literal)>,
     conf: VMConfig,
+    entrypoint: Address,
 }
 
 impl Builder {
@@ -27,6 +28,7 @@ impl Builder {
             sys_facts: vec![],
             env: vec![],
             conf: Default::default(),
+            entrypoint: (0, 0),
         }
     }
 
@@ -50,6 +52,11 @@ impl Builder {
 
     pub fn env(&mut self, k: Keyword, v: Literal) -> &mut Builder {
         self.env.push((k, v));
+        self
+    }
+
+    pub fn entry(&mut self, a: Address) -> &mut Self {
+        self.entrypoint = a;
         self
     }
 
@@ -88,7 +95,7 @@ impl Builder {
 
         VM {
             code,
-            frames: vec![(0, 0)],
+            frames: vec![self.entrypoint],
             stack: vec![],
             sys,
             environment: e,

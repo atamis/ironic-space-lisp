@@ -286,10 +286,10 @@ fn test_pid() {
 
     let (tx, _) = mpsc::channel::<exec::RouterMessage>(10);
 
-    vm.proc = Some(exec::ProcInfo {
+    vm.proc = Some(Box::new(exec::ProcInfo {
         pid: data::Pid(0),
         chan: tx,
-    });
+    }));
 
     vm.op_pid().unwrap();
 
@@ -306,10 +306,10 @@ fn test_send() {
 
     let (tx, rx) = mpsc::channel::<exec::RouterMessage>(10);
 
-    vm.proc = Some(exec::ProcInfo {
+    vm.proc = Some(Box::new(exec::ProcInfo {
         pid: data::Pid(0),
         chan: tx,
-    });
+    }));
 
     vm.op_lit("test-message".into()).unwrap();
     vm.op_pid().unwrap();
