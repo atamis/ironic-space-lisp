@@ -70,13 +70,13 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_group_by_2_panics1() {
-        group_by_2(vec![1].into_iter(), true).collect::<Vec<(usize, usize)>>();
+        group_by_2(vec![1].into_iter(), true).for_each(drop);
     }
 
     #[test]
     #[should_panic]
     fn test_group_by_2_panics2() {
-        group_by_2(vec![1, 2, 3].into_iter(), true).collect::<Vec<(usize, usize)>>();
+        group_by_2(vec![1, 2, 3].into_iter(), true).for_each(drop);
     }
 
     #[test]

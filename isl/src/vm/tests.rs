@@ -315,7 +315,14 @@ fn test_send() {
     vm.op_pid().unwrap();
     vm.op_send().unwrap();
 
-    let msg = rx.wait().next().unwrap();
+    let msg = rx.wait().next().unwrap().unwrap();
+
+    if let exec::RouterMessage::Send(pid, lit) = msg {
+        assert_eq!(lit, "test-message".into());
+        assert_eq!(pid, data::Pid(0));
+    } else {
+        panic!();
+    }
 }
 
 #[test]

@@ -231,7 +231,7 @@ mod tests {
     fn test_exec() {
         let mut exec = Exec::new();
 
-        let mut vm = empty_vm();
+        let vm = empty_vm();
 
         let (_, lit) = exec
             .sched(
@@ -255,7 +255,7 @@ mod tests {
     fn test_pid_send() {
         let mut exec = Exec::new();
 
-        let mut vm = empty_vm();
+        let vm = empty_vm();
 
         let (_, lit) = exec
             .sched(
@@ -281,7 +281,7 @@ mod tests {
         let router = router(&mut runtime);
 
         let mut handle1 = RouterHandle::new(router.clone());
-        let mut handle2 = RouterHandle::new(router.clone());
+        let handle2 = RouterHandle::new(router.clone());
 
         handle1.send(handle2.pid, "test-message".into());
         let (msg, mut handle2) = handle2.receive().wait().unwrap();

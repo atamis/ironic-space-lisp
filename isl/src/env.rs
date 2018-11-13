@@ -113,7 +113,6 @@ impl EnvStack {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use data::Literal;
 
     #[test]
     fn test_env() {
