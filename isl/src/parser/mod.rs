@@ -1,16 +1,16 @@
-//! Parser for parsing `data::Literal` values from strings.
+//! Parser for parsing [`Literal`](data::Literal)s values from strings.
 //!
-//! The string representation of `data::Literals` is a little inconsistent:
-//! The `std::fmt::Debug` implementation has some extra debug information,
+//! The string representation of [`Literal`](data::Literal) is a little inconsistent:
+//! The [`Debug`](std::fmt::Debug) implementation has some extra debug information,
 //! and this parser can't parse it correctly. The extra information is
 //! useful, but not necessary.
 //!
 //! This parser parses what is basically a SEXPR format that maps to a
-//! subset of the `data::Literal` enum. Values are numbers, keywords,
+//! subset of the [`Literal`](data::Literal) enum. Values are numbers, keywords,
 //! and lists, which may contain 1 or more additional values.
 //!
 //! Numbers are currently unsigned. The parser will error if the number is
-//! too large. This outputs a `Literal::Number`
+//! too large. This outputs a [`Literal::Number`](data::Literal::Number)
 //!
 //! ```
 //! # use isl::parser;
@@ -20,7 +20,7 @@
 //!
 //! Keywords a strings of characters that are alphanumeric, or in the set
 //! `"-!??*+/$<>.="`, except for the first character, which cannot be
-//! numeric. This outputs a `Literal::Keyword`
+//! numeric. This outputs a [`Literal::Keyword`](data::Literal::Keyword)
 //!
 //! ```
 //! # use isl::parser::parse;
@@ -33,7 +33,7 @@
 //! ```
 //!
 //! Lists are surrounded by matching parentheses, and output a
-//! `Literal::List`, and contain 0 or more other literals. They are not
+//! [`Literal::List`](data::Literal::List), and contain 0 or more other literals. They are not
 //! separated by commas.
 //!
 //! ```
@@ -62,10 +62,10 @@
 //!            parse("(quasiquote (+ 1 2 (unquote x)))").unwrap());
 //! ```
 //!
-//! Note that `parser::parse` attempts to parse the string completely
+//! Note that [`parser::parse`](parser::parse) attempts to parse the string completely
 //! into potentially multiple literal values, which it returns as an vector.
-//! However, the parser exposes the raw nom parsers `exprs`, `tagged_expr`,
-//! and `expr`, which could be used to parse single literals.
+//! However, the parser exposes the raw nom parsers [`exprs`](parser::exprs), [`tagged_expr`](parser::exprs),
+//! and [`expr`](parser::expr), which could be used to parse single literals.
 //!
 //! This parser uses `nom::types::CompleteStr`, which ensures the input
 //! strings are completely consumed.
@@ -78,7 +78,7 @@ use nom::{anychar, digit};
 use std::fmt::Debug;
 use std::str::FromStr;
 
-/// Legacy struct, delegates to `parser::parse()`
+/// Legacy struct, delegates to [`parser::parse`](parse)
 pub struct Parser();
 
 impl Default for Parser {
@@ -98,7 +98,7 @@ impl Parser {
     }
 }
 
-/// Parses a string to a vector of `data::Literal`s.
+/// Parses a string to a vector of [`Literal`](data::Literal)s.
 pub fn parse(input: &str) -> Result<Vec<data::Literal>> {
     let mut input = CompleteStr(input);
     let mut lits = vec![];
@@ -144,7 +144,7 @@ where
 
 /// Wraps a parser function to make it easier to use.
 ///
-/// The wrapper function wraps and unwraps input to the function. See `app()` for more info.
+/// The wrapper function wraps and unwraps input to the function. See [`app`](app) for more info.
 pub fn apper<F, T>(f: F) -> Box<Fn(&str) -> Result<T>>
 where
     F: Fn(CompleteStr) -> IResult<CompleteStr, T> + 'static,

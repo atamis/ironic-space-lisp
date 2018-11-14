@@ -1,6 +1,6 @@
 //! Utilities for registering, managing, and invoking syscalls.
 //!
-//! This is heavily integrated with the [`VM`](super::vm::VM), and they should be read together.
+//! This is heavily integrated with the [`VM`](vm::VM), and they should be read together.
 
 // Clippy complains about A1Fns and A2Fns because
 // they don't _have_ to be pass by value.

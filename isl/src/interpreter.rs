@@ -1,3 +1,4 @@
+//! Tree-walk interpreter for ISL.
 use std::rc::Rc;
 
 use ast::passes::function_lifter;
@@ -13,6 +14,7 @@ use env::Env;
 use errors::*;
 use syscall;
 
+/// An Interpreter. This keeps track of stored code, global environment, and available syscalls.
 #[derive(Debug)]
 pub struct Interpreter {
     sys: syscall::SyscallRegistry,
@@ -254,6 +256,7 @@ impl Interpreter {
         self.call_addr_global(entry)
     }
 
+    /// Evaluate a bare [`AST`](AST) using the global environment.
     pub fn eval(&mut self, a: &AST) -> Result<Literal> {
         let mut ng = self.global.clone();
         let res = self.env_eval(a, &mut ng)?;
@@ -261,6 +264,7 @@ impl Interpreter {
         Ok(res)
     }
 
+    /// Evaluate the bare [`AST`](AST) in the given environment.
     pub fn env_eval(&self, a: &AST, env: &mut Env) -> Result<Literal> {
         Context::new(self, env).visit(a)
     }

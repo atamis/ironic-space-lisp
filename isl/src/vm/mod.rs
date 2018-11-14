@@ -171,7 +171,7 @@ impl VM {
 
     /// Step until the VM can no longer run.
     ///
-    /// See [`step_until_cost()`] and [`step_until_value()`] for methods
+    /// See [`VM::step_until_cost`] and [`VM::step_until_value`] for methods
     /// that ensure the VM can be set to a running state, and then set it,
     /// because `state_step` doesn't do that.
     pub fn state_step(&mut self) -> Result<()> {

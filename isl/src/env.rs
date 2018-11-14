@@ -1,6 +1,6 @@
 //! Runtime environments
 //!
-//! This leverages immutable [`HashMap`]s from the [`im`](im) crate.
+//! This leverages immutable [`HashMap`](im::hashmap::HashMap)s from the [`im`](im) crate.
 use im::hashmap::HashMap;
 
 use data;
@@ -16,8 +16,8 @@ impl fmt::Debug for EnvStack {
 
 /// Represents runtime variable bindings.
 ///
-/// Currently maintaints [`Rc`] pointers to the [`Literal`](data::Literal),
-/// but this isn't necessary.
+/// Takes advantage of immutable [`HashMap`]s so that users
+/// can clone the environments to represent sub-environments.
 pub type Env = HashMap<String, data::Literal>;
 
 /// Represents multiple nested environment bindings.

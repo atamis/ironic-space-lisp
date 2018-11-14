@@ -1,4 +1,4 @@
-//! [`LiftedAST`] pass to rename local rebindings to unique names
+//! [`LiftedAST`](function_lifter::LiftedAST) pass to rename local rebindings to unique names
 
 use ast::passes::function_lifter;
 use ast::passes::function_lifter::ASTFunction;

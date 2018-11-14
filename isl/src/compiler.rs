@@ -1,4 +1,4 @@
-//! Compile [`AST`]s to [`Bytecode`].
+//! Compile [`AST`](ast::AST)s to [`Bytecode`](vm::bytecode::Bytecode).
 use std::rc::Rc;
 
 use ast::passes::function_lifter;
