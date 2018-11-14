@@ -276,7 +276,7 @@ fn test_wait() {
 #[test]
 fn test_pid() {
     use exec;
-    use tokio_channel::mpsc;
+    use futures::sync::mpsc;
 
     let mut vm = VM::new(Bytecode::new(vec![vec![]]));
 
@@ -299,8 +299,8 @@ fn test_pid() {
 #[test]
 fn test_send() {
     use exec;
+    use futures::sync::mpsc;
     use tokio::prelude::*;
-    use tokio_channel::mpsc;
 
     let mut vm = VM::new(Bytecode::new(vec![vec![]]));
 

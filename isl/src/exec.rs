@@ -4,12 +4,12 @@
 use data;
 use data::Literal;
 use errors::*;
+use futures::sync::mpsc;
 use std::collections::HashMap;
 use std::fmt;
 use tokio::prelude::future::{loop_fn, ok, Future, Loop};
 use tokio::prelude::stream::Stream;
 use tokio::runtime::Runtime;
-use tokio_channel::mpsc;
 use vm;
 
 /// A channel to the message router.

@@ -13,9 +13,8 @@ rustyline = "2.0.0"
 clap = "~2.32"
 derive_is_enum_variant = "0.1.1"
 nom = "^4.0"
-futures-preview = "0.2.1"
-tokio = "0.1.8"
-tokio-channel = "0.1.0"
+futures = "0.1"
+tokio = "0.1"
 rand = "0.5.5"
 # Semi-lockless hashmap.
-#chashmap = "2.2.0"
+#chashmap = "2.2.0
