@@ -15,6 +15,7 @@ use im::hashmap::HashMap;
 use im::hashset::HashSet;
 use std::rc::Rc;
 
+/// Do the pass. See [`super::unique`] for more information.
 pub fn pass(last: &LiftedAST) -> Result<LiftedAST> {
     let mut l: Unique = Default::default();
 

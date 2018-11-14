@@ -25,6 +25,7 @@ pub type IrChunkSlice<'a> = &'a [IrOp];
 /// are handled by [`function_lifter`] and [`pack_compile_lifted()`] rather
 /// represented in IrOp.
 #[derive(Debug, PartialEq)]
+#[allow(missing_docs)]
 pub enum IrOp {
     Lit(Literal),
     Return,

@@ -1,4 +1,4 @@
-//! Pass to lift functions out of the `AST` and into a function registry.
+//! Pass to lift functions out of the [`AST`](super::AST) and into a function registry.
 use std::rc::Rc;
 
 use ast::ASTVisitor;
@@ -13,11 +13,14 @@ use errors::*;
 /// Represents a function as a list of arguments and an `AST` node.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ASTFunction {
+    /// A list of the names of the arguments to this function.
     pub args: Vec<Keyword>,
+    /// The [`AST`] body of this function.
     pub body: Rc<AST>,
 }
 
 impl ASTFunction {
+    /// Return the arity of this function.
     pub fn arity(&self) -> usize {
         self.args.len()
     }
@@ -42,15 +45,20 @@ pub fn lift_functions(a: &AST) -> Result<LiftedAST> {
 /// lifted out. The first function is a dummy function.
 #[derive(Clone, Debug)]
 pub struct LiftedAST {
+    /// The [`FunctionRegistry`] holding all the functions.
     pub fr: FunctionRegistry,
+    /// The index of the entrypoint for this [`LiftedAST`].
     pub entry: usize,
 }
 
 impl LiftedAST {
+    /// Return the [`ASTFunction`] that serves as the entrypoint to this [`LiftedAST`].
     pub fn entry_fn(&self) -> &ASTFunction {
         &self.fr.functions[self.entry]
     }
 
+    /// Import the functions in a [`LiftedAST`] into another [`LiftedAST`], returning the address
+    /// of the new entry point.
     pub fn import(&mut self, last: &LiftedAST) -> Result<Address> {
         let new_idx = self.fr.functions.len();
         let import_entry = last.entry;
@@ -74,10 +82,12 @@ impl LiftedAST {
 /// packer in `compiler::pack_compile_lifted`.
 #[derive(Clone, Debug, Default)]
 pub struct FunctionRegistry {
+    /// The functions in the registry.
     pub functions: Vec<ASTFunction>,
 }
 
 impl FunctionRegistry {
+    /// Create a new empty [`FunctionRegistry`].
     pub fn new() -> FunctionRegistry {
         FunctionRegistry {
             functions: vec![ASTFunction {
@@ -94,6 +104,7 @@ impl FunctionRegistry {
         idx
     }
 
+    /// Try to find the function for a given [`Address`].
     pub fn lookup(&self, addr: Address) -> Option<&ASTFunction> {
         self.functions.get(addr.0)
     }
@@ -165,7 +176,9 @@ impl DefVisitor<Def> for FunctionRegistry {
     }
 }
 
+/// Visit all the functions in a [`LiftedAST`] with nice error tagging.
 pub trait LASTVisitor<T> {
+    /// Visit all the functions in a `LiftedAST`.
     fn last_visit(&mut self, last: &LiftedAST) -> Result<Vec<T>> {
         let entry = last.entry;
         let rs = last
@@ -190,7 +203,10 @@ pub trait LASTVisitor<T> {
         Ok(rs)
     }
 
+    /// Process a single top level function.
     fn ast_function(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<T>;
+
+    /// Process a single top level function that is the entry function for this `LAST`.
     fn ast_function_entry(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<T> {
         self.ast_function(args, body)
     }

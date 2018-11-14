@@ -27,6 +27,7 @@ pub struct EnvStack {
 }
 
 impl EnvStack {
+    /// Return a new empty [`EnvStack`].
     pub fn new() -> EnvStack {
         EnvStack {
             envs: vec![Env::new()],
@@ -42,6 +43,7 @@ impl EnvStack {
         Ok(())
     }
 
+    /// Insert a new `(k, v)` pair into the top environment, cloning the string from a ref.
     #[allow(dead_code)]
     pub fn easy_insert(&mut self, k: &str, v: data::Literal) -> Result<()> {
         self.insert(k.to_string(), v)
@@ -60,6 +62,7 @@ impl EnvStack {
         self.envs.last().ok_or_else(|| err_msg("Env stack empty"))
     }
 
+    /// Peek the top [`Env`] from the stack, mutably.
     pub fn peek_mut(&mut self) -> Result<&mut Env> {
         self.envs
             .last_mut()

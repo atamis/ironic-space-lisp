@@ -15,16 +15,22 @@ use vm;
 /// A channel to the message router.
 pub type RouterChan = mpsc::Sender<RouterMessage>;
 
-/// Inserted into VMs to allow them to send messages to the router, and know their Pid.
+/// Inserted into VMs to allow them to send messages to the router, and know their `Pid`.
 #[derive(Debug)]
 pub struct ProcInfo {
+    /// The [`Pid`](data::Pid), or unique identifier, for this handle.
     pub pid: data::Pid,
+    /// A channel back to the central router for this executor.
     pub chan: RouterChan,
 }
 
+/// A trait for interfacing between a [`vm::VM`] and its execution environment.
 pub trait ExecHandle: Send + Sync + fmt::Debug {
+    /// Return the `Pid`, or unique identifier of the exec handle.
     fn get_pid(&mut self) -> data::Pid;
+    /// Send a message to a particular `Pid`.
     fn send(&mut self, recv: data::Pid, msg: Literal) -> Result<()>;
+    /// Spawn a new `VM`, consuming the `VM` and returning its `Pid`.
     fn spawn(&mut self, vm: vm::VM) -> Result<data::Pid>;
 }
 

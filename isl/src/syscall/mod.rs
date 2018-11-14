@@ -30,8 +30,11 @@ pub type A2Fn = Box<Fn(Literal, Literal) -> Result<Literal> + Sync + Send + 'sta
 
 /// Tagged pointers to syscall implementations.
 pub enum Syscall {
+    /// A stack function.
     Stack(StackFn),
+    /// Arity-1 function.
     A1(A1Fn),
+    /// Arity-2 function.
     A2(A2Fn),
 }
 
@@ -48,6 +51,7 @@ impl Syscall {
 
 /// Produces a list of names and syscalls.
 pub trait SyscallFactory {
+    /// Returns a list associating a name with a syscall function pointer.
     fn syscalls(&self) -> Vec<(Keyword, Syscall)>;
 }
 
@@ -64,6 +68,7 @@ pub struct SyscallRegistry {
 }
 
 impl SyscallRegistry {
+    /// Create a new empty [`SyscallRegistry`].
     pub fn new() -> SyscallRegistry {
         SyscallRegistry {
             syscalls: HashMap::new(),
@@ -113,6 +118,8 @@ impl fmt::Debug for SyscallRegistry {
     }
 }
 
+/// Use a [`SyscallFactory`], registering the syscalls with the [`SyscallRegistry`],
+/// and the names with the [`env::Env`].
 pub fn ingest_environment(sys: &mut SyscallRegistry, env: &mut env::Env, fact: &SyscallFactory) {
     for (name, arity_opt, addr) in sys.ingest(fact) {
         let f = match arity_opt {

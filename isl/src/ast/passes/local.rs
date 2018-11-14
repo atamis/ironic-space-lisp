@@ -1,3 +1,4 @@
+//! Convert a [`LiftedAST`](function_lifter::LiftedAST) to a form that uses local definitions.
 use ast::passes::function_lifter::LASTVisitor;
 use ast::ASTVisitor;
 use ast::Def;
@@ -10,6 +11,8 @@ use errors::*;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+/// An [`AST`] that has local and global defs.
+#[allow(missing_docs)]
 #[derive(Debug, PartialEq)]
 pub enum LocalAST {
     Value(Literal),
@@ -38,30 +41,43 @@ pub enum LocalAST {
     },
 }
 
+/// A local def relating an index with a [`LocalAST`].
 #[derive(Debug, PartialEq)]
 pub struct LocalDef {
+    /// The index of this local def.
     pub name: usize,
+    /// The [`LocalAST`] body of this local def.
     pub value: LocalAST,
 }
 
+/// A global def relating a keyword name to a [`LocalAST`].
 #[derive(Debug, PartialEq)]
 pub struct GlobalDef {
+    /// The name of this global def.
     pub name: Keyword,
+    /// The [`LocalAST`] body of this global def.
     pub value: LocalAST,
 }
 
+/// A function with local definitions, where the body is [`LocalAST`].
 #[derive(Debug)]
 pub struct LocalFunction {
+    /// This functions argument names.
     pub args: Vec<Keyword>,
+    /// The body of the function
     pub body: Rc<LocalAST>,
 }
 
+/// A collection of [`LocalFunction`] with 1 entry point.
 #[derive(Debug)]
 pub struct LocalLiftedAST {
+    /// `Vec` of [`LocalFunction`].
     pub functions: Vec<LocalFunction>,
+    /// Index of the entry point.
     pub entry: usize,
 }
 
+/// Do the pass. See [`local`](super::local).
 pub fn pass(last: &LiftedAST) -> Result<LocalLiftedAST> {
     let mut l = Localizer::new();
 

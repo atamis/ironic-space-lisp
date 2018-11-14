@@ -18,6 +18,7 @@ use syscall;
 #[derive(Debug)]
 pub struct Interpreter {
     sys: syscall::SyscallRegistry,
+    /// The global environment. Holds both built in functions, named user defined function, and user data.
     pub global: Env,
     last: LiftedAST,
 }

@@ -1,3 +1,10 @@
+//! Weird VM-lisp in Rust. It's inspired by Erlang, Clojure and Scheme. It's
+//! architected on the assertion that if you never jump into input-based code, it's
+//! much harder to get exploited.
+//!
+//! This crate contains an eclectic mix of related tools. Primarily a compiler and
+//! bytecode VM, but also an interpreter.
+
 #![warn(missing_docs)]
 // because clippy
 #![allow(unknown_lints)]

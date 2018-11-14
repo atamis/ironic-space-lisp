@@ -28,10 +28,12 @@ pub fn address_inc(a: &mut Address) {
     a.1 += 1;
 }
 
+/// Represents the address of another executing VM that can recieve messages.
 #[derive(Eq, PartialEq, Clone, Copy, PartialOrd, Hash, Debug)]
 pub struct Pid(pub usize);
 
 impl Pid {
+    /// Randomly generate a `Pid` from the thread local pseudorandom number generator.
     pub fn gen() -> Pid {
         use rand::prelude::*;
         Pid(thread_rng().gen())
@@ -41,12 +43,25 @@ impl Pid {
 /// Enum representing valid runtime values for Ironic Space Lisp.
 #[derive(Clone, Eq, PartialEq, is_enum_variant)]
 pub enum Literal {
+    /// Unsigned 32 bit number.
     Number(u32),
+
+    /// Boolean, styled `#t` or `#f`.
     Boolean(bool),
+
+    /// An `[Address]`, or a tuple of 2 `usize`, representing an executable block of code.
     Address(Address),
+
+    /// A keyword, stored as a string.
     Keyword(Keyword),
+
+    /// A list, using the immutable [`Vector`](im::vector::Vector) data structure.
     List(Vector<Literal>),
+
+    /// A closure, an [`Address`] that includes an arity.
     Closure(usize, Address),
+
+    /// A [`Pid`], representing another executing [`super::vm::VM`] that can recieve messages.
     Pid(Pid),
 }
 
@@ -71,7 +86,11 @@ impl fmt::Debug for Literal {
 }
 
 impl Literal {
-    pub fn new_keyword<T: Into<String>>(s: T) -> Literal {
+    /// Make a new keyword from something that can be turned into a `String`
+    pub fn new_keyword<T>(s: T) -> Literal
+    where
+        T: Into<String>,
+    {
         Literal::Keyword(s.into())
     }
 
@@ -142,6 +161,7 @@ impl Literal {
         }
     }
 
+    /// Attempt to destructure a [`Literal`] into a [`Pid`], returning `Err()` if not possible.
     pub fn ensure_pid(&self) -> Result<Pid> {
         if let Literal::Pid(n) = self {
             Ok(*n)

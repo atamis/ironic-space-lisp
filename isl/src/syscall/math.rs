@@ -6,10 +6,12 @@ use syscall::destatic;
 use syscall::Syscall;
 use syscall::SyscallFactory;
 
+/// A `math` syscall factory.
 #[derive(Default)]
 pub struct Factory;
 
 impl Factory {
+    /// Create a `math` syscall factory.
     pub fn new() -> Factory {
         Factory {}
     }

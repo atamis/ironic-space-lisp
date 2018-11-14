@@ -7,10 +7,12 @@ use syscall::destatic;
 use syscall::Syscall;
 use syscall::SyscallFactory;
 
+/// A `list` syscall factory.
 #[derive(Default)]
 pub struct Factory;
 
 impl Factory {
+    /// Create a `list` syscall factory.
     pub fn new() -> Factory {
         Factory {}
     }

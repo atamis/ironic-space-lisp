@@ -19,12 +19,30 @@ use syscall;
 use vm::bytecode::Bytecode;
 use vm::op::Op;
 
+/// Enum representing the different states a [`VM`] can be in.
+///
+/// Methods on the enum represent some internal state transitions
+/// useful to the running [`VM`]. In particular, the [`VM`] depends
+/// on some of these methods to control its execution flow.
 #[derive(Clone, Debug, PartialEq)]
 pub enum VMState {
+    /// The [`VM`] is done, and has a return value.
     Done(Literal),
+    /// The [`VM`] is paused, ready for more execution at a later time.
     Stopped,
+    /// The [`VM`] is actively running. It is usually more efficient to utilize
+    /// [`RunningUntil`](VMState::RunningUntil) to control [`VM`] execution.
+    /// This can be used to start the [`VM`] for an indefinite run, although
+    /// [`step_until_value`](VM::step_until_value) does a lot of the housework
+    /// for you.
     Running,
+    /// The [`VM`] is actively running, but depleting a resource with every cycle
+    /// and syscall. The remaining resource reserve is indicated with the tuple field.
+    /// [`step_until_cost`](VM::step_until_cost) does a lot of the housework for you.
     RunningUntil(usize),
+    /// The [`VM`] is waiting for a message. This means the [`VM`] will refuse to execute
+    /// until it leaves this state. To supply a message and leave this state, see
+    /// [`answer_waiting`](VM::answer_waiting)
     Waiting,
 }
 
@@ -38,6 +56,10 @@ impl VMState {
         }
     }
 
+    /// Returns whether we can run or not as a result, `Ok(())` for yes, `Err(_)` for no.
+    ///
+    /// Additionally, if the `VMState` is [`RunningUntil`](VMState::RunningUntil), it
+    /// will reset to [`Stopped`](VMState::Stopped) if the remaining cost is 0.
     fn check_run(&mut self) -> Result<()> {
         if let VMState::RunningUntil(0) = self {
             *self = VMState::Stopped;
@@ -50,6 +72,7 @@ impl VMState {
         }
     }
 
+    /// If there is a return value available, clone and return it. Otherwise return `None`.
     pub fn get_ret(&self) -> Option<Literal> {
         if let VMState::Done(ref l) = self {
             Some(l.clone())
@@ -58,6 +81,9 @@ impl VMState {
         }
     }
 
+    /// Incur a cost on the cost reserve when in [`VMState::RunningUntil`].
+    ///
+    /// If the remaining cost reserve is 0, reset the state to [`Stopped`](VMState::Stopped).
     fn cost(&mut self, cost: usize) {
         if let VMState::RunningUntil(ref mut c) = self {
             *c = c.saturating_sub(cost);
@@ -69,10 +95,17 @@ impl VMState {
     }
 }
 
+/// Configuration options for VMs.
 #[derive(Debug)]
 pub struct VMConfig {
-    reset_on_error: bool,
-    print_trace: bool,
+    /// When using [`step_until_cost`](VM::step_until_cost), should the VM reset if it encounters an error?
+    ///
+    /// Default: `true`
+    pub reset_on_error: bool,
+    /// Should the VM print the VM state after every cycle?
+    ///
+    /// Default: `false`
+    pub print_trace: bool,
 }
 
 impl Default for VMConfig {
@@ -91,14 +124,18 @@ impl Default for VMConfig {
 pub struct VM {
     /// The live code repo.
     pub code: Bytecode,
+    /// The call stack of the VM. The VM treats the top of the stack as the program pointer.
+    /// Using the [`Call`](op::Op::Call) operation pushes the address to the top of the frame stack.
     pub frames: Vec<data::Address>,
     /// The data stack
     pub stack: Vec<data::Literal>,
     sys: syscall::SyscallRegistry,
     /// The current local environment bindings.
     pub environment: EnvStack,
+    /// The current state of the VM. See [`VMState`] for more information.
     pub state: VMState,
     conf: VMConfig,
+    /// This fields contains an optional [`ExecHandle`](exec::ExecHandle) the VM uses to interface with the execution environment.
     pub proc: Option<Box<exec::ExecHandle>>,
 }
 
@@ -255,6 +292,11 @@ impl VM {
         }
     }
 
+    /// Answer a waiting VM with a message.
+    ///
+    /// When in [`VMState::Waiting`], the VM is waiting for a message in the form
+    /// of a [`Literal`]. If the VM is not in the waiting state, this returns an
+    /// `Err`.
     pub fn answer_waiting(&mut self, a: Literal) -> Result<()> {
         if self.state != VMState::Waiting {
             return Err(format_err!(

@@ -18,62 +18,69 @@ pub struct Builder {
     sys_facts: Vec<Box<syscall::SyscallFactory>>,
     env: Vec<(Keyword, Literal)>,
     conf: VMConfig,
-    entrypoint: Address,
 }
 
 impl Builder {
+    /// Create a new [`VM`] builder.
     pub fn new() -> Builder {
         Builder {
             codes: vec![],
             sys_facts: vec![],
             env: vec![],
             conf: Default::default(),
-            entrypoint: (0, 0),
         }
     }
 
+    /// Add the [`Bytecode`] to the [`VM`]. Multiple [`Bytecode`]s are called
+    /// in the order they were added.
     pub fn code(&mut self, code: Bytecode) -> &mut Builder {
         self.codes.push(code);
         self
     }
 
+    /// Added a [`syscall::SyscallFactory`] to the syscalls.
     pub fn syscalls(&mut self, fact: Box<syscall::SyscallFactory>) -> &mut Builder {
         self.sys_facts.push(fact);
         self
     }
 
+    /// Add a series of default libraries to the [`VM`].
+    ///
+    /// Adds [`math`](syscall::math::Factory), [`list`](syscall::list::Factory),
+    /// [`util`](syscall::util::Factory)
     pub fn default_libs(&mut self) -> &mut Builder {
-        self.syscalls(Box::new(syscall::math::Factory::new()));
-        self.syscalls(Box::new(syscall::list::Factory::new()));
-        self.syscalls(Box::new(syscall::util::Factory::new()));
+        self.syscalls(Box::new(syscall::math::Factory::new()))
+            .syscalls(Box::new(syscall::list::Factory::new()))
+            .syscalls(Box::new(syscall::util::Factory::new()));
 
         self
     }
 
+    /// Adds a key value pair to the global environment of the [`VM`].
     pub fn env(&mut self, k: Keyword, v: Literal) -> &mut Builder {
         self.env.push((k, v));
         self
     }
 
-    pub fn entry(&mut self, a: Address) -> &mut Self {
-        self.entrypoint = a;
-        self
-    }
-
     // Config
 
+    /// See [`VMConfig::reset_on_error`].
     pub fn reset_on_error(&mut self, reset: bool) -> &mut Self {
         self.conf.reset_on_error = reset;
         self
     }
 
+    /// See [`VMConfig::print_trace`].
     pub fn print_trace(&mut self, print: bool) -> &mut Self {
         self.conf.print_trace = print;
         self
     }
 
+    /// Consume the builder to construct the [`VM`] and return it.
     pub fn build(self) -> VM {
+        // The first vec! is a dummy for the build_entry_chunk
         let mut code = Bytecode::new(vec![vec![]]);
+        // Hold all the entry points.
         let mut entries = vec![];
 
         for c in self.codes {
@@ -85,17 +92,19 @@ impl Builder {
         let mut e = env::EnvStack::new();
         let mut sys = syscall::SyscallRegistry::new();
 
+        // Put syscalls into the environment
         for f in self.sys_facts {
             syscall::ingest_environment(&mut sys, e.peek_mut().unwrap(), &*f);
         }
 
+        // Then push the custom environment vars.
         for (k, v) in self.env {
             e.insert(k, v).unwrap();
         }
 
         VM {
             code,
-            frames: vec![self.entrypoint],
+            frames: vec![(0, 0)],
             stack: vec![],
             sys,
             environment: e,
@@ -105,6 +114,9 @@ impl Builder {
         }
     }
 
+    /// Consume the builder to construct the [`VM`] and then execute to a value. Returns the value (or an error) an the VM.
+    ///
+    /// See [`VM::step_until_value`].
     pub fn build_exec(self) -> (Result<Literal>, VM) {
         let mut vm = self.build();
 

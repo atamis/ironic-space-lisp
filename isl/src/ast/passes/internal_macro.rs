@@ -17,6 +17,7 @@ use errors::*;
 use std::rc::Rc;
 use util::*;
 
+/// Do the pass over a normal [`AST`]. See [`internal_macro`](super::internal_macro) for more information.
 pub fn pass(a: &AST) -> Result<AST> {
     let mut lp = Pass {};
 

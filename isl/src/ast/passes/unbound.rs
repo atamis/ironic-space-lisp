@@ -1,3 +1,4 @@
+//! Determine if any variables are unbound in an [`AST`](super::AST).
 use ast::ASTVisitor;
 use ast::Def;
 use ast::AST;
@@ -11,12 +12,18 @@ use std::rc::Rc;
 #[allow(dead_code)]
 type KeywordSet = hashset::HashSet<Keyword>;
 
+/// Do the pass. See [`super::unbound`] for more information.
+///
+/// This checks unbound variables with an empty environment. This also checks a slice of [`AST`]s together.
 pub fn pass_default(asts: &[AST]) -> Result<()> {
     let mut hs = hashset::HashSet::new();
 
     asts.iter().map(|a| hs.visit(a)).collect()
 }
 
+/// Do the pass. See [`super::unbound`] for more information.
+///
+/// Check variables against an existing environment.
 pub fn pass(ast: &AST, env: &Env) -> Result<()> {
     let mut hs: KeywordSet = env.keys().cloned().collect();
 

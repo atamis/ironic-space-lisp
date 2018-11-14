@@ -24,25 +24,44 @@ use self::passes::unbound;
 /// Representation of Lisp code in terms of special forms and applications.
 #[derive(Debug, PartialEq)]
 pub enum AST {
+    /// A literal value.
     Value(Literal),
+    /// An `if` expression.
     If {
+        /// The predicate.
         pred: Rc<AST>,
+        /// The true branch.
         then: Rc<AST>,
+        /// The false branch.
+        ///
+        /// This would be `else`, but that's a reserved keyword.
         els: Rc<AST>,
     },
+    /// A single def expression, defining a keyword based on a body.
     Def(Rc<Def>),
+    /// A let expression, allowing for local bindings in a body.
     Let {
+        /// The local defs
         defs: Vec<Def>,
+        /// The body
         body: Rc<AST>,
     },
+    /// Expression for executing multiple expressions, evaluating to the value of the last expression.
     Do(Vec<AST>),
+    /// Lambda expression representing a function, having args and a body.
     Lambda {
+        /// A list of the argument names.
         args: Vec<Keyword>,
+        /// The body.
         body: Rc<AST>,
     },
+    /// A variable ref expression.
     Var(Keyword),
+    /// A function application expression.
     Application {
+        /// The function expression.
         f: Rc<AST>,
+        /// The arguments to the function.
         args: Vec<AST>,
     },
 }
@@ -50,7 +69,9 @@ pub enum AST {
 /// Represents a "definition", either a local binding or a top level definition.
 #[derive(Debug, PartialEq)]
 pub struct Def {
+    /// The name of the `Def`.
     pub name: Keyword,
+    /// The [`AST`] representing the body of the `Def`.
     pub value: AST,
 }
 
@@ -69,7 +90,9 @@ pub fn ast(lits: &[data::Literal], e: &env::Env) -> Result<function_lifter::Lift
     Ok(last)
 }
 
+/// Visit single or multiple `Def`s easily and with nice error tagging.
 pub trait DefVisitor<R> {
+    /// Visit multiple `Def`s, collecting the result in a `Vec`.
     fn visit_multi_def(&mut self, defs: &[Def]) -> Result<Vec<R>> {
         let rs: Vec<R> = defs
             .iter()
@@ -85,6 +108,9 @@ pub trait DefVisitor<R> {
         Ok(rs)
     }
 
+    /// Visit a single `Def`.
+    ///
+    /// This atuomatically destructures the `Def`, and tags the result with context.
     fn visit_single_def(&mut self, d: &Def) -> Result<R> {
         let res = self
             .visit_def(&d.name, &d.value)
@@ -92,6 +118,7 @@ pub trait DefVisitor<R> {
         Ok(res)
     }
 
+    /// Callback for a single `Def`, passing in the name and value `AST`.
     fn visit_def(&mut self, name: &str, value: &AST) -> Result<R>;
 }
 
@@ -138,24 +165,36 @@ pub trait ASTVisitor<R> {
         Ok(rs)
     }
 
+    /// Callback for `AST::Value`, passing in a reference to the container literal.
     fn value_expr(&mut self, l: &Literal) -> Result<R>;
 
+    /// Callback for `AST::If`, passing in the predicate and both branches.
     fn if_expr(&mut self, pred: &Rc<AST>, then: &Rc<AST>, els: &Rc<AST>) -> Result<R>;
 
+    /// Callback for `AST::Def`, passing in the `Def`.
     fn def_expr(&mut self, def: &Rc<Def>) -> Result<R>;
 
+    /// Callback for `AST::Let`, passing in a slice of the `Def`s and the body `AST`.
     fn let_expr(&mut self, defs: &[Def], body: &Rc<AST>) -> Result<R>;
 
+    /// Callback for `AST::Do`, passing in a slice of the `AST`s.
     fn do_expr(&mut self, exprs: &[AST]) -> Result<R>;
 
+    /// Callback for `AST::Lambda`, passing in a slice of the arguments and the body.
     fn lambda_expr(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<R>;
 
+    /// Callback for `AST::Var`, passing in the name.
     #[allow(clippy::ptr_arg)]
     fn var_expr(&mut self, k: &Keyword) -> Result<R>;
 
+    /// Callback for `AST::Application`, passing in the function, and a slice of the arguments.
     fn application_expr(&mut self, f: &Rc<AST>, args: &[AST]) -> Result<R>;
 }
 
+/// Parse potentially multiple exprs, returning exactly 1 AST.
+///
+/// Returns either the single [`AST`] contained in the literals,
+/// or multiple [`AST`]s from the literals, wrapped in a [`AST::Do`] expr.
 pub fn parse_multi(exprs: &[Literal]) -> Result<AST> {
     let mut asts: Vec<AST> = exprs
         .iter()
@@ -195,7 +234,6 @@ pub fn parse(e: &Literal) -> Result<AST> {
     }
 }
 
-// TODO: break these parsers out into functions and make better error messages.
 fn parse_compound(first: &Literal, rest: &Vector<Literal>) -> Result<AST> {
     let r = if let Literal::Keyword(s) = first {
         match s.as_ref() {

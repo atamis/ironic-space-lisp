@@ -88,6 +88,7 @@ impl Default for Parser {
 }
 
 impl Parser {
+    /// Create a new parser.
     pub fn new() -> Parser {
         Parser()
     }

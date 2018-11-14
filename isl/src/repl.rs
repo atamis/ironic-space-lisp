@@ -1,3 +1,5 @@
+//! Run an interactive REPL on a [`vm::VM`].
+
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 
@@ -11,6 +13,7 @@ use size::*;
 use str_to_ast;
 use vm;
 
+/// Run a REPL executing on a [`vm::VM`].
 pub fn repl() {
     let mut vm = vm::VM::new(vm::bytecode::Bytecode::new(vec![]));
 
@@ -55,6 +58,7 @@ pub fn repl() {
     }
 }
 
+/// Parse a string and evaluate it on the VM with a limited resource pool of 10000 cost.
 pub fn eval(vm: &mut vm::VM, s: &str) -> Result<Option<data::Literal>> {
     let ast = str_to_ast(&s)?;
 

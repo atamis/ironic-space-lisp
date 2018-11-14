@@ -1,3 +1,7 @@
+//! Contains utility functions for running the ISL implementation of ISL.
+//!
+//! Not very useful or reusable.
+
 use ast::ast;
 use ast::LiftedAST;
 use compiler;
@@ -8,6 +12,7 @@ use parser;
 use vm;
 use vm::bytecode;
 
+/// Read ISL lisp implementation. See `examples/lisp.isl`.
 pub fn read_lisp<'a>() -> Result<&'a str> {
     Ok(include_str!("../examples/lisp.isl"))
 }
@@ -16,6 +21,7 @@ fn compile(last: &LiftedAST) -> Result<bytecode::Bytecode> {
     compiler::pack_compile_lifted(&last)
 }
 
+/// An empty [`vm::VM`] with the default libraries.
 pub fn empty_vm() -> vm::VM {
     let mut builder = vm::Builder::new();
 
@@ -41,6 +47,7 @@ fn make_double(lits: &[data::Literal], e: &env::Env) -> Result<bytecode::Bytecod
     compile(&last)
 }
 
+/// Run the ISL implementation on a [`vm::VM`], returning nothing and panicing on error.
 pub fn self_hosted() -> Result<()> {
     let mut vm = empty_vm();
 
