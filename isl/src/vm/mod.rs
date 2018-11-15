@@ -117,6 +117,25 @@ impl Default for VMConfig {
     }
 }
 
+/// Stack frame used by the VM.
+///
+/// Consists of an address and a vector of local variables.
+#[derive(Debug)]
+pub struct Frame {
+    addr: data::Address,
+    locals: Vec<Literal>,
+}
+
+impl Frame {
+    /// Create a new frame with an address and an empty set of locals.
+    pub fn new(addr: data::Address) -> Frame {
+        Frame {
+            addr,
+            locals: vec![],
+        }
+    }
+}
+
 /// A non-reusable bytecode VM.
 ///
 /// Keeps track of data stack, frame stack, environment stack, and the code.
@@ -126,7 +145,7 @@ pub struct VM {
     pub code: Bytecode,
     /// The call stack of the VM. The VM treats the top of the stack as the program pointer.
     /// Using the [`Call`](op::Op::Call) operation pushes the address to the top of the frame stack.
-    pub frames: Vec<data::Address>,
+    pub frames: Vec<Frame>,
     /// The data stack
     pub stack: Vec<data::Literal>,
     sys: syscall::SyscallRegistry,
@@ -150,10 +169,11 @@ impl VM {
     }
 
     fn pcounter(&mut self) -> Result<Address> {
-        let pc = self
+        let pc = &mut self
             .frames
             .last_mut()
-            .ok_or_else(|| err_msg("Stack empty, no counter"))?;
+            .ok_or_else(|| err_msg("Stack empty, no counter"))?
+            .addr;
         let a = *pc;
 
         data::address_inc(pc);
@@ -231,10 +251,11 @@ impl VM {
     /// Manually jump the VM to an address. This returns an `Err` if the frame
     /// stack is empty.
     pub fn jump(&mut self, addr: data::Address) -> Result<()> {
-        let pc: &mut data::Address = self
+        let pc: &mut data::Address = &mut self
             .frames
             .last_mut()
-            .ok_or_else(|| err_msg("Frames empty, no way to jump"))?;
+            .ok_or_else(|| err_msg("Frames empty, no way to jump"))?
+            .addr;
 
         *pc = addr;
         Ok(())
@@ -244,7 +265,7 @@ impl VM {
     pub fn reset(&mut self, code: Bytecode) {
         self.code = code;
         self.stack = vec![];
-        self.frames = vec![(0, 0)];
+        self.frames = vec![Frame::new((0, 0))];
         self.state = VMState::Stopped;
     }
 
@@ -262,7 +283,7 @@ impl VM {
     pub fn import_jump(&mut self, code: &Bytecode) -> Address {
         let a = self.code.import(code);
         self.frames.clear();
-        self.frames.push(a);
+        self.frames.push(Frame::new(a));
         a
     }
 
@@ -387,6 +408,12 @@ impl VM {
             Op::Wait => self.op_wait().context("Executing operation wait")?,
             Op::Send => self.op_send().context("Executing operation send")?,
             Op::Pid => self.op_pid().context("Executing operation pid")?,
+            Op::LoadLocal(i) => self
+                .op_load_local(i)
+                .context("Executing operation load local")?,
+            Op::StoreLocal(i) => self
+                .op_store_local(i)
+                .context("Executing operation store local")?,
         }
         Ok(())
     }
@@ -415,7 +442,7 @@ impl VM {
             _ => return Err(err_msg("attempted to jump to non-address")),
         };
 
-        self.frames.push(addr);
+        self.frames.push(Frame::new(addr));
         Ok(())
     }
 
@@ -547,7 +574,7 @@ impl VM {
             }
         }
 
-        self.frames.push(addr);
+        self.frames.push(Frame::new(addr));
 
         Ok(())
     }
@@ -586,5 +613,42 @@ impl VM {
             self.stack.push(false.into());
             Ok(())
         }
+    }
+
+    fn local_cap_ref(&mut self, index: usize) -> Result<&mut Literal> {
+        {
+            let locals = &mut self
+                .frames
+                .last_mut()
+                .ok_or_else(|| err_msg("Stack empty, no locals"))?
+                .locals;
+
+            while locals.len() <= index {
+                locals.push(false.into());
+            }
+        }
+
+        Ok(&mut self.frames.last_mut().unwrap().locals[index])
+    }
+
+    fn op_load_local(&mut self, index: usize) -> Result<()> {
+        let val = { self.local_cap_ref(index)?.clone() };
+
+        self.stack.push(val);
+
+        Ok(())
+    }
+
+    fn op_store_local(&mut self, index: usize) -> Result<()> {
+        let msg = self
+            .stack
+            .pop()
+            .ok_or_else(|| err_msg("Attempted to pop stack for value to store locally"))?;
+
+        let local_ref = self.local_cap_ref(index)?;
+
+        *local_ref = msg;
+
+        Ok(())
     }
 }

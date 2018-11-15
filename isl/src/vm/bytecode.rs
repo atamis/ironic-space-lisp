@@ -35,8 +35,17 @@ impl Chunk {
             if let Op::Lit(l) = op {
                 print!("\t{:?}", l);
             }
+
             if let Op::CallArity(a) = op {
                 print!("\t{:}", a);
+            }
+
+            if let Op::LoadLocal(i) = op {
+                print!("\t{:}", i);
+            }
+
+            if let Op::StoreLocal(i) = op {
+                print!("\t{:}", i);
             }
 
             println!()

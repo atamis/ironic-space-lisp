@@ -40,7 +40,7 @@ fn test_jump() {
     let mut vm = VM::new(single);
 
     vm.jump((5, 5)).unwrap();
-    assert_eq!(*vm.frames.last().unwrap(), (5, 5));
+    assert_eq!(vm.frames.last().unwrap().addr, (5, 5));
 }
 
 #[test]
@@ -73,7 +73,7 @@ fn test_op_call() {
 
     vm.op_lit(Literal::Address((0, 0))).unwrap();
     assert!(vm.op_call().is_ok());
-    assert_eq!(*vm.frames.last().unwrap(), (0, 0));
+    assert_eq!(vm.frames.last().unwrap().addr, (0, 0));
     assert_eq!(vm.frames.len(), 2)
 }
 
@@ -87,7 +87,7 @@ fn test_op_jump() {
 
     vm.op_lit(Literal::Address((5, 5))).unwrap();
     assert!(vm.op_jump().is_ok());
-    assert_eq!(*vm.frames.last().unwrap(), (5, 5));
+    assert_eq!(vm.frames.last().unwrap().addr, (5, 5));
 }
 
 #[test]
@@ -98,7 +98,7 @@ fn test_jumpcond_then() {
     vm.op_lit(Literal::Address((5, 0))).unwrap();
     vm.op_lit(Literal::Boolean(true)).unwrap();
     assert!(vm.op_jumpcond().is_ok());
-    assert_eq!(*vm.frames.last().unwrap(), (5, 0));
+    assert_eq!(vm.frames.last().unwrap().addr, (5, 0));
 }
 
 #[test]
@@ -109,7 +109,7 @@ fn test_jumpcond_else() {
     vm.op_lit(Literal::Address((5, 0))).unwrap();
     vm.op_lit(Literal::Boolean(false)).unwrap();
     assert!(vm.op_jumpcond().is_ok());
-    assert_eq!(*vm.frames.last().unwrap(), (6, 0));
+    assert_eq!(vm.frames.last().unwrap().addr, (6, 0));
 }
 
 #[test]
@@ -227,7 +227,7 @@ fn test_op_call_closure() {
     vm.op_lit(Literal::Closure(2, (0, 0))).unwrap();
     vm.op_call().unwrap();
 
-    assert_eq!(*vm.frames.last().unwrap(), (0, 0));
+    assert_eq!(vm.frames.last().unwrap().addr, (0, 0));
     assert_eq!(vm.frames.len(), 2)
 }
 
@@ -238,7 +238,7 @@ fn test_op_call_arity() {
     vm.op_lit(Literal::Closure(2, (0, 0))).unwrap();
     assert!(vm.op_call_arity(2).is_ok());
 
-    assert_eq!(*vm.frames.last().unwrap(), (0, 0));
+    assert_eq!(vm.frames.last().unwrap().addr, (0, 0));
 
     let mut vm = VM::new(Bytecode::new(vec![vec![]]));
 
@@ -250,14 +250,14 @@ fn test_op_call_arity() {
     vm.op_lit(Literal::Address((0, 0))).unwrap();
     assert!(vm.op_call_arity(1).is_ok());
 
-    assert_eq!(*vm.frames.last().unwrap(), (0, 0));
+    assert_eq!(vm.frames.last().unwrap().addr, (0, 0));
 
     let mut vm = VM::new(Bytecode::new(vec![vec![]]));
 
     vm.op_lit(Literal::Address((0, 0))).unwrap();
     assert!(vm.op_call_arity(2).is_ok());
 
-    assert_eq!(*vm.frames.last().unwrap(), (0, 0));
+    assert_eq!(vm.frames.last().unwrap().addr, (0, 0));
 }
 
 #[test]
@@ -323,6 +323,38 @@ fn test_send() {
     } else {
         panic!();
     }
+}
+
+#[test]
+fn test_store_local() {
+    let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+
+    vm.op_lit(1.into()).unwrap();
+    vm.op_store_local(0).unwrap();
+
+    assert_eq!(vm.frames.last().unwrap().locals[0], 1.into());
+
+    vm.op_lit(2.into()).unwrap();
+    vm.op_store_local(1).unwrap();
+
+    assert_eq!(vm.frames.last().unwrap().locals[1], 2.into());
+}
+
+#[test]
+fn test_load_local() {
+    let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+
+    vm.op_lit(1.into()).unwrap();
+    vm.op_store_local(0).unwrap();
+    vm.op_load_local(0).unwrap();
+
+    assert_eq!(*vm.stack.last().unwrap(), Literal::from(1));
+
+    vm.op_lit(2.into()).unwrap();
+    vm.op_store_local(1).unwrap();
+    vm.op_load_local(1).unwrap();
+
+    assert_eq!(*vm.stack.last().unwrap(), Literal::from(2));
 }
 
 #[test]
@@ -429,7 +461,7 @@ fn bench_nested_envs(b: &mut Bencher) {
     vm.step_until_cost(10000).unwrap().unwrap();
 
     b.iter(|| {
-        vm.frames.push((0, 0));
+        vm.frames.push(Frame::new((0, 0)));
         vm.step_until_cost(10000).unwrap().unwrap();
     })
 }
@@ -453,7 +485,7 @@ fn bench_infinite_recursion(b: &mut Bencher) {
 
     b.iter(|| {
         vm.frames.clear();
-        vm.frames.push((0, 0));
+        vm.frames.push(Frame::new((0, 0)));
         vm.step_until_cost(10000).unwrap();
     });
 }

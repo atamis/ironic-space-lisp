@@ -10,6 +10,7 @@ use syscall;
 use vm::bytecode::Bytecode;
 use vm::bytecode::Chunk;
 use vm::op::Op;
+use vm::Frame;
 
 /// Construct a VM.
 #[derive(Default)]
@@ -104,7 +105,7 @@ impl Builder {
 
         VM {
             code,
-            frames: vec![(0, 0)],
+            frames: vec![Frame::new((0, 0))],
             stack: vec![],
             sys,
             environment: e,

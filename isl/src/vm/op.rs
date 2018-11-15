@@ -81,6 +81,17 @@ pub enum Op {
     ///
     /// Puts this VM's Pid on the stack, or #f if the VM has no Pid.
     Pid,
+
+    /// Load a local var.
+    ///
+    /// parameter: index
+    LoadLocal(usize),
+
+    /// Store to a local var.
+    ///
+    /// parameter: index
+    /// `<value>`
+    StoreLocal(usize),
 }
 
 impl Op {
@@ -103,6 +114,8 @@ impl Op {
             Op::Wait => "Wait",
             Op::Send => "Send",
             Op::Pid => "Pid",
+            Op::LoadLocal(_) => "LoadLocal",
+            Op::StoreLocal(_) => "StoreLocal",
         }
     }
 
@@ -131,6 +144,8 @@ impl fmt::Debug for Op {
             Op::Wait => write!(f, "o<"),
             Op::Send => write!(f, "o>"),
             Op::Pid => write!(f, "oMe"),
+            Op::LoadLocal(i) => write!(f, "oLL{:}", i),
+            Op::StoreLocal(i) => write!(f, "oSL{:}", i),
         }
     }
 }
