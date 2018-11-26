@@ -130,11 +130,12 @@ fn test_jumpcond_errors() {
 
     // Now uses Literal::truthy, which is defined for all values.
     /*let mut vm = VM::new(Bytecode::new(vec![vec![]]));
-    
+
     vm.op_lit(Literal::Address((6, 0))).unwrap();
     vm.op_lit(Literal::Address((5, 0))).unwrap();
     vm.op_lit(Literal::Number(1)).unwrap();
-    assert!(vm.op_jumpcond().is_err());*/}
+    assert!(vm.op_jumpcond().is_err());*/
+}
 
 #[test]
 fn test_op_load() {

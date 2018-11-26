@@ -187,14 +187,14 @@ mod tests {
 
         let ds = e.diff_stack();
 
-        assert_eq!(ds[0], hashmap!{"test0".to_string() => 0.into()});
+        assert_eq!(ds[0], hashmap! {"test0".to_string() => 0.into()});
         assert_eq!(
             ds[1],
-            hashmap!{"test1".to_string() => 1.into(), "test2".to_string() => 2.into()}
+            hashmap! {"test1".to_string() => 1.into(), "test2".to_string() => 2.into()}
         );
-        assert_eq!(ds[2], hashmap!{});
-        assert_eq!(ds[3], hashmap!{"test3".to_string() => 3.into()});
+        assert_eq!(ds[2], hashmap! {});
+        assert_eq!(ds[3], hashmap! {"test3".to_string() => 3.into()});
 
-        assert_eq!(EnvStack::new().diff_stack(), [hashmap!{}]);
+        assert_eq!(EnvStack::new().diff_stack(), [hashmap! {}]);
     }
 }
