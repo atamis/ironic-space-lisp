@@ -43,6 +43,8 @@ pub enum IrOp {
     Dup,
     Pop,
     CallArity(usize),
+    LoadLocal(usize),
+    StoreLocal(usize),
 }
 
 /// Empty struct that implements `ASTVisitor<IrChunk>`.
@@ -297,6 +299,8 @@ pub fn pack(
                 Op::JumpCond
             }
             IrOp::CallArity(a) => Op::CallArity(*a),
+            IrOp::LoadLocal(idx) => Op::LoadLocal(*idx),
+            IrOp::StoreLocal(idx) => Op::StoreLocal(*idx),
             //_ => { return Err(err_msg("not implemented"))},
         };
 
