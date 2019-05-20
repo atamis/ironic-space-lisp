@@ -26,7 +26,7 @@ pub fn repl() {
 
         match readline {
             Ok(line) => {
-                rl.add_history_entry(line.as_ref());
+                rl.add_history_entry(&line);
                 res = eval(&mut vm, &line);
             }
             Err(ReadlineError::Interrupted) => break,
