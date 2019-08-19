@@ -146,7 +146,7 @@ where
 /// Wraps a parser function to make it easier to use.
 ///
 /// The wrapper function wraps and unwraps input to the function. See [`app`](app) for more info.
-pub fn apper<F, T>(f: F) -> Box<Fn(&str) -> Result<T>>
+pub fn apper<F, T>(f: F) -> Box<dyn Fn(&str) -> Result<T>>
 where
     F: Fn(CompleteStr) -> IResult<CompleteStr, T> + 'static,
 {

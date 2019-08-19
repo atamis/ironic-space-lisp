@@ -164,7 +164,7 @@ fn exec_future(
     router: &RouterChan,
 ) -> (
     data::Pid,
-    Box<Future<Item = (vm::VM, data::Literal), Error = failure::Error> + 'static + Send>,
+    Box<dyn Future<Item = (vm::VM, data::Literal), Error = failure::Error> + 'static + Send>,
 ) {
     use vm::VMState;
 
@@ -184,7 +184,7 @@ fn exec_future(
     let f = loop_fn((vm, handle), move |(vm, handle)| {
         ok((vm, handle)).and_then(
             |(mut vm, handle)| -> Box<
-                Future<
+                dyn Future<
                         Item = Loop<(vm::VM, Literal), (vm::VM, RouterHandle)>,
                         Error = failure::Error,
                     > + Send,

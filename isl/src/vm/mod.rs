@@ -155,7 +155,7 @@ pub struct VM {
     pub state: VMState,
     conf: VMConfig,
     /// This fields contains an optional [`ExecHandle`](exec::ExecHandle) the VM uses to interface with the execution environment.
-    pub proc: Option<Box<exec::ExecHandle>>,
+    pub proc: Option<Box<dyn exec::ExecHandle>>,
 }
 
 impl VM {

@@ -16,7 +16,7 @@ use vm::Frame;
 #[derive(Default)]
 pub struct Builder {
     codes: Vec<Bytecode>,
-    sys_facts: Vec<Box<syscall::SyscallFactory>>,
+    sys_facts: Vec<Box<dyn syscall::SyscallFactory>>,
     env: Vec<(Keyword, Literal)>,
     conf: VMConfig,
 }
@@ -40,7 +40,7 @@ impl Builder {
     }
 
     /// Added a [`syscall::SyscallFactory`] to the syscalls.
-    pub fn syscalls(&mut self, fact: Box<syscall::SyscallFactory>) -> &mut Builder {
+    pub fn syscalls(&mut self, fact: Box<dyn syscall::SyscallFactory>) -> &mut Builder {
         self.sys_facts.push(fact);
         self
     }
