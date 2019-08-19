@@ -470,6 +470,7 @@ fn bench_nested_envs(b: &mut Bencher) {
 #[bench]
 fn bench_infinite_recursion(b: &mut Bencher) {
     use ast::passes::function_lifter;
+    use ast::passes::local;
     use compiler;
     use str_to_ast;
 
@@ -478,7 +479,9 @@ fn bench_infinite_recursion(b: &mut Bencher) {
 
     let last = function_lifter::lift_functions(&ast).unwrap();
 
-    let code = compiler::pack_compile_lifted(&last).unwrap();
+    let llast = local::pass(&last).unwrap();
+
+    let code = compiler::pack_compile_lifted(&llast).unwrap();
 
     code.dissassemble();
 

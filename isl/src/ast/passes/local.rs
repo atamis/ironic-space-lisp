@@ -226,7 +226,7 @@ impl ASTVisitor<LocalAST> for FunctionLocalizer {
 
 pub use self::visitors::*;
 
-mod visitors {
+pub mod visitors {
     use super::GlobalDef;
     use super::LocalAST;
     use super::LocalDef;

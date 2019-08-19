@@ -5,6 +5,7 @@ use rustyline::Editor;
 
 use ast::passes::function_lifter;
 use ast::passes::internal_macro;
+use ast::passes::local;
 use ast::passes::unbound;
 use compiler;
 use data;
@@ -68,7 +69,9 @@ pub fn eval(vm: &mut vm::VM, s: &str) -> Result<Option<data::Literal>> {
 
     let last = function_lifter::lift_functions(&ast)?;
 
-    let code = compiler::pack_compile_lifted(&last)?;
+    let llast = local::pass(&last)?;
+
+    let code = compiler::pack_compile_lifted(&llast)?;
 
     vm.import_jump(&code);
 

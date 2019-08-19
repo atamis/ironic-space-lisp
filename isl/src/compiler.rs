@@ -2,6 +2,8 @@
 use std::rc::Rc;
 
 use ast::passes::function_lifter;
+use ast::passes::local;
+use ast::passes::local::visitors;
 use ast::ASTVisitor;
 use ast::Def;
 use ast::DefVisitor;
@@ -63,12 +65,12 @@ impl DefVisitor<IrChunk> for Compiler {
     }
 }
 
-impl ASTVisitor<IrChunk> for Compiler {
+impl visitors::LocalASTVisitor<IrChunk> for Compiler {
     fn value_expr(&mut self, l: &Literal) -> Result<IrChunk> {
         Ok(vec![IrOp::Lit(l.clone())])
     }
 
-    fn if_expr(&mut self, pred: &Rc<AST>, then: &Rc<AST>, els: &Rc<AST>) -> Result<IrChunk> {
+    fn if_expr(&mut self, pred: &Rc<LocalAST>, then: &Rc<LocalAST>, els: &Rc<LocalAST>) -> Result<IrChunk> {
         let pred_chunk = self.visit(pred)?;
         let then_chunk = self.visit(then)?;
         let els_chunk = self.visit(els)?;
@@ -151,7 +153,7 @@ impl ASTVisitor<IrChunk> for Compiler {
 }
 
 /// Compiles a raw [ `AST` ] into an [ `IrChunk` ]. See [ `Compiler` ] for implementation.
-pub fn compile(a: &AST) -> Result<IrChunk> {
+pub fn compile(a: &local::LocalAST) -> Result<IrChunk> {
     let mut c = Compiler {};
     c.visit(a)
 }
@@ -165,11 +167,11 @@ fn alloc_chunk(code: &mut Bytecode) -> usize {
 }
 
 /// Compile and pack a [`LiftedAST`](function_lifter::LiftedAST) into a new bytecode.
-pub fn pack_compile_lifted(last: &function_lifter::LiftedAST) -> Result<Bytecode> {
+pub fn pack_compile_lifted(llast: &local::LocalLiftedAST) -> Result<Bytecode> {
     let mut code = Bytecode::new(vec![]);
 
     // allocate chunks first
-    for (id, _) in last.fr.functions.iter().enumerate() {
+    for (id, _) in llast.functions.iter().enumerate() {
         let chunk = alloc_chunk(&mut code);
         if id != chunk {
             panic!("id chunk missalignment");
@@ -177,11 +179,11 @@ pub fn pack_compile_lifted(last: &function_lifter::LiftedAST) -> Result<Bytecode
     }
 
     // load functions into the chunks
-    for (id, function) in last.fr.functions.iter().enumerate() {
+    for (id, function) in llast.functions.iter().enumerate() {
         let chunk = id;
-        let is_entry = id == last.entry;
+        let is_entry = id == llast.entry;
 
-        let mut ir = compile(&function.body)?;
+        let mut ir = compile(&(*function).body)?;
 
         if !is_entry {
             ir.push(IrOp::PopEnv);
@@ -358,8 +360,9 @@ mod tests {
     fn lifted_compile(s: &'static str) -> Bytecode {
         let ast = str_to_ast(s).unwrap();
         let last = function_lifter::lift_functions(&ast).unwrap();
+        let llast = local::pass(&last).unwrap();
 
-        pack_compile_lifted(&last).unwrap()
+        pack_compile_lifted(&llast).unwrap()
     }
 
     #[test]
@@ -442,7 +445,9 @@ mod tests {
 
             let last = function_lifter::lift_functions(&ast).unwrap();
 
-            test::black_box(pack_compile_lifted(&last).unwrap());
+            let llast = local::pass(&last).unwrap();
+
+            test::black_box(pack_compile_lifted(&llast).unwrap());
         })
     }
 }

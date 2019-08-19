@@ -3,6 +3,7 @@
 //! Not very useful or reusable.
 
 use ast::ast;
+use ast::passes::local;
 use ast::LiftedAST;
 use compiler;
 use data;
@@ -18,7 +19,8 @@ pub fn read_lisp<'a>() -> Result<&'a str> {
 }
 
 fn compile(last: &LiftedAST) -> Result<bytecode::Bytecode> {
-    compiler::pack_compile_lifted(&last)
+    let llast = local::pass(&last).unwrap();
+    compiler::pack_compile_lifted(&llast)
 }
 
 /// An empty [`vm::VM`] with the default libraries.
@@ -57,7 +59,9 @@ pub fn self_hosted() -> Result<()> {
 
     let last = ast(&lits, vm.environment.peek().unwrap()).unwrap();
 
-    let code = compiler::pack_compile_lifted(&last).unwrap();
+    let llast = local::pass(&last).unwrap();
+
+    let code = compiler::pack_compile_lifted(&llast).unwrap();
 
     vm.import_jump(&code);
 
