@@ -1,10 +1,10 @@
 //! Holds math related syscalls
 
-use data::Literal;
-use errors::*;
-use syscall::destatic;
-use syscall::Syscall;
-use syscall::SyscallFactory;
+use crate::data::Literal;
+use crate::errors::*;
+use crate::syscall::destatic;
+use crate::syscall::Syscall;
+use crate::syscall::SyscallFactory;
 
 /// A `math` syscall factory.
 #[derive(Default)]

@@ -1,5 +1,5 @@
 use super::*;
-use data;
+use crate::data;
 use test::Bencher;
 
 #[test]
@@ -276,7 +276,7 @@ fn test_wait() {
 
 #[test]
 fn test_pid() {
-    use exec;
+    use crate::exec;
     use futures::sync::mpsc;
 
     let mut vm = VM::new(Bytecode::new(vec![vec![]]));
@@ -299,7 +299,7 @@ fn test_pid() {
 
 #[test]
 fn test_send() {
-    use exec;
+    use crate::exec;
     use futures::sync::mpsc;
     use tokio::prelude::*;
 
@@ -446,9 +446,9 @@ fn test_syscalls() {
 
 #[bench]
 fn bench_nested_envs(b: &mut Bencher) {
-    use compiler::compile;
-    use compiler::pack_start;
-    use str_to_ast;
+    use crate::compiler::compile;
+    use crate::compiler::pack_start;
+    use crate::str_to_ast;
 
     let s = "(let (x 0) (let (y 1) (let (z 2) x)))";
     let ast = str_to_ast(s).unwrap();
@@ -469,9 +469,9 @@ fn bench_nested_envs(b: &mut Bencher) {
 
 #[bench]
 fn bench_infinite_recursion(b: &mut Bencher) {
-    use ast::passes::function_lifter;
-    use compiler;
-    use str_to_ast;
+    use crate::ast::passes::function_lifter;
+    use crate::compiler;
+    use crate::str_to_ast;
 
     let s = "(def x (lambda () (x))) (x)";
     let ast = str_to_ast(s).unwrap();

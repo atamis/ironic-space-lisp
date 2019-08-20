@@ -1,16 +1,16 @@
 use super::VMConfig;
 use super::VMState;
 use super::VM;
-use data::Address;
-use data::Keyword;
-use data::Literal;
-use env;
-use errors::*;
-use syscall;
-use vm::bytecode::Bytecode;
-use vm::bytecode::Chunk;
-use vm::op::Op;
-use vm::Frame;
+use crate::data::Address;
+use crate::data::Keyword;
+use crate::data::Literal;
+use crate::env;
+use crate::errors::*;
+use crate::syscall;
+use crate::vm::bytecode::Bytecode;
+use crate::vm::bytecode::Chunk;
+use crate::vm::op::Op;
+use crate::vm::Frame;
 
 /// Construct a VM.
 #[derive(Default)]

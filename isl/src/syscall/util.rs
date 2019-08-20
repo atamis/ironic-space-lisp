@@ -1,11 +1,11 @@
 //! Holds general utility syscalls.
 //!
 //! Registers syscalls `list?, keyword?, print, or, and, even?, odd?, error`
-use data::Literal;
-use errors::*;
-use syscall::destatic;
-use syscall::Syscall;
-use syscall::SyscallFactory;
+use crate::data::Literal;
+use crate::errors::*;
+use crate::syscall::destatic;
+use crate::syscall::Syscall;
+use crate::syscall::SyscallFactory;
 
 /// A `util` syscall factory.
 #[derive(Default)]
@@ -68,14 +68,14 @@ fn vm_error(a: Literal) -> Result<Literal> {
 }
 
 fn size(a: Literal) -> Result<Literal> {
-    use size::DataSize;
+    use crate::size::DataSize;
     Ok(Literal::Number(a.data_size() as u32))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use data::list;
+    use crate::data::list;
 
     fn mytrue() -> Literal {
         Literal::Boolean(true)

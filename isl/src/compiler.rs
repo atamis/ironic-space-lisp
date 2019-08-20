@@ -1,17 +1,17 @@
 //! Compile [`AST`](ast::AST)s to [`Bytecode`](vm::bytecode::Bytecode).
 use std::rc::Rc;
 
-use ast::passes::function_lifter;
-use ast::ASTVisitor;
-use ast::Def;
-use ast::DefVisitor;
-use ast::AST;
-use data::Keyword;
-use data::Literal;
-use errors::*;
-use vm::bytecode::Bytecode;
-use vm::bytecode::Chunk;
-use vm::op::Op;
+use crate::ast::passes::function_lifter;
+use crate::ast::ASTVisitor;
+use crate::ast::Def;
+use crate::ast::DefVisitor;
+use crate::ast::AST;
+use crate::data::Keyword;
+use crate::data::Literal;
+use crate::errors::*;
+use crate::vm::bytecode::Bytecode;
+use crate::vm::bytecode::Chunk;
+use crate::vm::op::Op;
 
 /// A vector of [`IrOp`]s.
 pub type IrChunk = Vec<IrOp>;
@@ -318,9 +318,9 @@ pub fn pack(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use str_to_ast;
+    use crate::str_to_ast;
     use test::Bencher;
-    use vm::VM;
+    use crate::vm::VM;
 
     fn run(s: &'static str) -> Result<Literal> {
         let ast = str_to_ast(s)?;

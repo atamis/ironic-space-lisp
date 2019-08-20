@@ -1,13 +1,13 @@
 //! Convert a [`LiftedAST`](function_lifter::LiftedAST) to a form that uses local definitions.
-use ast::passes::function_lifter::LASTVisitor;
-use ast::ASTVisitor;
-use ast::Def;
-use ast::DefVisitor;
-use ast::LiftedAST;
-use ast::AST;
-use data::Keyword;
-use data::Literal;
-use errors::*;
+use crate::ast::passes::function_lifter::LASTVisitor;
+use crate::ast::ASTVisitor;
+use crate::ast::Def;
+use crate::ast::DefVisitor;
+use crate::ast::LiftedAST;
+use crate::ast::AST;
+use crate::data::Keyword;
+use crate::data::Literal;
+use crate::errors::*;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -231,9 +231,9 @@ mod visitors {
     use super::LocalAST;
     use super::LocalDef;
     use super::LocalLiftedAST;
-    use data::Keyword;
-    use data::Literal;
-    use errors::*;
+    use crate::data::Keyword;
+    use crate::data::Literal;
+    use crate::errors::*;
     use std::rc::Rc;
 
     /// Traverse a LocalAST, optionally producing a value alongside errors.
@@ -415,11 +415,11 @@ mod visitors {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ast;
-    use ast::passes::function_lifter;
-    use ast::passes::internal_macro;
-    use ast::passes::unique;
-    use parser;
+    use crate::ast;
+    use crate::ast::passes::function_lifter;
+    use crate::ast::passes::internal_macro;
+    use crate::ast::passes::unique;
+    use crate::parser;
 
     fn do_last(s: &str) -> LiftedAST {
         let ast = ast::parse_multi(&parser::parse(s).unwrap()).unwrap();

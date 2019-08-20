@@ -2,15 +2,15 @@
 //!
 //! Not very useful or reusable.
 
-use ast::ast;
-use ast::LiftedAST;
-use compiler;
-use data;
-use env;
-use errors::*;
-use parser;
-use vm;
-use vm::bytecode;
+use crate::ast::ast;
+use crate::ast::LiftedAST;
+use crate::compiler;
+use crate::data;
+use crate::env;
+use crate::errors::*;
+use crate::parser;
+use crate::vm;
+use crate::vm::bytecode;
 
 /// Read ISL lisp implementation. See `examples/lisp.isl`.
 pub fn read_lisp<'a>() -> Result<&'a str> {

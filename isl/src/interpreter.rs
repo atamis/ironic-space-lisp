@@ -1,18 +1,18 @@
 //! Tree-walk interpreter for ISL.
 use std::rc::Rc;
 
-use ast::passes::function_lifter;
-use ast::passes::function_lifter::LiftedAST;
-use ast::ASTVisitor;
-use ast::Def;
-use ast::DefVisitor;
-use ast::AST;
-use data::Address;
-use data::Keyword;
-use data::Literal;
-use env::Env;
-use errors::*;
-use syscall;
+use crate::ast::passes::function_lifter;
+use crate::ast::passes::function_lifter::LiftedAST;
+use crate::ast::ASTVisitor;
+use crate::ast::Def;
+use crate::ast::DefVisitor;
+use crate::ast::AST;
+use crate::data::Address;
+use crate::data::Keyword;
+use crate::data::Literal;
+use crate::env::Env;
+use crate::errors::*;
+use crate::syscall;
 
 /// An Interpreter. This keeps track of stored code, global environment, and available syscalls.
 #[derive(Debug)]
@@ -274,11 +274,11 @@ impl Interpreter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ast;
-    use ast::passes::unbound;
-    use data::Literal;
-    use parser;
-    use parser::Parser;
+    use crate::ast;
+    use crate::ast::passes::unbound;
+    use crate::data::Literal;
+    use crate::parser;
+    use crate::parser::Parser;
 
     fn pi(i: &mut Interpreter, s: &str) -> Result<Literal> {
         let p = Parser::new();

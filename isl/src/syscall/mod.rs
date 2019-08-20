@@ -6,11 +6,11 @@
 // they don't _have_ to be pass by value.
 #![allow(clippy::needless_pass_by_value)]
 
-use data::Address;
-use data::Keyword;
-use data::Literal;
-use env;
-use errors::*;
+use crate::data::Address;
+use crate::data::Keyword;
+use crate::data::Literal;
+use crate::env;
+use crate::errors::*;
 use std::collections::HashMap;
 use std::fmt;
 use std::usize;
