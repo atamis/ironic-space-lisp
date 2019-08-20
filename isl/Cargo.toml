@@ -1,5 +1,3 @@
-cargo-features = ["default-run"]
-
 [package]
 name = "isl"
 version = "0.1.0"
@@ -13,8 +11,18 @@ rustyline = "4.0.0"
 clap = "~2.32"
 derive_is_enum_variant = "0.1.1"
 nom = "^4.0"
-futures = "0.1"
-tokio = "0.1"
+#tokio = { version = "0.1.15", features = ["async-await-preview"] }
+#futures-preview = { version = "=0.3.0-alpha.17", features = ["compat"] }
 rand = "0.5.5"
 # Semi-lockless hashmap.
 #chashmap = "2.2.0
+
+futures-preview = "0.3.0-alpha.14"
+#tokio = { version = "0.1.18", features = ["async-await-preview"] }
+[dependencies.tokio]
+git = "https://github.com/tokio-rs/tokio"
+branch = "master"
+#features = ["async-await-preview"]
+[patch.crates-io]
+tokio = { git = "https://github.com/tokio-rs/tokio" }
+tokio-async-await = { git = "https://github.com/tokio-rs/tokio" }

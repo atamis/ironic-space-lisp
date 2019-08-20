@@ -4,11 +4,11 @@
 use data;
 use data::Literal;
 use errors::*;
-use futures::sync::mpsc;
+use futures::channel::mpsc;
+use futures::future::{ok, Future};
+use futures::stream::Stream;
 use std::collections::HashMap;
 use std::fmt;
-use tokio::prelude::future::{loop_fn, ok, Future, Loop};
-use tokio::prelude::stream::Stream;
 use tokio::runtime::Runtime;
 use vm;
 
@@ -181,41 +181,65 @@ fn exec_future(
         .try_send(RouterMessage::Send(handle.pid, "dummy-message".into()))
         .unwrap();
 
-    let f = loop_fn((vm, handle), move |(vm, handle)| {
-        ok((vm, handle)).and_then(
-            |(mut vm, handle)| -> Box<
-                dyn Future<
-                        Item = Loop<(vm::VM, Literal), (vm::VM, RouterHandle)>,
-                        Error = failure::Error,
-                    > + Send,
-            > {
-                vm.state = VMState::RunningUntil(100);
-                vm.state_step().unwrap();
+    let f2 = async || {
+        loop {
+            vm.state = VMState::RunningUntil(100);
+            vm.state_step().unwrap();
 
-                if let VMState::Done(_) = vm.state {
-                    let l = { vm.state.get_ret().unwrap() };
-                    vm.proc = None;
-                    return Box::new(ok(Loop::Break((vm, l))));
-                }
+            if let VMState::Done(_) = vm.state {
+                let l = { vm.state.get_ret().unwrap() };
+                vm.proc = None;
+                return (vm, l);
+                //return Box::new(ok(Loop::Break((vm, l))));
+            }
 
-                if let VMState::Stopped = vm.state {
-                    return Box::new(ok(Loop::Continue((vm, handle))));
-                }
+            if let VMState::Waiting = vm.state {
+                let opt_lit = handle.receive_async().await;
+                vm.answer_waiting(opt_lit).unwrap()
+                //return Box::new(handle.receive().then(|res| {
+                //let (opt_lit, handle) = res.unwrap();
+                //vm.answer_waiting(opt_lit).unwrap();
+                //Ok(Loop::Continue((vm, handle)))
+                //}));
+            }
+        }
+    };
 
-                if let VMState::Waiting = vm.state {
-                    return Box::new(handle.receive().then(|res| {
-                        let (opt_lit, handle) = res.unwrap();
-                        vm.answer_waiting(opt_lit).unwrap();
-                        Ok(Loop::Continue((vm, handle)))
-                    }));
-                }
+    // let f = loop_fn((vm, handle), move |(vm, handle)| {
+    //     ok((vm, handle)).and_then(
+    //         |(mut vm, handle)| -> Box<
+    //             dyn Future<
+    //                     Item = Loop<(vm::VM, Literal), (vm::VM, RouterHandle)>,
+    //                     Error = failure::Error,
+    //                 > + Send,
+    //         > {
+    //             vm.state = VMState::RunningUntil(100);
+    //             vm.state_step().unwrap();
 
-                panic!("VM state not done, stopped, or waiting");
-            },
-        )
-    });
+    //             if let VMState::Done(_) = vm.state {
+    //                 let l = { vm.state.get_ret().unwrap() };
+    //                 vm.proc = None;
+    //                 return Box::new(ok(Loop::Break((vm, l))));
+    //             }
 
-    (pid, Box::new(f))
+    //             if let VMState::Stopped = vm.state {
+    //                 return Box::new(ok(Loop::Continue((vm, handle))));
+    //             }
+
+    //             if let VMState::Waiting = vm.state {
+    //                 return Box::new(handle.receive().then(|res| {
+    //                     let (opt_lit, handle) = res.unwrap();
+    //                     vm.answer_waiting(opt_lit).unwrap();
+    //                     Ok(Loop::Continue((vm, handle)))
+    //                 }));
+    //             }
+
+    //             panic!("VM state not done, stopped, or waiting");
+    //         },
+    //     )
+    // });
+
+    (pid, f2())
 }
 
 /// Holds handles to its Runtime and router.
