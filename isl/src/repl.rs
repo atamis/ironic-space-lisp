@@ -3,15 +3,15 @@
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 
-use ast::passes::function_lifter;
-use ast::passes::internal_macro;
-use ast::passes::unbound;
-use compiler;
-use data;
-use errors::*;
-use size::*;
-use str_to_ast;
-use vm;
+use crate::ast::passes::function_lifter;
+use crate::ast::passes::internal_macro;
+use crate::ast::passes::unbound;
+use crate::compiler;
+use crate::data;
+use crate::errors::*;
+use crate::size::*;
+use crate::str_to_ast;
+use crate::vm;
 
 /// Run a REPL executing on a [`vm::VM`].
 pub fn repl() {

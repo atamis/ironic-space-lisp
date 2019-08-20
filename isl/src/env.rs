@@ -3,8 +3,8 @@
 //! This leverages immutable [`HashMap`](im::hashmap::HashMap)s from the [`im`](im) crate.
 use im::hashmap::HashMap;
 
-use data;
-use errors::*;
+use crate::data;
+use crate::errors::*;
 
 use std::fmt;
 

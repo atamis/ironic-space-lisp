@@ -9,11 +9,11 @@
 use im::vector::Vector;
 use std::rc::Rc;
 
-use data;
-use data::Keyword;
-use data::Literal;
-use env;
-use errors::*;
+use crate::data;
+use crate::data::Keyword;
+use crate::data::Literal;
+use crate::env;
+use crate::errors::*;
 
 pub mod passes;
 use self::passes::function_lifter;
@@ -439,8 +439,8 @@ fn parse_application(first: &Literal, rest: &Vector<Literal>) -> Result<AST> {
 mod tests {
     use super::*;
 
-    use data::Literal;
-    use parser::Parser;
+    use crate::data::Literal;
+    use crate::parser::Parser;
     use std::rc::Rc;
 
     fn p(s: &str) -> Result<Vec<Literal>> {

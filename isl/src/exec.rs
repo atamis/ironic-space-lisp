@@ -1,16 +1,17 @@
 //! Parallel processing environment for ISL VMs.
 //!
 //! Warning: this code calls `unwrap` constantly, and probably panics all the time.
-use data;
-use data::Literal;
-use errors::*;
+use crate::data;
+use crate::data::Literal;
+use crate::errors::*;
+use crate::vm;
 use futures::channel::mpsc;
 use futures::future::{ok, Future};
 use futures::stream::Stream;
+use futures::sync::mpsc;
 use std::collections::HashMap;
 use std::fmt;
 use tokio::runtime::Runtime;
-use vm;
 
 /// A channel to the message router.
 pub type RouterChan = mpsc::Sender<RouterMessage>;
@@ -166,7 +167,7 @@ fn exec_future(
     data::Pid,
     Box<dyn Future<Item = (vm::VM, data::Literal), Error = failure::Error> + 'static + Send>,
 ) {
-    use vm::VMState;
+    use crate::vm::VMState;
 
     let mut handle = RouterHandle::new(router.clone());
 
@@ -293,7 +294,7 @@ impl Default for Exec {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vm::op::Op;
+    use crate::vm::op::Op;
 
     fn empty_vm() -> vm::VM {
         let mut builder = vm::Builder::new();
