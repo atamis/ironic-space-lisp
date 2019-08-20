@@ -1,10 +1,10 @@
 //! Bytecode containers and dissassembly.
 
-use data::Address;
-use data::Literal;
-use errors::*;
+use crate::data::Address;
+use crate::data::Literal;
+use crate::errors::*;
 use std::fmt;
-use vm::op::Op;
+use crate::vm::op::Op;
 
 /// Holds `Chunk`s of bytecode. See `Bytecode::addr` for its primary use.
 #[derive(Clone, PartialEq)]

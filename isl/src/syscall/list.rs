@@ -1,11 +1,11 @@
 //! Holds list related syscalls
 
-use data::Literal;
-use errors::*;
+use crate::data::Literal;
+use crate::errors::*;
 use im::vector::Vector;
-use syscall::destatic;
-use syscall::Syscall;
-use syscall::SyscallFactory;
+use crate::syscall::destatic;
+use crate::syscall::Syscall;
+use crate::syscall::SyscallFactory;
 
 /// A `list` syscall factory.
 #[derive(Default)]
@@ -93,7 +93,7 @@ fn append(a: Literal, b: Literal) -> Result<Literal> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use data::list;
+    use crate::data::list;
 
     #[test]
     fn test_len() {

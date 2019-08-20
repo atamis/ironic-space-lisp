@@ -4,7 +4,7 @@
 //! this module implemented `From` on the base Rust data types to ease literal
 //! construction.
 
-use errors::*;
+use crate::errors::*;
 #[doc(hidden)]
 pub use im::vector::Vector;
 use std::fmt;

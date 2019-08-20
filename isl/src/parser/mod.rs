@@ -69,9 +69,9 @@
 //!
 //! This parser uses `nom::types::CompleteStr`, which ensures the input
 //! strings are completely consumed.
-use data;
-use data::Literal;
-use errors::*;
+use crate::data;
+use crate::data::Literal;
+use crate::errors::*;
 use nom::types::CompleteStr;
 use nom::IResult;
 use nom::{anychar, digit};
@@ -231,10 +231,10 @@ named_attr!(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use data::list;
-    use data::Literal;
-    use data::Literal::Keyword;
-    use data::Literal::Number;
+    use crate::data::list;
+    use crate::data::Literal;
+    use crate::data::Literal::Keyword;
+    use crate::data::Literal::Number;
 
     fn k(s: &str) -> Literal {
         Keyword(s.to_string())

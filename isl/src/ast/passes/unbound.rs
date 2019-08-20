@@ -1,11 +1,11 @@
 //! Determine if any variables are unbound in an [`AST`](super::AST).
-use ast::ASTVisitor;
-use ast::Def;
-use ast::AST;
-use data::Keyword;
-use data::Literal;
-use env::Env;
-use errors::*;
+use crate::ast::ASTVisitor;
+use crate::ast::Def;
+use crate::ast::AST;
+use crate::data::Keyword;
+use crate::data::Literal;
+use crate::env::Env;
+use crate::errors::*;
 use im::hashset;
 use std::rc::Rc;
 
@@ -98,10 +98,10 @@ impl ASTVisitor<()> for KeywordSet {
 #[cfg(test)]
 mod tests {
     use super::pass_default;
-    use ast;
-    use ast::AST;
-    use errors::*;
-    use parser;
+    use crate::ast;
+    use crate::ast::AST;
+    use crate::errors::*;
+    use crate::parser;
 
     fn p(s: &str) -> Result<()> {
         let p = parser::Parser::new();
