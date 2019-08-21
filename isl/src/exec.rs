@@ -6,8 +6,7 @@ use crate::data::Literal;
 use crate::errors::*;
 use crate::vm;
 use futures::channel::mpsc;
-use futures::future::{ok, Future, FutureExt, self};
-use futures::stream::Stream;
+use futures::future::{Future, FutureExt, self};
 use std::collections::HashMap;
 use std::fmt;
 use std::pin::Pin;
@@ -111,13 +110,10 @@ impl RouterHandle {
         })
     }
 
+    /// Asynchronously receive a Literal from this channel.
     pub async fn receive_async(&mut self) -> Literal {
-        use std::mem;
-        //let rx = mem::replace(&mut self.rx, None).unwrap();
 
         let msg  = self.rx.as_mut().unwrap().next().await.unwrap();
-
-        //mem::replace(&mut self.rx, Some(rx));
 
         msg
     }
