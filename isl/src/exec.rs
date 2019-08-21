@@ -48,12 +48,8 @@ impl ExecHandle for ProcInfo {
     }
 
     fn spawn(&mut self, vm: vm::VM) -> Result<data::Pid> {
-        //let builder = builder::Builder::new();
-        //builder.code(vm.code.clone()).default_libs().;
-
         let (pid, f) = exec_future(vm, &self.chan);
         let f = f.then(|_| future::ready(()));
-        //let f = async || { f.await; () };
 
         tokio::spawn(f);
 
@@ -80,7 +76,7 @@ pub enum RouterMessage {
 /// because the channel receiver can't be cloned.
 pub struct RouterHandle {
     pid: data::Pid,
-    rx: Option<mpsc::Receiver<Literal>>,
+    rx: mpsc::Receiver<Literal>,
     router: RouterChan,
 }
 
@@ -93,29 +89,17 @@ impl RouterHandle {
 
         RouterHandle {
             pid,
-            rx: Some(rx),
+            rx: rx,
             router: chan,
         }
     }
 
-    /// Returns a future that resolves to the next message this handle receives, and the handle.
-    pub fn receive(mut self) -> impl Future<Output = (Literal, RouterHandle)> {
-        use std::mem;
-        let rx = mem::replace(&mut self.rx, None).unwrap();
-
-        rx.into_future().then(move |(maybe_msg, rx)| {
-            let msg = maybe_msg.unwrap();
-            mem::replace(&mut self.rx, Some(rx));
-            future::ready(( msg, self ))
-        })
-    }
-
     /// Asynchronously receive a Literal from this channel.
-    pub async fn receive_async(&mut self) -> Literal {
-
-        let msg  = self.rx.as_mut().unwrap().next().await.unwrap();
-
-        msg
+    pub async fn receive(&mut self) -> Literal {
+        self.rx
+            .next()
+            .await
+            .unwrap()
     }
 
     /// Send a message through  to a pid.
@@ -204,7 +188,7 @@ fn exec_future(
             }
 
             if let VMState::Waiting = vm.state {
-                let opt_lit = handle.receive_async().await;
+                let opt_lit = handle.receive().await;
                 vm.answer_waiting(opt_lit).unwrap()
             }
         }
@@ -332,14 +316,14 @@ mod tests {
         let router = router(&mut runtime);
 
         let mut handle1 = RouterHandle::new(router.clone());
-        let handle2 = RouterHandle::new(router.clone());
+        let mut handle2 = RouterHandle::new(router.clone());
 
         handle1.send(handle2.pid, "test-message".into());
-        let (msg, mut handle2) = executor::block_on(handle2.receive());
+        let msg = executor::block_on(handle2.receive());
         assert_eq!(msg, "test-message".into());
 
         handle2.send(handle1.pid, "test-message2".into());
-        let (msg, _) = executor::block_on(handle1.receive());
+        let msg = executor::block_on(handle1.receive());
         assert_eq!(msg, "test-message2".into());
     }
 }
