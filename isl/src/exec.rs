@@ -159,7 +159,7 @@ fn exec_future(
     router: &RouterChan,
 ) -> (
     data::Pid,
-    Pin<Box<impl Future<Output = Result<(vm::VM, data::Literal)>>>>,
+    Pin<Box<impl Future<Output = (vm::VM, Result<data::Literal>)>>>,
 ) {
     use crate::vm::VMState;
 
@@ -179,12 +179,15 @@ fn exec_future(
     let f2 = async move || {
         loop {
             vm.state = VMState::RunningUntil(100);
-            vm.state_step()?;
+
+            if let Err(e) = vm.state_step() {
+                return (vm, Err(e))
+            };
 
             if let VMState::Done(_) = vm.state {
                 let l = { vm.state.get_ret().unwrap() };
                 vm.proc = None;
-                return Ok((vm, l));
+                return (vm, Ok(l));
             }
 
             if let VMState::Waiting = vm.state {
@@ -226,7 +229,7 @@ impl Exec {
         &mut self,
         mut vm: vm::VM,
         code: &vm::bytecode::Bytecode,
-    ) -> Result<(vm::VM, Literal)>
+    ) -> ( vm::VM, Result<Literal> )
     {
         vm.import_jump(code);
         let (_, f) = exec_future(vm, &self.router_chan);
