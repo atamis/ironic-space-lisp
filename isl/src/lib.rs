@@ -5,7 +5,7 @@
 //! This crate contains an eclectic mix of related tools. Primarily a compiler and
 //! bytecode VM, but also an interpreter.
 
-#![feature(async_await, futures_api)]
+#![feature(async_await, async_closure, futures_api)]
 #![warn(missing_docs)]
 // because clippy
 #![allow(unknown_lints)]

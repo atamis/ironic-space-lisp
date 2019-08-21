@@ -6,12 +6,13 @@ use crate::data::Literal;
 use crate::errors::*;
 use crate::vm;
 use futures::channel::mpsc;
-use futures::future::{ok, Future};
+use futures::future::{ok, Future, FutureExt, self};
 use futures::stream::Stream;
-use futures::sync::mpsc;
 use std::collections::HashMap;
 use std::fmt;
+use std::pin::Pin;
 use tokio::runtime::Runtime;
+use futures::stream::StreamExt;
 
 /// A channel to the message router.
 pub type RouterChan = mpsc::Sender<RouterMessage>;
@@ -52,7 +53,8 @@ impl ExecHandle for ProcInfo {
         //builder.code(vm.code.clone()).default_libs().;
 
         let (pid, f) = exec_future(vm, &self.chan);
-        let f = f.then(|_| ok(()));
+        let f = f.then(|_| future::ready(()));
+        //let f = async || { f.await; () };
 
         tokio::spawn(f);
 
@@ -98,15 +100,26 @@ impl RouterHandle {
     }
 
     /// Returns a future that resolves to the next message this handle receives, and the handle.
-    pub fn receive(mut self) -> impl Future<Item = (Literal, RouterHandle), Error = ()> {
+    pub fn receive(mut self) -> impl Future<Output = (Literal, RouterHandle)> {
         use std::mem;
         let rx = mem::replace(&mut self.rx, None).unwrap();
 
-        rx.into_future().then(move |res| {
-            let (msg, rx) = res.unwrap();
+        rx.into_future().then(move |(maybe_msg, rx)| {
+            let msg = maybe_msg.unwrap();
             mem::replace(&mut self.rx, Some(rx));
-            ok::<(Literal, RouterHandle), ()>((msg.unwrap(), self))
+            future::ready(( msg, self ))
         })
+    }
+
+    pub async fn receive_async(&mut self) -> Literal {
+        use std::mem;
+        //let rx = mem::replace(&mut self.rx, None).unwrap();
+
+        let msg  = self.rx.as_mut().unwrap().next().await.unwrap();
+
+        //mem::replace(&mut self.rx, Some(rx));
+
+        msg
     }
 
     /// Send a message through  to a pid.
@@ -148,12 +161,13 @@ pub fn router(runtime: &mut Runtime) -> mpsc::Sender<RouterMessage> {
                 }
                 RouterMessage::Send(p, l) => state.get_mut(&p).unwrap().try_send(l).unwrap(),
             };
-            ok(state)
+            future::ready(state)
         })
         .then(|x| {
             println!("Router exited: {:?}", x);
-            ok::<(), ()>(())
+            future::ready(())
         });
+
 
     runtime.spawn(f);
 
@@ -165,7 +179,7 @@ fn exec_future(
     router: &RouterChan,
 ) -> (
     data::Pid,
-    Box<dyn Future<Item = (vm::VM, data::Literal), Error = failure::Error> + 'static + Send>,
+    Pin<Box<impl Future<Output = Result<(vm::VM, data::Literal)>>>>,
 ) {
     use crate::vm::VMState;
 
@@ -182,65 +196,25 @@ fn exec_future(
         .try_send(RouterMessage::Send(handle.pid, "dummy-message".into()))
         .unwrap();
 
-    let f2 = async || {
+    let f2 = async move || {
         loop {
             vm.state = VMState::RunningUntil(100);
-            vm.state_step().unwrap();
+            vm.state_step()?;
 
             if let VMState::Done(_) = vm.state {
                 let l = { vm.state.get_ret().unwrap() };
                 vm.proc = None;
-                return (vm, l);
-                //return Box::new(ok(Loop::Break((vm, l))));
+                return Ok((vm, l));
             }
 
             if let VMState::Waiting = vm.state {
                 let opt_lit = handle.receive_async().await;
                 vm.answer_waiting(opt_lit).unwrap()
-                //return Box::new(handle.receive().then(|res| {
-                //let (opt_lit, handle) = res.unwrap();
-                //vm.answer_waiting(opt_lit).unwrap();
-                //Ok(Loop::Continue((vm, handle)))
-                //}));
             }
         }
     };
 
-    // let f = loop_fn((vm, handle), move |(vm, handle)| {
-    //     ok((vm, handle)).and_then(
-    //         |(mut vm, handle)| -> Box<
-    //             dyn Future<
-    //                     Item = Loop<(vm::VM, Literal), (vm::VM, RouterHandle)>,
-    //                     Error = failure::Error,
-    //                 > + Send,
-    //         > {
-    //             vm.state = VMState::RunningUntil(100);
-    //             vm.state_step().unwrap();
-
-    //             if let VMState::Done(_) = vm.state {
-    //                 let l = { vm.state.get_ret().unwrap() };
-    //                 vm.proc = None;
-    //                 return Box::new(ok(Loop::Break((vm, l))));
-    //             }
-
-    //             if let VMState::Stopped = vm.state {
-    //                 return Box::new(ok(Loop::Continue((vm, handle))));
-    //             }
-
-    //             if let VMState::Waiting = vm.state {
-    //                 return Box::new(handle.receive().then(|res| {
-    //                     let (opt_lit, handle) = res.unwrap();
-    //                     vm.answer_waiting(opt_lit).unwrap();
-    //                     Ok(Loop::Continue((vm, handle)))
-    //                 }));
-    //             }
-
-    //             panic!("VM state not done, stopped, or waiting");
-    //         },
-    //     )
-    // });
-
-    (pid, f2())
+    (pid, Box::pin(f2()))
 }
 
 /// Holds handles to its Runtime and router.
@@ -272,7 +246,8 @@ impl Exec {
         &mut self,
         mut vm: vm::VM,
         code: &vm::bytecode::Bytecode,
-    ) -> Result<(vm::VM, Literal)> {
+    ) -> Result<(vm::VM, Literal)>
+    {
         vm.import_jump(code);
         let (_, f) = exec_future(vm, &self.router_chan);
 
@@ -281,7 +256,7 @@ impl Exec {
 
     /// Wait for all futures to resolve.
     pub fn wait(self) {
-        self.runtime.shutdown_on_idle().wait().unwrap();
+        self.runtime.shutdown_on_idle();
     }
 }
 
@@ -295,6 +270,7 @@ impl Default for Exec {
 mod tests {
     use super::*;
     use crate::vm::op::Op;
+    use futures::executor;
 
     fn empty_vm() -> vm::VM {
         let mut builder = vm::Builder::new();
@@ -363,11 +339,11 @@ mod tests {
         let handle2 = RouterHandle::new(router.clone());
 
         handle1.send(handle2.pid, "test-message".into());
-        let (msg, mut handle2) = handle2.receive().wait().unwrap();
+        let (msg, mut handle2) = executor::block_on(handle2.receive());
         assert_eq!(msg, "test-message".into());
 
         handle2.send(handle1.pid, "test-message2".into());
-        let (msg, _) = handle1.receive().wait().unwrap();
+        let (msg, _) = executor::block_on(handle1.receive());
         assert_eq!(msg, "test-message2".into());
     }
 }

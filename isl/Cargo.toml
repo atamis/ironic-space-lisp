@@ -3,6 +3,7 @@ name = "isl"
 version = "0.1.0"
 authors = ["Andrew Amis <atamiser@gmail.com>"]
 default-run = "isl"
+edition = '2018'
 
 [dependencies]
 failure = "0.1.2"

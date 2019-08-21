@@ -277,7 +277,7 @@ fn test_wait() {
 #[test]
 fn test_pid() {
     use crate::exec;
-    use futures::sync::mpsc;
+    use futures::channel::mpsc;
 
     let mut vm = VM::new(Bytecode::new(vec![vec![]]));
 
@@ -300,12 +300,13 @@ fn test_pid() {
 #[test]
 fn test_send() {
     use crate::exec;
-    use futures::sync::mpsc;
+    use futures::channel::mpsc;
+    use futures::executor;
     use tokio::prelude::*;
 
     let mut vm = VM::new(Bytecode::new(vec![vec![]]));
 
-    let (tx, rx) = mpsc::channel::<exec::RouterMessage>(10);
+    let (tx, mut rx) = mpsc::channel::<exec::RouterMessage>(10);
 
     vm.proc = Some(Box::new(exec::ProcInfo {
         pid: data::Pid(0),
@@ -316,7 +317,7 @@ fn test_send() {
     vm.op_pid().unwrap();
     vm.op_send().unwrap();
 
-    let msg = rx.wait().next().unwrap().unwrap();
+    let msg = executor::block_on(rx.next()).unwrap();
 
     if let exec::RouterMessage::Send(pid, lit) = msg {
         assert_eq!(lit, "test-message".into());
