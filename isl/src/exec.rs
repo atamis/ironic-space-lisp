@@ -282,8 +282,9 @@ mod tests {
                     Op::CallArity(1),
                     Op::Return,
                 ]]),
-            )
-            .unwrap();
+            );
+
+        let lit = lit.unwrap();
 
         assert_eq!(lit, "dummy-message".into());
         println!("{:?}", lit);
@@ -307,10 +308,9 @@ mod tests {
                     Op::Wait,
                     Op::Return,
                 ]]),
-            )
-            .unwrap();
+            );
 
-        assert_eq!(lit, "from-myself".into());
+        assert_eq!(lit.unwrap(), "from-myself".into());
     }
 
     #[test]
