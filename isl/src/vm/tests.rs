@@ -277,7 +277,10 @@ fn test_wait() {
 #[test]
 fn test_pid() {
     use crate::exec;
+    use crate::exec::ExecHandle;
+    use crate::futures::StreamExt;
     use futures::channel::mpsc;
+    use futures::executor;
 
     let mut vm = VM::new(Bytecode::new(vec![vec![]]));
 
@@ -285,21 +288,30 @@ fn test_pid() {
 
     assert_eq!(*vm.stack.last().unwrap(), false.into());
 
-    let (tx, _) = mpsc::channel::<exec::RouterMessage>(10);
+    let (tx, mut rx) = mpsc::channel::<exec::RouterMessage>(10);
 
-    vm.proc = Some(Box::new(exec::ProcInfo {
-        pid: data::Pid(0),
-        chan: tx,
-    }));
+    let mut handler = exec::RouterHandle::new(tx);
+    let pid = handler.get_pid();;
+
+    vm.proc = Some(Box::new(handler));
 
     vm.op_pid().unwrap();
 
-    assert_eq!(*vm.stack.last().unwrap(), data::Pid(0).into());
+    assert_eq!(*vm.stack.last().unwrap(), pid.into());
+
+    let reg_msg = executor::block_on(rx.next()).unwrap();
+
+    if let exec::RouterMessage::Register(p, _) = reg_msg {
+        assert_eq!(p, pid);
+    } else {
+        panic!();
+    }
 }
 
 #[test]
 fn test_send() {
     use crate::exec;
+    use crate::exec::ExecHandle;
     use futures::channel::mpsc;
     use futures::executor;
     use tokio::prelude::*;
@@ -308,21 +320,24 @@ fn test_send() {
 
     let (tx, mut rx) = mpsc::channel::<exec::RouterMessage>(10);
 
-    vm.proc = Some(Box::new(exec::ProcInfo {
-        pid: data::Pid(0),
-        chan: tx,
-    }));
+    let mut handler = exec::RouterHandle::new(tx);
+    let pid = handler.get_pid();;
+
+    vm.proc = Some(Box::new(handler));
 
     vm.op_lit("test-message".into()).unwrap();
     vm.op_pid().unwrap();
     vm.op_send().unwrap();
 
+    // Throw out register message
+    executor::block_on(rx.next()).unwrap();
     let msg = executor::block_on(rx.next()).unwrap();
 
-    if let exec::RouterMessage::Send(pid, lit) = msg {
+    if let exec::RouterMessage::Send(p, lit) = msg {
         assert_eq!(lit, "test-message".into());
-        assert_eq!(pid, data::Pid(0));
+        assert_eq!(p, pid);
     } else {
+        eprintln!("{:?}, {:?}", pid, msg);
         panic!();
     }
 }
