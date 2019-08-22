@@ -72,8 +72,7 @@ pub enum RouterMessage {
 
 /// Represents a handle on a Router.
 ///
-/// Automatically manages registration and deregistration. Can't implement clone
-/// because the channel receiver can't be cloned.
+/// Automatically manages registration and deregistration.
 pub struct RouterHandle {
     pid: data::Pid,
     rx: mpsc::Receiver<Literal>,
@@ -115,6 +114,13 @@ impl RouterHandle {
         }
     }
 }
+
+impl Clone for RouterHandle {
+    fn clone(&self) -> Self {
+        RouterHandle::new(self.router.clone())
+    }
+}
+
 
 impl Drop for RouterHandle {
     fn drop(&mut self) {
