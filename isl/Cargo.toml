@@ -23,6 +23,3 @@ async-trait = "0.1.10"
 git = "https://github.com/tokio-rs/tokio"
 branch = "master"
 #features = ["async-await-preview"]
-[patch.crates-io]
-tokio = { git = "https://github.com/tokio-rs/tokio" }
-tokio-async-await = { git = "https://github.com/tokio-rs/tokio" }
