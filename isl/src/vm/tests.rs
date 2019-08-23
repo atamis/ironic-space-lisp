@@ -416,7 +416,6 @@ fn test_fork2() {
 
     assert!(ans.contains(&true.into()));
     assert!(ans.contains(&false.into()));
-    assert!(false);
 }
 
 #[test]
