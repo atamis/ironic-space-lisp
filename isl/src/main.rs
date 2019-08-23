@@ -47,7 +47,7 @@ fn exec(content: &str) -> Result<()> {
 
         let (vm, res) = exec.sched(vm, &code);
 
-        //exec.wait();
+        exec.wait();
 
         match res {
             Ok(x) => println!("{:#?}", x),

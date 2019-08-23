@@ -1,5 +1,4 @@
 use super::*;
-use crate::data;
 use test::Bencher;
 
 #[test]
@@ -340,6 +339,84 @@ fn test_send() {
         eprintln!("{:?}, {:?}", pid, msg);
         panic!();
     }
+}
+
+#[test]
+fn test_fork() {
+    use crate::exec;
+    use crate::exec::ExecHandle;
+    use futures::channel::mpsc;
+    use futures::executor;
+    use futures::future;
+    use tokio::prelude::*;
+    use tokio::runtime::current_thread;
+
+    let mut exec = exec::Exec::new();
+
+    let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+
+    let mut handler = exec.get_handle();
+    let pid = handler.get_pid();;
+
+    vm.proc = Some(Box::new(handler));
+
+    exec.runtime
+        .block_on(future::lazy(|_| vm.op_fork()))
+        .unwrap();
+}
+
+#[test]
+fn test_fork2() {
+    use crate::exec;
+    use crate::exec::ExecHandle;
+    use futures::channel::mpsc;
+    use futures::executor;
+    use futures::future;
+    use std::time::Duration;
+    use tokio::prelude::*;
+    use tokio::runtime::current_thread;
+    use tokio::timer::Timeout;
+
+    let dur = Duration::from_millis(10);
+
+    let mut exec = exec::Exec::new();
+
+    let mut test_handler = exec.get_handle();
+
+    let code = Bytecode::new(vec![vec![
+        Op::Fork,
+        Op::Dup,
+        Op::Lit("print".into()),
+        Op::Load,
+        Op::CallArity(1),
+        Op::Lit(test_handler.get_pid().into()),
+        Op::Send,
+    ]]);
+
+    let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+
+    exec.sched(vm, &code);
+
+    let mut ans = vec![];
+
+    ans.push(
+        exec.runtime
+            .block_on(Timeout::new(test_handler.receive(), dur))
+            .unwrap()
+            .unwrap(),
+    );
+    ans.push(
+        exec.runtime
+            .block_on(Timeout::new(test_handler.receive(), dur))
+            .unwrap()
+            .unwrap(),
+    );
+
+    println!("{:?}", ans);
+
+    assert!(ans.contains(&true.into()));
+    assert!(ans.contains(&false.into()));
+    assert!(false);
 }
 
 #[test]

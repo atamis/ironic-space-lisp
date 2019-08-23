@@ -47,7 +47,6 @@ pub enum RouterMessage {
 /// Represents a handle on a Router.
 ///
 /// Automatically manages registration and deregistration.
-#[derive(Debug)]
 pub struct RouterHandle {
     pid: data::Pid,
     rx: mpsc::Receiver<Literal>,
@@ -103,6 +102,14 @@ impl ExecHandle for RouterHandle {
 impl Clone for RouterHandle {
     fn clone(&self) -> Self {
         RouterHandle::new(self.router.clone())
+    }
+}
+
+impl fmt::Debug for RouterHandle {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // Derive implementation includes all fields, most of which
+        // aren't relevant.
+       write!(f, "RouterHandle({:?})", self.pid)
     }
 }
 
@@ -189,7 +196,7 @@ fn exec_future(
 
 /// Holds handles to its Runtime and router.
 pub struct Exec {
-    runtime: Runtime,
+    pub runtime: Runtime,
     router_chan: RouterChan,
 }
 
@@ -225,7 +232,8 @@ impl Exec {
     }
 
     /// Wait for all futures to resolve.
-    pub fn wait(self) {
+    pub fn wait(mut self) {
+        self.router_chan.close_channel();
         self.runtime.shutdown_on_idle();
     }
 }

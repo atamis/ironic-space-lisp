@@ -82,6 +82,11 @@ pub enum Op {
     /// Puts this VM's Pid on the stack, or #f if the VM has no Pid.
     Pid,
 
+    /// Fork this VM, returning #t if in the forked VM, #f if in the orignal.
+    ///
+    /// Throws an error if this VM does not have an execution handle installed.
+    Fork,
+
     /// Load a local var.
     ///
     /// parameter: index
@@ -113,6 +118,7 @@ impl Op {
             Op::CallArity(_) => "CallArity",
             Op::Wait => "Wait",
             Op::Send => "Send",
+            Op::Fork => "Fork",
             Op::Pid => "Pid",
             Op::LoadLocal(_) => "LoadLocal",
             Op::StoreLocal(_) => "StoreLocal",
@@ -143,6 +149,7 @@ impl fmt::Debug for Op {
             Op::CallArity(a) => write!(f, "oC{:}", a),
             Op::Wait => write!(f, "o<"),
             Op::Send => write!(f, "o>"),
+            Op::Fork => write!(f, "oF"),
             Op::Pid => write!(f, "oMe"),
             Op::LoadLocal(i) => write!(f, "oLL{:}", i),
             Op::StoreLocal(i) => write!(f, "oSL{:}", i),
