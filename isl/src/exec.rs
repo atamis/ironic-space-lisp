@@ -42,6 +42,8 @@ pub enum RouterMessage {
     Register(data::Pid, mpsc::Sender<Literal>),
     /// Send some data to the channel associated with a Pid.
     Send(data::Pid, Literal),
+    /// Safely close the router once all other handlers are dropped..
+    Quit,
 }
 
 /// Represents a handle on a Router.
@@ -128,26 +130,49 @@ impl Drop for RouterHandle {
 pub fn router(runtime: &mut Runtime) -> mpsc::Sender<RouterMessage> {
     let (tx, rx) = mpsc::channel::<RouterMessage>(10);
 
-    let f = rx
-        .fold(RouterState::new(), |mut state, msg| {
+    let f = async move || {
+        let mut rx = rx;
+        let mut state = RouterState::new();
+        let mut quitting = false;
+
+        loop {
+            if quitting && state.is_empty() {
+                    break;
+            }
+
+            let msg = rx.next().await;
+
+            println!("Recieved message {:?}", msg);
+
             match msg {
-                RouterMessage::Close(p) => {
+                None => break,
+                Some(RouterMessage::Close(p)) => {
                     state.remove(&p);
                 }
-                RouterMessage::Register(p, tx) => {
+                Some(RouterMessage::Register(p, tx)) => {
                     state.insert(p, tx);
                 }
-                RouterMessage::Send(p, l) => state.get_mut(&p).unwrap().try_send(l).unwrap(),
+                Some(RouterMessage::Send(p, l)) => {
+                    //state.get_mut(&p).unwrap(),
+                    if let Some(chan) = state.get_mut(&p) {
+                        if let Err(e) = chan.try_send(l) {
+                            eprintln!("Attempted to send on closed channel {:?}, but encountered error: {:?}", p, e);
+                            state.remove(&p);
+                        }
+                    } else {
+                        eprintln!("Attempted to send to non-existant pid {:?}: {:?}", p, l)
+                    }
+                },
+                Some(RouterMessage::Quit) => quitting = true,
             };
-            future::ready(state)
-        })
-        .then(|x| {
-            println!("Router exited: {:?}", x);
-            future::ready(())
-        });
+        }
 
+        println!("Router finished (quitting: {:?}): {:?}", quitting,  state);
 
-    runtime.spawn(f);
+        ()
+        };
+
+    runtime.spawn(f());
 
     tx
 }
@@ -235,7 +260,7 @@ impl Exec {
 
     /// Wait for all futures to resolve.
     pub fn wait(mut self) {
-        self.router_chan.close_channel();
+        self.router_chan.try_send(RouterMessage::Quit);
         self.runtime.shutdown_on_idle();
     }
 }

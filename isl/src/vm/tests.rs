@@ -351,12 +351,11 @@ fn test_fork() {
     use tokio::prelude::*;
     use tokio::runtime::current_thread;
 
-    let mut exec = exec::Exec::new();
+    let exec = exec::Exec::new();
 
     let mut vm = VM::new(Bytecode::new(vec![vec![]]));
 
-    let mut handler = exec.get_handle();
-    let pid = handler.get_pid();;
+    let handler = exec.get_handle();
 
     vm.proc = Some(Box::new(handler));
 
@@ -377,7 +376,7 @@ fn test_fork2() {
     use tokio::runtime::current_thread;
     use tokio::timer::Timeout;
 
-    let dur = Duration::from_millis(10);
+    let dur = Duration::from_millis(1000);
 
     let mut exec = exec::Exec::new();
 
@@ -386,16 +385,17 @@ fn test_fork2() {
     let code = Bytecode::new(vec![vec![
         Op::Fork,
         Op::Dup,
-        Op::Lit("print".into()),
-        Op::Load,
-        Op::CallArity(1),
+        //Op::Lit("print".into()),
+        //Op::Load,
+        //Op::CallArity(1),
         Op::Lit(test_handler.get_pid().into()),
         Op::Send,
+        Op::Return,
     ]]);
 
-    let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+    let vm = VM::new(Bytecode::new(vec![vec![]]));
 
-    exec.sched(vm, &code);
+    assert_eq!(exec.sched(vm, &code).1.unwrap(), false.into());
 
     let mut ans = vec![];
 
@@ -405,6 +405,7 @@ fn test_fork2() {
             .unwrap()
             .unwrap(),
     );
+
     ans.push(
         exec.runtime
             .block_on(Timeout::new(test_handler.receive(), dur))
@@ -416,6 +417,8 @@ fn test_fork2() {
 
     assert!(ans.contains(&true.into()));
     assert!(ans.contains(&false.into()));
+
+    //exec.wait();
 }
 
 #[test]
