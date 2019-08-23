@@ -196,6 +196,8 @@ fn exec_future(
 
 /// Holds handles to its Runtime and router.
 pub struct Exec {
+    /// The Tokio Runtime this Exec uses. All VMs and the router
+    /// get launched on this runtime.
     pub runtime: Runtime,
     router_chan: RouterChan,
 }
