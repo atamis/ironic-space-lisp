@@ -489,6 +489,45 @@ mod tests {
         assert!(res.is_err())
     }
 
+    #[test]
+    fn test_async_ops() {
+        let code = lifted_compile("(fork)");
+
+        assert_eq!(code.addr((0, 0)).unwrap(), Op::Fork);
+        assert_eq!(code.addr((0, 1)).unwrap(), Op::Return);
+
+        let code = lifted_compile("(wait)");
+
+        code.dissassemble();
+
+        assert_eq!(code.addr((0, 0)).unwrap(), Op::Wait);
+        assert_eq!(code.addr((0, 1)).unwrap(), Op::Return);
+
+        let code = lifted_compile("(pid)");
+
+        code.dissassemble();
+
+        assert_eq!(code.addr((0, 0)).unwrap(), Op::Pid);
+        assert_eq!(code.addr((0, 1)).unwrap(), Op::Return);
+
+        let code = lifted_compile("(send (pid) 'test)");
+
+        code.dissassemble();
+
+        assert_eq!(code.addr((0, 1)).unwrap(), Op::Pid);
+        assert_eq!(code.addr((0, 2)).unwrap(), Op::Send);
+        assert_eq!(code.addr((0, 3)).unwrap(), Op::Return);
+    }
+
+    #[test]
+    fn test_async_ops_arity() {
+        assert!(run("(fork 1)").is_err());
+        assert!(run("(wait 1)").is_err());
+        assert!(run("(pid 1)").is_err());
+        assert!(run("(send 1)").is_err());
+        assert!(run("(send)").is_err());
+    }
+
     #[bench]
     fn bench_toolchain(b: &mut Bencher) {
         use test;
