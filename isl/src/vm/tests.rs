@@ -344,12 +344,7 @@ fn test_send() {
 #[test]
 fn test_fork() {
     use crate::exec;
-    use crate::exec::ExecHandle;
-    use futures::channel::mpsc;
-    use futures::executor;
     use futures::future;
-    use tokio::prelude::*;
-    use tokio::runtime::current_thread;
 
     let exec = exec::Exec::new();
 
@@ -368,12 +363,7 @@ fn test_fork() {
 fn test_fork2() {
     use crate::exec;
     use crate::exec::ExecHandle;
-    use futures::channel::mpsc;
-    use futures::executor;
-    use futures::future;
     use std::time::Duration;
-    use tokio::prelude::*;
-    use tokio::runtime::current_thread;
     use tokio::timer::Timeout;
 
     let dur = Duration::from_millis(1000);
@@ -390,6 +380,7 @@ fn test_fork2() {
         //Op::CallArity(1),
         Op::Lit(test_handler.get_pid().into()),
         Op::Send,
+        Op::Pop,
         Op::Return,
     ]]);
 
