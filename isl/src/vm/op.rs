@@ -72,7 +72,7 @@ pub enum Op {
     /// Puts the next message recieved onto the stack.
     Wait,
 
-    /// Send an external message.
+    /// Send an external message. Returns the pid.
     ///
     /// `<data pid>`
     Send,

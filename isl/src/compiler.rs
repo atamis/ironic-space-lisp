@@ -43,6 +43,10 @@ pub enum IrOp {
     Dup,
     Pop,
     CallArity(usize),
+    Wait,
+    Send,
+    Fork,
+    Pid,
     LoadLocal(usize),
     StoreLocal(usize),
 }
@@ -141,10 +145,57 @@ impl ASTVisitor<IrChunk> for Compiler {
             chunk.append(&mut e_chunk);
         }
 
-        let mut f_chunk = self.visit(f)?;
-        chunk.append(&mut f_chunk);
+        let arg_check = |name, arity| {
+            if args.len() != arity {
+                return Err(err_msg(format!(
+                    "{:} takes {:} arguments, given {:}",
+                    name,
+                    arity,
+                    args.len()
+                )));
+            } else {
+                Ok(())
+            }
+        };
 
-        chunk.push(IrOp::CallArity(args.len()));
+        // Ideally this would be handled by a combined else
+        // clause, ie, the match expression would match over
+        // the struct rather than the string, but that doesn't
+        // work, so we combine the else clauses of the match and the
+        // if let with this bool.
+        let mut normal_call = false;
+
+        if let AST::Var(s) = &**f {
+            match s.as_ref() {
+                "fork" => {
+                    arg_check("fork", 0)?;
+                    chunk.push(IrOp::Fork);
+                }
+                "wait" => {
+                    arg_check("fork", 0)?;
+                    chunk.push(IrOp::Wait);
+                }
+                "send" => {
+                    arg_check("send", 2)?;
+                    chunk.push(IrOp::Send);
+                }
+                "pid" => {
+                    arg_check("pid", 0)?;
+                    chunk.push(IrOp::Pid);
+                }
+
+                _ => normal_call = true,
+            };
+        } else {
+            normal_call = true;
+        }
+
+        if normal_call {
+            let mut f_chunk = self.visit(f)?;
+            chunk.append(&mut f_chunk);
+
+            chunk.push(IrOp::CallArity(args.len()));
+        }
 
         Ok(chunk)
     }
@@ -299,6 +350,10 @@ pub fn pack(
                 Op::JumpCond
             }
             IrOp::CallArity(a) => Op::CallArity(*a),
+            IrOp::Wait => Op::Wait,
+            IrOp::Send => Op::Send,
+            IrOp::Fork => Op::Fork,
+            IrOp::Pid => Op::Pid,
             IrOp::LoadLocal(idx) => Op::LoadLocal(*idx),
             IrOp::StoreLocal(idx) => Op::StoreLocal(*idx),
             //_ => { return Err(err_msg("not implemented"))},
@@ -319,8 +374,8 @@ pub fn pack(
 mod tests {
     use super::*;
     use crate::str_to_ast;
-    use test::Bencher;
     use crate::vm::VM;
+    use test::Bencher;
 
     fn run(s: &'static str) -> Result<Literal> {
         let ast = str_to_ast(s)?;

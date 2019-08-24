@@ -199,6 +199,7 @@ fn exec_future(
             vm.state = VMState::RunningUntil(100);
 
             if let Err(e) = vm.state_step() {
+                eprintln!("Encountered error while running vm: {:?} ", e);
                 return (vm, Err(e))
             };
 
@@ -209,10 +210,10 @@ fn exec_future(
             }
 
             if let VMState::Waiting = vm.state {
+                println!("Waiting");
                 let opt_lit = vm.proc.as_mut().map(move |proc| proc.receive()).unwrap().await.unwrap();
                 vm.answer_waiting(opt_lit).unwrap()
             }
-           
         }
     };
 
@@ -260,7 +261,9 @@ impl Exec {
 
     /// Wait for all futures to resolve.
     pub fn wait(mut self) {
-        self.router_chan.try_send(RouterMessage::Quit);
+        if let Err(e) = self.router_chan.try_send(RouterMessage::Quit) {
+            eprintln!("Encountered error shutting down router: {:?}", e);
+        }
         self.runtime.shutdown_on_idle();
     }
 }

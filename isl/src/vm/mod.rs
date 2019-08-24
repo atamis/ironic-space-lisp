@@ -604,6 +604,8 @@ impl VM {
 
         proc.send(pid, msg)?;
 
+        self.stack.push(pid.into());
+
         Ok(())
     }
 
