@@ -6,6 +6,7 @@ use std::fmt;
 /// Basic operations (or instructions).
 ///
 /// Manually implements `Debug` to provide short 2-3 character names.
+/// Arguments are provided in the order they're popped off the stack.
 #[derive(Clone, PartialEq)]
 pub enum Op {
     /// Pushes a literal datum to the stack.
@@ -26,7 +27,7 @@ pub enum Op {
     /// Conditionally jump to one of two addresses. This is pretty inconvenient to use by hand.
     /// If pred is true, jump to then, otherwise jump to else
     ///
-    /// `<else then pred>`
+    /// `<pred then else>`
     ///
     /// Where else and then are addresses and pred is a boolean.
     JumpCond,
@@ -38,7 +39,7 @@ pub enum Op {
 
     /// Store a value from the stack in the environment.
     ///
-    /// `<value keyword>`
+    /// `<keyword value>`
     Store,
 
     /// Push an Environment onto the environment stack (see the `environment` module).
@@ -59,7 +60,7 @@ pub enum Op {
 
     /// Make a closure from an address and an arity
     ///
-    /// `<address arity>`
+    /// `<arity address>`
     MakeClosure,
 
     /// Call a function with a given arity
@@ -74,7 +75,7 @@ pub enum Op {
 
     /// Send an external message. Returns the pid.
     ///
-    /// `<data pid>`
+    /// `<pid data>`
     Send,
 
     /// Returns the Pid of this VM, if available.
