@@ -528,6 +528,24 @@ mod tests {
         assert!(run("(send)").is_err());
     }
 
+    #[test]
+    fn test_async_ops_execution() {
+        use crate::exec;
+
+        let code =
+            lifted_compile("(let (me (pid)) (if (fork) (send me 'hello) (do (wait) (wait))))");
+
+        code.dissassemble();
+
+        let mut exec = exec::Exec::new();
+
+        let vm = VM::new(Bytecode::new(vec![vec![]]));
+
+        let (_vm, res) = exec.sched(vm, &code);
+
+        assert_eq!(res.unwrap(), "hello".into())
+    }
+
     #[bench]
     fn bench_toolchain(b: &mut Bencher) {
         use test;
