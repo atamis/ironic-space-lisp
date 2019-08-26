@@ -186,13 +186,22 @@ fn exec_future(
 ) {
     use crate::vm::VMState;
 
-    let mut handle = RouterHandle::new(router.clone());
+    // Whether or not the VM already has a proc
+    // If it does, we don't want to replace it, or remove it later.
+    let mut has_proc = false;
 
-    let pid = handle.pid;
+    let pid = if vm.proc.is_none() {
+        let mut handle = RouterHandle::new(router.clone());
 
-    handle.send(handle.pid, "dummy-message".into()).unwrap();
+        let pid = handle.pid;
 
-    vm.proc = Some(Box::new(handle));
+        handle.send(handle.pid, "dummy-message".into()).unwrap();
+        vm.proc = Some(Box::new(handle));
+        pid
+    } else {
+        has_proc = true;
+        vm.proc.as_mut().unwrap().get_pid()
+    };
 
     let f2 = async move || {
         loop {
@@ -205,7 +214,9 @@ fn exec_future(
 
             if let VMState::Done(_) = vm.state {
                 let l = { vm.state.get_ret().unwrap() };
-                vm.proc = None;
+                if !has_proc {
+                    vm.proc = None;
+                }
                 return (vm, Ok(l));
             }
 
