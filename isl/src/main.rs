@@ -22,6 +22,7 @@ fn exec(content: &str) -> Result<()> {
         use isl::ast;
         use isl::ast::passes::function_lifter;
         use isl::ast::passes::internal_macro;
+        use isl::ast::passes::local;
         use isl::ast::passes::unbound;
         use isl::compiler;
         use isl::parser;
@@ -40,7 +41,9 @@ fn exec(content: &str) -> Result<()> {
 
         let last = function_lifter::lift_functions(&ast).context("While lifting functions")?;
 
-        let code = compiler::pack_compile_lifted(&last).context("Packing lifted ast")?;
+        let llast = local::pass(&last).context("While local pass")?;
+
+        let code = compiler::pack_compile_lifted(&llast).context("Packing lifted ast")?;
 
         vm.import_jump(&code);
         let res = vm.step_until_value();
@@ -65,6 +68,7 @@ fn inspect(content: &str) -> Result<()> {
         use isl::ast;
         use isl::ast::passes::function_lifter;
         use isl::ast::passes::internal_macro;
+        use isl::ast::passes::local;
         use isl::ast::passes::unbound;
         use isl::compiler;
         use isl::parser;
@@ -104,7 +108,11 @@ fn inspect(content: &str) -> Result<()> {
 
         println!("LAST: {:#?}", last);
 
-        let code = compiler::pack_compile_lifted(&last).context("Packing lifted ast")?;
+        let llast = local::pass(&last).context("While local pass")?;
+
+        println!("LLAST: {:#?}", llast);
+
+        let code = compiler::pack_compile_lifted(&llast).context("While compiling")?;
 
         code.dissassemble();
     }

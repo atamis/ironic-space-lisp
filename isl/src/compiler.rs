@@ -1,12 +1,14 @@
 //! Compile [`AST`](ast::AST)s to [`Bytecode`](vm::bytecode::Bytecode).
 use std::rc::Rc;
 
-use ast::passes::function_lifter;
 use ast::passes::local;
 use ast::passes::local::visitors;
-use ast::ASTVisitor;
-use ast::Def;
-use ast::DefVisitor;
+use ast::passes::local::visitors::GlobalDefVisitor;
+use ast::passes::local::visitors::LocalASTVisitor;
+use ast::passes::local::visitors::LocalDefVisitor;
+use ast::passes::local::GlobalDef;
+use ast::passes::local::LocalAST;
+use ast::passes::local::LocalDef;
 use ast::AST;
 use data::Keyword;
 use data::Literal;
@@ -54,14 +56,26 @@ pub enum IrOp {
 /// See `ASTVisitor<IrChunk>` and [`ASTVisitor`] for information.
 pub struct Compiler;
 
-impl DefVisitor<IrChunk> for Compiler {
-    fn visit_def(&mut self, name: &str, value: &AST) -> Result<IrChunk> {
+impl visitors::GlobalDefVisitor<IrChunk> for Compiler {
+    fn visit_globaldef(&mut self, name: &Keyword, value: &LocalAST) -> Result<IrChunk> {
         let mut body_chunk = self.visit(value)?;
 
-        body_chunk.push(IrOp::Lit(name.into()));
+        body_chunk.push(IrOp::Lit(name.clone().into()));
         body_chunk.push(IrOp::Store);
 
         Ok(body_chunk)
+    }
+}
+
+impl visitors::LocalDefVisitor<IrChunk> for Compiler {
+    fn visit_localdef(&mut self, index: usize, value: &LocalAST) -> Result<IrChunk> {
+        /*let mut body_chunk = self.visit(value)?;
+
+        body_chunk.push(IrOp::Lit((*name).into()));
+        body_chunk.push(IrOp::Store);
+
+        Ok(body_chunk)*/
+        Err(err_msg("Not implemented"))
     }
 }
 
@@ -70,7 +84,12 @@ impl visitors::LocalASTVisitor<IrChunk> for Compiler {
         Ok(vec![IrOp::Lit(l.clone())])
     }
 
-    fn if_expr(&mut self, pred: &Rc<LocalAST>, then: &Rc<LocalAST>, els: &Rc<LocalAST>) -> Result<IrChunk> {
+    fn if_expr(
+        &mut self,
+        pred: &Rc<LocalAST>,
+        then: &Rc<LocalAST>,
+        els: &Rc<LocalAST>,
+    ) -> Result<IrChunk> {
         let pred_chunk = self.visit(pred)?;
         let then_chunk = self.visit(then)?;
         let els_chunk = self.visit(els)?;
@@ -84,18 +103,18 @@ impl visitors::LocalASTVisitor<IrChunk> for Compiler {
         ])
     }
 
-    fn def_expr(&mut self, def: &Rc<Def>) -> Result<IrChunk> {
-        let mut chunk = self.visit_single_def(def)?;
+    fn def_expr(&mut self, def: &Rc<GlobalDef>) -> Result<IrChunk> {
+        let mut chunk = self.visit_single_globaldef(def)?;
 
-        chunk.append(&mut self.var_expr(&def.name)?);
+        chunk.append(&mut self.globalvar_expr(&def.name)?);
 
         Ok(chunk)
     }
 
-    fn let_expr(&mut self, defs: &[Def], body: &Rc<AST>) -> Result<IrChunk> {
+    fn let_expr(&mut self, defs: &[local::LocalDef], body: &Rc<LocalAST>) -> Result<IrChunk> {
         let mut chunk = vec![IrOp::PushEnv];
 
-        for mut def_chunk in self.visit_multi_def(defs)?.into_iter() {
+        for mut def_chunk in self.visit_multi_localdef(defs)?.into_iter() {
             chunk.append(&mut def_chunk);
         }
 
@@ -108,7 +127,7 @@ impl visitors::LocalASTVisitor<IrChunk> for Compiler {
         Ok(chunk)
     }
 
-    fn do_expr(&mut self, exprs: &[AST]) -> Result<IrChunk> {
+    fn do_expr(&mut self, exprs: &[LocalAST]) -> Result<IrChunk> {
         let mut chunk: IrChunk = vec![];
 
         let e_chunks = self.multi_visit(&exprs).into_iter().flat_map(|e| e);
@@ -125,17 +144,28 @@ impl visitors::LocalASTVisitor<IrChunk> for Compiler {
         Ok(chunk)
     }
 
-    fn lambda_expr(&mut self, _args: &[Keyword], _body: &Rc<AST>) -> Result<IrChunk> {
+    /*fn lambda_expr(&mut self, _args: &[Keyword], _body: &Rc<AST>) -> Result<IrChunk> {
         Err(err_msg(
             "Not implemented: run the function lifter pass first",
         ))
+    }*/
+
+    fn localdef_expr(&mut self, def: &Rc<local::LocalDef>) -> Result<IrChunk> {
+        Err(err_msg("Not implemented"))
     }
 
-    fn var_expr(&mut self, k: &Keyword) -> Result<IrChunk> {
+    fn globalvar_expr(&mut self, name: &Keyword) -> Result<IrChunk> {
+        Err(err_msg("Not implemented"))
+    }
+    fn localvar_expr(&mut self, index: usize) -> Result<IrChunk> {
+        Err(err_msg("Not implemented"))
+    }
+
+    /*fn var_expr(&mut self, k: &Keyword) -> Result<IrChunk> {
         Ok(vec![IrOp::Lit(Literal::Keyword(k.clone())), IrOp::Load])
-    }
+    }*/
 
-    fn application_expr(&mut self, f: &Rc<AST>, args: &[AST]) -> Result<IrChunk> {
+    fn application_expr(&mut self, f: &Rc<LocalAST>, args: &[LocalAST]) -> Result<IrChunk> {
         let mut chunk = vec![];
 
         for e in args.iter().rev() {
@@ -320,18 +350,25 @@ pub fn pack(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ast;
+    use parser;
     use str_to_ast;
     use test::Bencher;
+    use vm::bytecode;
     use vm::VM;
 
+    use ast::passes::function_lifter;
+
     fn run(s: &'static str) -> Result<Literal> {
-        let ast = str_to_ast(s)?;
+        let lits = parser::parse(s)?;
 
-        let ir = compile(&ast)?;
+        let mut vm = VM::new(bytecode::Bytecode::new(vec![vec![]]));
 
-        let code = pack_start(&ir)?;
+        let ast = ast::ast(&lits, vm.environment.peek()?)?;
 
-        let mut vm = VM::new(code);
+        let code = pack_compile_lifted(&ast)?;
+
+        vm.import_jump(&code);
 
         vm.step_until_cost(10000).map(Option::unwrap)
     }
@@ -358,6 +395,7 @@ mod tests {
     }
 
     fn lifted_compile(s: &'static str) -> Bytecode {
+        use ast::passes::function_lifter;
         let ast = str_to_ast(s).unwrap();
         let last = function_lifter::lift_functions(&ast).unwrap();
         let llast = local::pass(&last).unwrap();

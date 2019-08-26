@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use isl::ast;
 use isl::ast::passes::function_lifter;
 use isl::ast::passes::internal_macro;
+use isl::ast::passes::local;
 use isl::ast::passes::unbound;
 use isl::compiler;
 use isl::data::Literal;
@@ -98,21 +99,39 @@ impl HostedEvaler {
     }
 }
 
-fn hosted_launcher(lits: &[Literal], env: &env::Env) -> Result<function_lifter::LiftedAST> {
+fn hosted_launcher(lits: &[Literal], env: &env::Env) -> Literal {
     let mut lits = lits.to_vec();
     lits.insert(0, "do".into());
 
     // (ret-v (eval (quote (do *lits)) (quote ())))
-    let caller = list_lit!(
+    list_lit!(
         "ret-v",
         list_lit!(
             "eval",
             list_lit!("quote", lits),
             list_lit!("quote", list_lit!())
         )
-    );
+    )
+}
 
-    let last = ast::ast(&[caller], &env)?;
+fn hosted_launcher_llast(lits: &[Literal], env: &env::Env) -> Result<local::LocalLiftedAST> {
+    let launcher_lits = hosted_launcher(lits, env);
+
+    let llast = ast::ast(&[launcher_lits], &env)?;
+
+    Ok(llast)
+}
+
+fn hosted_launcher_last(lits: &[Literal], env: &env::Env) -> Result<function_lifter::LiftedAST> {
+    let launcher_lits = hosted_launcher(lits, env);
+
+    let ast = ast::parse_multi(&[launcher_lits]).unwrap();
+
+    let ast = internal_macro::pass(&ast).unwrap();
+
+    unbound::pass(&ast, env).unwrap();
+
+    let last = function_lifter::lift_functions(&ast).unwrap();
 
     Ok(last)
 }
@@ -121,9 +140,9 @@ impl Evaler for HostedEvaler {
     fn lit_eval(&mut self, lits: &[Literal]) -> Result<Literal> {
         let vm = &mut self.0;
 
-        let last = hosted_launcher(lits, vm.environment.peek()?)?;
+        let llast = hosted_launcher_llast(lits, vm.environment.peek()?)?;
 
-        vm.import_jump(&compiler::pack_compile_lifted(&last)?);
+        vm.import_jump(&compiler::pack_compile_lifted(&llast)?);
 
         vm.step_until_value()
     }
@@ -143,7 +162,13 @@ impl IntHosted {
 
         let lits = parser::parse(&s).unwrap();
 
-        let last = ast::ast(&lits, &terp.global).unwrap();
+        let ast = ast::parse_multi(&lits).unwrap();
+
+        let ast = internal_macro::pass(&ast).unwrap();
+
+        unbound::pass(&ast, &terp.global).unwrap();
+
+        let last = function_lifter::lift_functions(&ast).unwrap();
 
         // This returns an error, but it still works.
         terp.import(&last);
@@ -154,7 +179,10 @@ impl IntHosted {
 
 impl Evaler for IntHosted {
     fn lit_eval(&mut self, lits: &[Literal]) -> Result<Literal> {
-        match self.terp.import(&hosted_launcher(lits, &self.terp.global)?) {
+        match self
+            .terp
+            .import(&hosted_launcher_last(lits, &self.terp.global)?)
+        {
             Ok(r) => Ok(r),
             Err(e) => Err(err_msg(format!("Elided error: {}", e))),
         }

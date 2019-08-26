@@ -300,7 +300,7 @@ pub mod visitors {
         fn localdef_expr(&mut self, def: &Rc<LocalDef>) -> Result<R>;
 
         /// Callback for `LocalAST::Let`, passing in a slice of `LocalDef` and a reference to the body.
-        fn let_expr(&mut self, defs: &[LocalDef], body: &LocalAST) -> Result<R>;
+        fn let_expr(&mut self, defs: &[LocalDef], body: &Rc<LocalAST>) -> Result<R>;
 
         /// Callback for `LocalAST::Do`, passing in a slice of `LocalAST`.
         fn do_expr(&mut self, exprs: &[LocalAST]) -> Result<R>;
@@ -368,10 +368,10 @@ pub mod visitors {
         /// Visit a single `GlobalDef`.
         ///
         /// This atuomatically destructures the `GlobalDef`, and tags the result with context.
-        fn visit_single_localdef(&mut self, d: &GlobalDef) -> Result<R> {
+        fn visit_single_globaldef(&mut self, d: &GlobalDef) -> Result<R> {
             let res = self
                 .visit_globaldef(&d.name, &d.value)
-                .context(format!("While visiting localdef {:}", d.name))?;
+                .context(format!("While visiting globaldef {:}", d.name))?;
             Ok(res)
         }
 
@@ -473,5 +473,4 @@ mod tests {
 
         //assert!(false);
     }
-
 }

@@ -19,6 +19,7 @@ pub mod passes;
 use self::passes::function_lifter;
 pub use self::passes::function_lifter::LiftedAST;
 use self::passes::internal_macro;
+use self::passes::local;
 use self::passes::unbound;
 
 /// Representation of Lisp code in terms of special forms and applications.
@@ -76,14 +77,16 @@ pub struct Def {
 }
 
 /// Parse several [`Literal`]s into a [`LiftedAST`].
-pub fn ast(lits: &[data::Literal], e: &env::Env) -> Result<function_lifter::LiftedAST> {
+pub fn ast(lits: &[data::Literal], e: &env::Env) -> Result<local::LocalLiftedAST> {
     let last = {
         let ast = parse_multi(&lits).context("Multiparsing literals")?;
         let ast = internal_macro::pass(&ast).context("Expanding internal macros")?;
 
         unbound::pass(&ast, e).context("Checking unbound variables")?;
 
-        function_lifter::lift_functions(&ast).context("Lifting functions")
+        let last = function_lifter::lift_functions(&ast).context("Lifting functions")?;
+
+        local::pass(&last).context("Locals pass")
     }
     .context("While parsing multiple literals")?;
 

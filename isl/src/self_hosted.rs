@@ -6,6 +6,7 @@ use ast::ast;
 use ast::passes::local;
 use ast::LiftedAST;
 use compiler;
+use compiler::pack_compile_lifted;
 use data;
 use env;
 use errors::*;
@@ -46,7 +47,7 @@ fn make_double(lits: &[data::Literal], e: &env::Env) -> Result<bytecode::Bytecod
     );
 
     let last = ast(&[caller], e)?;
-    compile(&last)
+    pack_compile_lifted(&last)
 }
 
 /// Run the ISL implementation on a [`vm::VM`], returning nothing and panicing on error.
@@ -57,9 +58,7 @@ pub fn self_hosted() -> Result<()> {
 
     let lits = parser::parse(&s).unwrap();
 
-    let last = ast(&lits, vm.environment.peek().unwrap()).unwrap();
-
-    let llast = local::pass(&last).unwrap();
+    let llast = ast(&lits, vm.environment.peek().unwrap()).unwrap();
 
     let code = compiler::pack_compile_lifted(&llast).unwrap();
 
