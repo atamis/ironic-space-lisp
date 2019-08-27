@@ -15,8 +15,6 @@ use crate::str_to_ast;
 use crate::vm;
 use crate::vm::bytecode;
 
-
-
 /// Run a REPL executing on a [`vm::VM`].
 pub fn repl() {
     let mut vm = vm::VM::new(vm::bytecode::Bytecode::new(vec![]));

@@ -532,9 +532,6 @@ fn test_syscalls() {
 
 #[bench]
 fn bench_nested_envs(b: &mut Bencher) {
-    
-    
-    
     use crate::ast;
     use crate::compiler::pack_compile_lifted;
     use crate::parser;
@@ -562,11 +559,10 @@ fn bench_nested_envs(b: &mut Bencher) {
 
 #[bench]
 fn bench_infinite_recursion(b: &mut Bencher) {
-    
     use crate::compiler;
-    
+
     use crate::ast;
-    
+
     use crate::parser;
 
     let s = "(def x (lambda () (x))) (x)";
