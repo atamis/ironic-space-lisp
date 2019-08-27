@@ -5,6 +5,7 @@ use rustyline::Editor;
 
 use crate::ast::passes::function_lifter;
 use crate::ast::passes::internal_macro;
+use crate::ast::passes::local;
 use crate::ast::passes::unbound;
 use crate::compiler;
 use crate::data;
