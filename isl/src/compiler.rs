@@ -164,10 +164,6 @@ impl visitors::LocalASTVisitor<IrChunk> for Compiler {
         Ok(vec![IrOp::LoadLocal(index)])
     }
 
-    /*fn var_expr(&mut self, k: &Keyword) -> Result<IrChunk> {
-        Ok(vec![IrOp::Lit(Literal::Keyword(k.clone())), IrOp::Load])
-    }*/
-
     fn application_expr(&mut self, f: &Rc<LocalAST>, args: &[LocalAST]) -> Result<IrChunk> {
         let mut chunk = vec![];
 
@@ -194,7 +190,7 @@ impl visitors::LLASTVisitor<IrChunk> for Compiler {
     ) -> Result<IrChunk> {
         let mut ir = self.visit(body)?;
 
-        if entry {
+        if !entry {
             ir.push(IrOp::PopEnv);
         }
 
@@ -203,11 +199,10 @@ impl visitors::LLASTVisitor<IrChunk> for Compiler {
         let mut arg_ir: IrChunk = args
             .iter()
             .enumerate()
-            //.map(|k| vec![IrOp::Lit(Literal::Keyword(k.clone())), IrOp::Store])
             .map(|(i, _)| IrOp::StoreLocal(i))
             .collect();
 
-        if entry {
+        if !entry {
             arg_ir.insert(0, IrOp::PushEnv);
         }
 
@@ -219,12 +214,6 @@ impl visitors::LLASTVisitor<IrChunk> for Compiler {
 
         Ok(arg_ir)
     }
-}
-
-/// Compiles a raw [ `AST` ] into an [ `IrChunk` ]. See [ `Compiler` ] for implementation.
-pub fn compile(a: &local::LocalAST) -> Result<IrChunk> {
-    let mut c = Compiler {};
-    c.visit(a)
 }
 
 // Allocate an empty chunk and return its idx.
@@ -240,6 +229,9 @@ pub fn pack_compile_lifted(llast: &local::LocalLiftedAST) -> Result<Bytecode> {
     let mut code = Bytecode::new(vec![]);
 
     // allocate chunks first
+    // The previous compiler phases assume that then nth function is in the nth chunk
+    // This is how the packing works later in the function, and how the previous passes
+    // lift functions and replace them with addresses or closures.
     for (id, _) in llast.functions.iter().enumerate() {
         let chunk = alloc_chunk(&mut code);
         if id != chunk {
@@ -252,46 +244,6 @@ pub fn pack_compile_lifted(llast: &local::LocalLiftedAST) -> Result<Bytecode> {
     for (id, chunk) in c.llast_visit(llast)?.into_iter().enumerate() {
         pack(&chunk, &mut code, id, 0)?;
     }
-
-    // load functions into the chunks
-    /*for (id, function) in llast.functions.iter().enumerate() {
-        let chunk = id;
-        let is_entry = id == llast.entry;
-
-        /*let mut ir = compile(&(*function).body)?;
-
-        if !is_entry {
-            ir.push(IrOp::PopEnv);
-        }
-        ir.push(IrOp::Return);
-
-        let mut arg_ir: IrChunk = function
-            .args
-            .iter()
-            .map(|k| vec![IrOp::Lit(Literal::Keyword(k.clone())), IrOp::Store])
-            .flat_map(|x| x)
-            .collect();
-
-        if !is_entry {
-            arg_ir.insert(0, IrOp::PushEnv);
-        }
-
-        arg_ir.append(&mut ir);
-
-        if !is_entry {
-            tail_call_optimization(&mut arg_ir);
-        }*/
-
-        pack(&arg_ir, &mut code, chunk, 0)?;
-    }*/
-
-    // function 0 is a dummy function in FunctionRegistry, so stick the root there.
-    //code.chunks[0].ops.clear();
-
-    //let mut root_ir = compile(&last.root)?;
-    //root_ir.push(IrOp::Return);
-
-    //pack(&root_ir, &mut code, 0, 0)?;
 
     Ok(code)
 }
