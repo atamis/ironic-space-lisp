@@ -290,7 +290,7 @@ fn test_pid() {
     let (tx, mut rx) = mpsc::channel::<exec::RouterMessage>(10);
 
     let mut handler = exec::RouterHandle::new(tx);
-    let pid = handler.get_pid();;
+    let pid = handler.get_pid();
 
     vm.proc = Some(Box::new(handler));
 
@@ -320,7 +320,7 @@ fn test_send() {
     let (tx, mut rx) = mpsc::channel::<exec::RouterMessage>(10);
 
     let mut handler = exec::RouterHandle::new(tx);
-    let pid = handler.get_pid();;
+    let pid = handler.get_pid();
 
     vm.proc = Some(Box::new(handler));
 
