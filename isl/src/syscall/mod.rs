@@ -13,6 +13,7 @@ use crate::env;
 use crate::errors::*;
 use std::collections::HashMap;
 use std::fmt;
+use std::sync::Arc;
 use std::usize;
 
 pub mod list;
@@ -61,9 +62,9 @@ fn destatic(v: Vec<(&'static str, Syscall)>) -> Vec<(Keyword, Syscall)> {
 }
 
 /// Keeps track of installed syscalls and their pseudo-[`Address`]
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct SyscallRegistry {
-    syscalls: HashMap<usize, Syscall>,
+    syscalls: HashMap<usize, Arc<Syscall>>,
     idx: usize,
 }
 
@@ -80,7 +81,7 @@ impl SyscallRegistry {
     pub fn lookup(&self, addr: Address) -> Option<&Syscall> {
         let c = usize::MAX - addr.0;
 
-        self.syscalls.get(&c)
+        self.syscalls.get(&c).map(|v| &**v)
     }
 
     /// Is this address a valid syscall address.
@@ -103,7 +104,7 @@ impl SyscallRegistry {
             .into_iter()
             .map(|(name, syscall)| {
                 let arity = syscall.arity();
-                self.syscalls.insert(self.idx, syscall);
+                self.syscalls.insert(self.idx, Arc::new(syscall));
                 let a = (usize::MAX - self.idx, 0);
                 self.idx += 1;
                 (name, arity, a)

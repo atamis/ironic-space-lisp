@@ -3,8 +3,8 @@
 use crate::data::Address;
 use crate::data::Literal;
 use crate::errors::*;
-use std::fmt;
 use crate::vm::op::Op;
+use std::fmt;
 
 /// Holds `Chunk`s of bytecode. See `Bytecode::addr` for its primary use.
 #[derive(Clone, PartialEq)]

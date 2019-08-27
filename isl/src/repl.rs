@@ -8,61 +8,77 @@ use crate::ast::passes::internal_macro;
 use crate::ast::passes::local;
 use crate::ast::passes::unbound;
 use crate::compiler;
-use crate::data;
 use crate::errors::*;
+use crate::exec;
 use crate::size::*;
 use crate::str_to_ast;
 use crate::vm;
+use crate::vm::bytecode;
 
 
 
 /// Run a REPL executing on a [`vm::VM`].
 pub fn repl() {
     let mut vm = vm::VM::new(vm::bytecode::Bytecode::new(vec![]));
+    let mut exec = exec::Exec::new();
+    vm.proc = Some(Box::new(exec.get_handle()));
 
     let mut rl = Editor::<()>::new();
 
     loop {
         let readline = rl.readline(&format!("{:} {:?} >", vm.code.chunks.len(), vm.data_size()));
 
-        let mut res = Err(err_msg("No relevant matches error"));
-
-        match readline {
-            Ok(line) => {
-                rl.add_history_entry(&line);
-                res = eval(&mut vm, &line);
-            }
-            Err(ReadlineError::Interrupted) => break,
+        let line = match readline {
+            Err(ReadlineError::Interrupted) => continue,
             Err(ReadlineError::Eof) => break,
-            Err(err) => {
-                println!("Error: {:?}", err);
+            Err(e) => {
+                eprintln!("Error encountered in repl: {:?}", e);
+                break;
             }
-        }
+            Ok(s) => s,
+        };
 
-        if let Err(ref e) = res {
-            vm.code.dissassemble();
-            println!("{:?}", vm);
-            println!("error: {}", e);
+        rl.add_history_entry(&line);
 
+        let code = compile(&mut vm, &line);
+
+        if let Err(e) = code {
+            eprintln!("Error encountered in compiler: {:?}", e);
             for e in e.iter_causes() {
                 println!("caused by: {}", e);
             }
+            continue;
+        }
 
-            // The backtrace is not always generated. Try to run this example
-            // with `RUST_BACKTRACE=1`.
-            if let Some(backtrace) = Some(e.backtrace()) {
-                println!("backtrace: {:?}", backtrace);
+        let code = code.unwrap();
+
+        let (new_vm, res) = exec.sched(vm, &code);
+
+        vm = new_vm;
+
+        match res {
+            Err(ref e) => {
+                vm.code.dissassemble();
+                println!("{:?}", vm);
+                println!("error: {}", e);
+
+                for e in e.iter_causes() {
+                    println!("caused by: {}", e);
+                }
+
+                // The backtrace is not always generated. Try to run this example
+                // with `RUST_BACKTRACE=1`.
+                if let Some(backtrace) = Some(e.backtrace()) {
+                    println!("backtrace: {:?}", backtrace);
+                }
             }
-        } else {
-            println!("{:?}", res.unwrap());
-            //println!("{:?}", vm);
-            //vm.code.dissassemble();
+            Ok(v) => println!("{:?}", v),
         }
     }
 }
 
 /// Parse a string and evaluate it on the VM with a limited resource pool of 10000 cost.
-pub fn eval(vm: &mut vm::VM, s: &str) -> Result<Option<data::Literal>> {
+pub fn compile(vm: &mut vm::VM, s: &str) -> Result<bytecode::Bytecode> {
     let ast = str_to_ast(&s)?;
 
     let ast = internal_macro::pass(&ast)?;
@@ -75,9 +91,9 @@ pub fn eval(vm: &mut vm::VM, s: &str) -> Result<Option<data::Literal>> {
 
     let code = compiler::pack_compile_lifted(&llast)?;
 
-    vm.import_jump(&code);
+    //vm.import_jump(&code);
 
-    let val = vm.step_until_cost(10000)?;
+    //let val = vm.step_until_cost(10000)?;
 
-    Ok(val)
+    Ok(code)
 }

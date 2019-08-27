@@ -1,9 +1,9 @@
 //! Runtime size of data values
 use crate::data;
 use crate::env::EnvStack;
+use crate::vm;
 use im::Vector;
 use std::mem::size_of;
-use crate::vm;
 
 /// Express size in "runtime" size.
 ///

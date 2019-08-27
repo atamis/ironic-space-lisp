@@ -25,9 +25,10 @@ fn exec(content: &str) -> Result<()> {
         use isl::ast::passes::local;
         use isl::ast::passes::unbound;
         use isl::compiler;
+        use isl::exec;
         use isl::parser;
         use isl::vm;
-        let mut vm = vm::VM::new(vm::bytecode::Bytecode::new(vec![]));
+        let vm = vm::VM::new(vm::bytecode::Bytecode::new(vec![]));
 
         let p = parser::Parser::new();
 
@@ -45,8 +46,11 @@ fn exec(content: &str) -> Result<()> {
 
         let code = compiler::pack_compile_lifted(&llast).context("Packing lifted ast")?;
 
-        vm.import_jump(&code);
-        let res = vm.step_until_value();
+        let mut exec = exec::Exec::new();
+
+        let (vm, res) = exec.sched(vm, &code);
+
+        println!("{:?}", (&vm, &res));
 
         match res {
             Ok(x) => println!("{:#?}", x),
@@ -56,6 +60,8 @@ fn exec(content: &str) -> Result<()> {
                 return Err(e);
             }
         }
+
+        exec.wait();
     }
 
     Ok(())

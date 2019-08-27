@@ -1,11 +1,9 @@
-cargo-features = ["default-run"]
-
 [package]
 name = "isl"
 version = "0.1.0"
 authors = ["Andrew Amis <atamiser@gmail.com>"]
 default-run = "isl"
-edition = "2018"
+edition = '2018'
 
 [dependencies]
 failure = "0.1.2"
@@ -14,8 +12,14 @@ rustyline = "4.0.0"
 clap = "~2.32"
 derive_is_enum_variant = "0.1.1"
 nom = "^4.0"
-futures = "0.1"
-tokio = "0.1"
 rand = "0.5.5"
 # Semi-lockless hashmap.
 #chashmap = "2.2.0
+
+futures-preview = "0.3.0-alpha.14"
+async-trait = "0.1.10"
+
+[dependencies.tokio]
+git = "https://github.com/tokio-rs/tokio"
+branch = "master"
+#features = ["async-await-preview"]

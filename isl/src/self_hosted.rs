@@ -8,6 +8,7 @@ use crate::compiler::pack_compile_lifted;
 use crate::data;
 use crate::env;
 use crate::errors::*;
+use crate::exec;
 use crate::parser;
 use crate::vm;
 use crate::vm::bytecode;
@@ -45,7 +46,7 @@ fn make_double(lits: &[data::Literal], e: &env::Env) -> Result<bytecode::Bytecod
 
 /// Run the ISL implementation on a [`vm::VM`], returning nothing and panicing on error.
 pub fn self_hosted() -> Result<()> {
-    let mut vm = empty_vm();
+    let vm = empty_vm();
 
     let s = read_lisp().unwrap();
 
@@ -55,15 +56,17 @@ pub fn self_hosted() -> Result<()> {
 
     let code = compiler::pack_compile_lifted(&llast).unwrap();
 
-    vm.import_jump(&code);
+    let mut exec = exec::Exec::new();
 
-    println!("{:?}", vm.step_until_value().unwrap());
+    let (vm, res) = exec.sched(vm, &code);
+
+    println!("{:?}", res.unwrap());
 
     let double = make_double(&lits, vm.environment.peek().unwrap()).unwrap();
 
-    vm.import_jump(&double);
+    let (_, res) = exec.sched(vm, &double);
 
-    println!("hosted: {:?}", vm.step_until_value()?.ensure_list()?[1]);
+    println!("hosted: {:?}", res?.ensure_list()?[1]);
 
     Ok(())
 }
