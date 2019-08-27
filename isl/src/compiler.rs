@@ -553,8 +553,7 @@ mod tests {
     fn test_async_ops_execution() {
         use crate::exec;
 
-        let code =
-            lifted_compile("(let (me (pid)) (if (fork) (send me 'hello) (do (wait) (wait))))");
+        let code = lifted_compile("(let (me (pid)) (if (fork) (send me 'hello) (wait)))");
 
         code.dissassemble();
 

@@ -187,11 +187,10 @@ fn exec_future(
     let mut has_proc = false;
 
     let pid = if vm.proc.is_none() {
-        let mut handle = RouterHandle::new(router.clone());
+        let handle = RouterHandle::new(router.clone());
 
         let pid = handle.pid;
 
-        handle.send(handle.pid, "dummy-message".into()).unwrap();
         vm.proc = Some(Box::new(handle));
         pid
     } else {
@@ -304,7 +303,17 @@ mod tests {
     fn test_exec() {
         let mut exec = Exec::new();
 
-        let vm = empty_vm();
+        let mut vm_handle = exec.get_handle();
+
+        let vm_pid = vm_handle.get_pid();
+
+        let mut vm = empty_vm();
+
+        vm.proc = Some(Box::new(vm_handle));
+
+        let mut my_handle = exec.get_handle();
+
+        my_handle.send(vm_pid, "dummy-message".into()).unwrap();
 
         let (_, lit) = exec.sched(
             vm,
@@ -333,8 +342,6 @@ mod tests {
         let (_, lit) = exec.sched(
             vm,
             &vm::bytecode::Bytecode::new(vec![vec![
-                Op::Wait,
-                Op::Pop, // throw away dummy message
                 Op::Lit("from-myself".into()),
                 Op::Pid,
                 Op::Send,
