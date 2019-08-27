@@ -337,10 +337,6 @@ fn parse_let(_first: &Literal, rest: &Vector<Literal>) -> Result<AST> {
 
     let body_literals = rest.skip(1);
 
-    if def_literals.is_empty() {
-        return Err(err_msg("empty list of let bindings is not allowed"));
-    }
-
     if def_literals.len() % 2 != 0 {
         return Err(err_msg("in let, def list must be even"));
     }
@@ -613,9 +609,15 @@ mod tests {
             }
         );
 
-        let p5 = ps("(let () 0)");
+        let p5 = ps("(let () 0)").unwrap();
 
-        assert!(p5.is_err());
+        assert_eq!(
+            p5,
+            AST::Let {
+                defs: vec![],
+                body: Rc::new(AST::Value(0.into()))
+            }
+        );
     }
 
     #[test]
