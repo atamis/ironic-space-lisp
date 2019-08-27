@@ -1,27 +1,27 @@
 //! Compile [`AST`](ast::AST)s to [`Bytecode`](vm::bytecode::Bytecode).
 use std::rc::Rc;
 
-use crate::ast::passes::function_lifter;
+
 use crate::ast::ASTVisitor;
-use crate::ast::Def;
-use crate::ast::DefVisitor;
-use crate::ast::AST;
+
+
+
 use crate::data::Keyword;
 use crate::data::Literal;
 use crate::errors::*;
 use crate::vm::bytecode::Bytecode;
 use crate::vm::bytecode::Chunk;
 use crate::vm::op::Op;
-use ast::passes::local;
-use ast::passes::local::visitors;
-use ast::passes::local::visitors::GlobalDefVisitor;
-use ast::passes::local::visitors::LLASTVisitor;
-use ast::passes::local::visitors::LocalASTVisitor;
-use ast::passes::local::visitors::LocalDefVisitor;
-use ast::passes::local::GlobalDef;
-use ast::passes::local::LocalAST;
-use ast::passes::local::LocalDef;
-use errors::*;
+use crate::ast::passes::local;
+use crate::ast::passes::local::visitors;
+use crate::ast::passes::local::visitors::GlobalDefVisitor;
+use crate::ast::passes::local::visitors::LLASTVisitor;
+use crate::ast::passes::local::visitors::LocalASTVisitor;
+use crate::ast::passes::local::visitors::LocalDefVisitor;
+use crate::ast::passes::local::GlobalDef;
+use crate::ast::passes::local::LocalAST;
+
+
 
 /// A vector of [`IrOp`]s.
 pub type IrChunk = Vec<IrOp>;
@@ -154,7 +154,7 @@ impl visitors::LocalASTVisitor<IrChunk> for Compiler {
         ))
     }*/
 
-    fn localdef_expr(&mut self, def: &Rc<local::LocalDef>) -> Result<IrChunk> {
+    fn localdef_expr(&mut self, _def: &Rc<local::LocalDef>) -> Result<IrChunk> {
         Err(err_msg("Not implemented"))
     }
 
@@ -399,12 +399,12 @@ mod tests {
     use super::*;
     use crate::str_to_ast;
     use crate::vm::VM;
-    use ast;
-    use parser;
+    use crate::ast;
+    use crate::parser;
     use test::Bencher;
-    use vm::bytecode;
+    use crate::vm::bytecode;
 
-    use ast::passes::function_lifter;
+    use crate::ast::passes::function_lifter;
 
     fn run(s: &'static str) -> Result<Literal> {
         let lits = parser::parse(s)?;
@@ -442,7 +442,7 @@ mod tests {
     }
 
     fn lifted_compile(s: &'static str) -> Bytecode {
-        use ast::passes::function_lifter;
+        use crate::ast::passes::function_lifter;
         let ast = str_to_ast(s).unwrap();
         let last = function_lifter::lift_functions(&ast).unwrap();
         let llast = local::pass(&last).unwrap();

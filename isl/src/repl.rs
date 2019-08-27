@@ -13,8 +13,8 @@ use crate::errors::*;
 use crate::size::*;
 use crate::str_to_ast;
 use crate::vm;
-use errors::*;
-use size::*;
+
+
 
 /// Run a REPL executing on a [`vm::VM`].
 pub fn repl() {
