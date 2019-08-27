@@ -3,26 +3,18 @@
 //! Not very useful or reusable.
 
 use crate::ast::ast;
-use crate::ast::LiftedAST;
 use crate::compiler;
+use crate::compiler::pack_compile_lifted;
 use crate::data;
 use crate::env;
 use crate::errors::*;
 use crate::parser;
 use crate::vm;
 use crate::vm::bytecode;
-use crate::ast::passes::local;
-use crate::compiler::pack_compile_lifted;
-
 
 /// Read ISL lisp implementation. See `examples/lisp.isl`.
 pub fn read_lisp<'a>() -> Result<&'a str> {
     Ok(include_str!("../examples/lisp.isl"))
-}
-
-fn compile(last: &LiftedAST) -> Result<bytecode::Bytecode> {
-    let llast = local::pass(&last).unwrap();
-    compiler::pack_compile_lifted(&llast)
 }
 
 /// An empty [`vm::VM`] with the default libraries.

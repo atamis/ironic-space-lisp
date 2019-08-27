@@ -226,6 +226,11 @@ impl ASTVisitor<LocalAST> for FunctionLocalizer {
 
 pub use self::visitors::*;
 
+/// Contains visitor traits for [`LocalLiftedAST`] and related structs.
+///
+/// Traits include single generic visit method that dispatches on the enum
+/// values, and abstract methods for each individual sub-value that take the
+/// deconstructed data as parameters.
 pub mod visitors {
     use super::GlobalDef;
     use super::LocalAST;
