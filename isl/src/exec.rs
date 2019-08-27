@@ -5,14 +5,14 @@ use crate::data;
 use crate::data::Literal;
 use crate::errors::*;
 use crate::vm;
+use async_trait::async_trait;
 use futures::channel::mpsc;
-use futures::future::{Future, FutureExt, self};
+use futures::future::{self, Future, FutureExt};
+use futures::stream::StreamExt;
 use std::collections::HashMap;
 use std::fmt;
 use std::pin::Pin;
 use tokio::runtime::Runtime;
-use futures::stream::StreamExt;
-use async_trait::async_trait;
 
 /// A channel to the message router.
 pub type RouterChan = mpsc::Sender<RouterMessage>;
@@ -29,7 +29,6 @@ pub trait ExecHandle: Send + Sync + fmt::Debug {
     /// Asynchronously receive a Literal from your inbox.
     async fn receive(&mut self) -> Option<Literal>;
 }
-
 
 type RouterState = HashMap<data::Pid, mpsc::Sender<Literal>>;
 
@@ -78,9 +77,7 @@ impl ExecHandle for RouterHandle {
 
     /// Asynchronously receive a Literal from this channel.
     async fn receive(&mut self) -> Option<Literal> {
-        self.rx
-            .next()
-            .await
+        self.rx.next().await
     }
 
     /// Send a message through  to a pid.
@@ -111,14 +108,13 @@ impl fmt::Debug for RouterHandle {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // Derive implementation includes all fields, most of which
         // aren't relevant.
-       write!(f, "RouterHandle({:?})", self.pid)
+        write!(f, "RouterHandle({:?})", self.pid)
     }
 }
 
-
 impl Drop for RouterHandle {
     fn drop(&mut self) {
-        if let Err(e) = self.router .try_send(RouterMessage::Close(self.pid)) {
+        if let Err(e) = self.router.try_send(RouterMessage::Close(self.pid)) {
             eprintln!("Error encountered while closing RouterHandle: {:?}", e);
         }
     }
@@ -137,7 +133,7 @@ pub fn router(runtime: &mut Runtime) -> mpsc::Sender<RouterMessage> {
 
         loop {
             if quitting && state.is_empty() {
-                    break;
+                break;
             }
 
             let msg = rx.next().await;
@@ -162,15 +158,15 @@ pub fn router(runtime: &mut Runtime) -> mpsc::Sender<RouterMessage> {
                     } else {
                         eprintln!("Attempted to send to non-existant pid {:?}: {:?}", p, l)
                     }
-                },
+                }
                 Some(RouterMessage::Quit) => quitting = true,
             };
         }
 
-        println!("Router finished (quitting: {:?}): {:?}", quitting,  state);
+        println!("Router finished (quitting: {:?}): {:?}", quitting, state);
 
         ()
-        };
+    };
 
     runtime.spawn(f());
 
@@ -203,28 +199,32 @@ fn exec_future(
         vm.proc.as_mut().unwrap().get_pid()
     };
 
-    let f2 = async move || {
-        loop {
-            vm.state = VMState::RunningUntil(100);
+    let f2 = async move || loop {
+        vm.state = VMState::RunningUntil(100);
 
-            if let Err(e) = vm.state_step() {
-                eprintln!("Encountered error while running vm: {:?} ", e);
-                return (vm, Err(e))
-            };
+        if let Err(e) = vm.state_step() {
+            eprintln!("Encountered error while running vm: {:?} ", e);
+            return (vm, Err(e));
+        };
 
-            if let VMState::Done(_) = vm.state {
-                let l = { vm.state.get_ret().unwrap() };
-                if !has_proc {
-                    vm.proc = None;
-                }
-                return (vm, Ok(l));
+        if let VMState::Done(_) = vm.state {
+            let l = { vm.state.get_ret().unwrap() };
+            if !has_proc {
+                vm.proc = None;
             }
+            return (vm, Ok(l));
+        }
 
-            if let VMState::Waiting = vm.state {
-                println!("Waiting");
-                let opt_lit = vm.proc.as_mut().map(move |proc| proc.receive()).unwrap().await.unwrap();
-                vm.answer_waiting(opt_lit).unwrap()
-            }
+        if let VMState::Waiting = vm.state {
+            println!("Waiting");
+            let opt_lit = vm
+                .proc
+                .as_mut()
+                .map(move |proc| proc.receive())
+                .unwrap()
+                .await
+                .unwrap();
+            vm.answer_waiting(opt_lit).unwrap()
         }
     };
 
@@ -262,8 +262,7 @@ impl Exec {
         &mut self,
         mut vm: vm::VM,
         code: &vm::bytecode::Bytecode,
-    ) -> ( vm::VM, Result<Literal> )
-    {
+    ) -> (vm::VM, Result<Literal>) {
         vm.import_jump(code);
         let (_, f) = exec_future(vm, &self.router_chan);
 
@@ -307,18 +306,17 @@ mod tests {
 
         let vm = empty_vm();
 
-        let (_, lit) = exec
-            .sched(
-                vm,
-                &vm::bytecode::Bytecode::new(vec![vec![
-                    //Op::Lit(1.into()),
-                    Op::Wait,
-                    Op::Lit("print".into()),
-                    Op::Load,
-                    Op::CallArity(1),
-                    Op::Return,
-                ]]),
-            );
+        let (_, lit) = exec.sched(
+            vm,
+            &vm::bytecode::Bytecode::new(vec![vec![
+                //Op::Lit(1.into()),
+                Op::Wait,
+                Op::Lit("print".into()),
+                Op::Load,
+                Op::CallArity(1),
+                Op::Return,
+            ]]),
+        );
 
         let lit = lit.unwrap();
 
@@ -332,19 +330,18 @@ mod tests {
 
         let vm = empty_vm();
 
-        let (_, lit) = exec
-            .sched(
-                vm,
-                &vm::bytecode::Bytecode::new(vec![vec![
-                    Op::Wait,
-                    Op::Pop, // throw away dummy message
-                    Op::Lit("from-myself".into()),
-                    Op::Pid,
-                    Op::Send,
-                    Op::Wait,
-                    Op::Return,
-                ]]),
-            );
+        let (_, lit) = exec.sched(
+            vm,
+            &vm::bytecode::Bytecode::new(vec![vec![
+                Op::Wait,
+                Op::Pop, // throw away dummy message
+                Op::Lit("from-myself".into()),
+                Op::Pid,
+                Op::Send,
+                Op::Wait,
+                Op::Return,
+            ]]),
+        );
 
         assert_eq!(lit.unwrap(), "from-myself".into());
     }

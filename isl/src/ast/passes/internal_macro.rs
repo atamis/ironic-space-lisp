@@ -14,8 +14,8 @@ use crate::data;
 use crate::data::Keyword;
 use crate::data::Literal;
 use crate::errors::*;
-use std::rc::Rc;
 use crate::util::*;
+use std::rc::Rc;
 
 /// Do the pass over a normal [`AST`]. See [`internal_macro`](super::internal_macro) for more information.
 pub fn pass(a: &AST) -> Result<AST> {

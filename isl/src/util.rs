@@ -84,5 +84,4 @@ mod tests {
         let v: Vec<(usize, usize)> = group_by_2(vec![1, 2, 3, 4, 5].into_iter(), false).collect();
         assert_eq!(v, vec![(1, 2), (3, 4)]);
     }
-
 }

@@ -2,10 +2,10 @@
 
 use crate::data::Literal;
 use crate::errors::*;
-use im::vector::Vector;
 use crate::syscall::destatic;
 use crate::syscall::Syscall;
 use crate::syscall::SyscallFactory;
+use im::vector::Vector;
 
 /// A `list` syscall factory.
 #[derive(Default)]
