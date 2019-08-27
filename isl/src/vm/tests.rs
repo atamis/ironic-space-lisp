@@ -456,13 +456,15 @@ fn bench_nested_envs(b: &mut Bencher) {
     let s = "(let (x 0) (let (y 1) (let (z 2) x)))";
     let lits = parser::parse(&s).unwrap();
 
-    let mut vm = VM::new(bytecode::Bytecode::new(vec![vec![]]));
+    let mut vm = VM::new(bytecode::Bytecode::new(vec![]));
 
     let ast = ast::ast(&lits, vm.environment.peek().unwrap()).unwrap();
 
     let code = pack_compile_lifted(&ast).unwrap();
 
     vm.import_jump(&code);
+
+    vm.code.dissassemble();
 
     vm.step_until_cost(10000).unwrap().unwrap();
 

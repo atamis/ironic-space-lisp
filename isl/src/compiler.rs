@@ -4,6 +4,7 @@ use std::rc::Rc;
 use ast::passes::local;
 use ast::passes::local::visitors;
 use ast::passes::local::visitors::GlobalDefVisitor;
+use ast::passes::local::visitors::LLASTVisitor;
 use ast::passes::local::visitors::LocalASTVisitor;
 use ast::passes::local::visitors::LocalDefVisitor;
 use ast::passes::local::GlobalDef;
@@ -69,13 +70,11 @@ impl visitors::GlobalDefVisitor<IrChunk> for Compiler {
 
 impl visitors::LocalDefVisitor<IrChunk> for Compiler {
     fn visit_localdef(&mut self, index: usize, value: &LocalAST) -> Result<IrChunk> {
-        /*let mut body_chunk = self.visit(value)?;
+        let mut body_chunk = self.visit(value)?;
 
-        body_chunk.push(IrOp::Lit((*name).into()));
-        body_chunk.push(IrOp::Store);
+        body_chunk.push(IrOp::StoreLocal(index));
 
-        Ok(body_chunk)*/
-        Err(err_msg("Not implemented"))
+        Ok(body_chunk)
     }
 }
 
@@ -155,10 +154,11 @@ impl visitors::LocalASTVisitor<IrChunk> for Compiler {
     }
 
     fn globalvar_expr(&mut self, name: &Keyword) -> Result<IrChunk> {
-        Err(err_msg("Not implemented"))
+        Ok(vec![IrOp::Lit(Literal::Keyword(name.clone())), IrOp::Load])
     }
+
     fn localvar_expr(&mut self, index: usize) -> Result<IrChunk> {
-        Err(err_msg("Not implemented"))
+        Ok(vec![IrOp::LoadLocal(index)])
     }
 
     /*fn var_expr(&mut self, k: &Keyword) -> Result<IrChunk> {
@@ -179,6 +179,42 @@ impl visitors::LocalASTVisitor<IrChunk> for Compiler {
         chunk.push(IrOp::CallArity(args.len()));
 
         Ok(chunk)
+    }
+}
+
+impl visitors::LLASTVisitor<IrChunk> for Compiler {
+    fn visit_local_function(
+        &mut self,
+        args: &[Keyword],
+        body: &Rc<LocalAST>,
+        entry: bool,
+    ) -> Result<IrChunk> {
+        let mut ir = self.visit(body)?;
+
+        if entry {
+            ir.push(IrOp::PopEnv);
+        }
+
+        ir.push(IrOp::Return);
+
+        let mut arg_ir: IrChunk = args
+            .iter()
+            .enumerate()
+            //.map(|k| vec![IrOp::Lit(Literal::Keyword(k.clone())), IrOp::Store])
+            .map(|(i, _)| IrOp::StoreLocal(i))
+            .collect();
+
+        if entry {
+            arg_ir.insert(0, IrOp::PushEnv);
+        }
+
+        arg_ir.append(&mut ir);
+
+        if !entry {
+            tail_call_optimization(&mut arg_ir);
+        }
+
+        Ok(arg_ir)
     }
 }
 
@@ -208,12 +244,18 @@ pub fn pack_compile_lifted(llast: &local::LocalLiftedAST) -> Result<Bytecode> {
         }
     }
 
+    let mut c = Compiler {};
+
+    for (id, chunk) in c.llast_visit(llast)?.into_iter().enumerate() {
+        pack(&chunk, &mut code, id, 0)?;
+    }
+
     // load functions into the chunks
-    for (id, function) in llast.functions.iter().enumerate() {
+    /*for (id, function) in llast.functions.iter().enumerate() {
         let chunk = id;
         let is_entry = id == llast.entry;
 
-        let mut ir = compile(&(*function).body)?;
+        /*let mut ir = compile(&(*function).body)?;
 
         if !is_entry {
             ir.push(IrOp::PopEnv);
@@ -235,10 +277,10 @@ pub fn pack_compile_lifted(llast: &local::LocalLiftedAST) -> Result<Bytecode> {
 
         if !is_entry {
             tail_call_optimization(&mut arg_ir);
-        }
+        }*/
 
         pack(&arg_ir, &mut code, chunk, 0)?;
-    }
+    }*/
 
     // function 0 is a dummy function in FunctionRegistry, so stick the root there.
     //code.chunks[0].ops.clear();
@@ -417,6 +459,8 @@ mod tests {
     #[test]
     fn test_pack_compile_lifted_arguments() {
         let code = lifted_compile("(def x (lambda (y z) z)) (x 5 6)");
+
+        code.dissassemble();
 
         let mut vm = VM::new(code);
 
