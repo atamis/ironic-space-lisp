@@ -99,7 +99,7 @@ impl HostedEvaler {
     }
 }
 
-fn hosted_launcher(lits: &[Literal], env: &env::Env) -> Literal {
+fn hosted_launcher(lits: &[Literal], _env: &env::Env) -> Literal {
     let mut lits = lits.to_vec();
     lits.insert(0, "do".into());
 
