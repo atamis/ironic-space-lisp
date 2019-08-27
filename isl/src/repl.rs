@@ -87,7 +87,7 @@ pub fn compile(vm: &mut vm::VM, s: &str) -> Result<bytecode::Bytecode> {
 
     let llast = local::pass(&last)?;
 
-    let code = compiler::pack_compile_lifted(&llast)?;
+    let code = compiler::compile(&llast)?;
 
     //vm.import_jump(&code);
 

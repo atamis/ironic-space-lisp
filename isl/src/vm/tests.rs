@@ -533,7 +533,7 @@ fn test_syscalls() {
 #[bench]
 fn bench_nested_envs(b: &mut Bencher) {
     use crate::ast;
-    use crate::compiler::pack_compile_lifted;
+    use crate::compiler::compile;
     use crate::parser;
 
     let s = "(let (x 0) (let (y 1) (let (z 2) x)))";
@@ -543,7 +543,7 @@ fn bench_nested_envs(b: &mut Bencher) {
 
     let ast = ast::ast(&lits, vm.environment.peek().unwrap()).unwrap();
 
-    let code = pack_compile_lifted(&ast).unwrap();
+    let code = compile(&ast).unwrap();
 
     vm.import_jump(&code);
 
@@ -573,7 +573,7 @@ fn bench_infinite_recursion(b: &mut Bencher) {
 
     let ast = ast::ast(&lits, vm.environment.peek().unwrap()).unwrap();
 
-    let code = compiler::pack_compile_lifted(&ast).unwrap();
+    let code = compiler::compile(&ast).unwrap();
 
     code.dissassemble();
 

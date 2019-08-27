@@ -44,7 +44,7 @@ fn exec(content: &str) -> Result<()> {
 
         let llast = local::pass(&last).context("While local pass")?;
 
-        let code = compiler::pack_compile_lifted(&llast).context("Packing lifted ast")?;
+        let code = compiler::compile(&llast).context("Packing lifted ast")?;
 
         let mut exec = exec::Exec::new();
 
@@ -118,7 +118,7 @@ fn inspect(content: &str) -> Result<()> {
 
         println!("LLAST: {:#?}", llast);
 
-        let code = compiler::pack_compile_lifted(&llast).context("While compiling")?;
+        let code = compiler::compile(&llast).context("While compiling")?;
 
         code.dissassemble();
     }

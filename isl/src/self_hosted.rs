@@ -4,7 +4,7 @@
 
 use crate::ast::ast;
 use crate::compiler;
-use crate::compiler::pack_compile_lifted;
+use crate::compiler::compile;
 use crate::data;
 use crate::env;
 use crate::errors::*;
@@ -41,7 +41,7 @@ fn make_double(lits: &[data::Literal], e: &env::Env) -> Result<bytecode::Bytecod
     );
 
     let last = ast(&[caller], e)?;
-    pack_compile_lifted(&last)
+    compile(&last)
 }
 
 /// Run the ISL implementation on a [`vm::VM`], returning nothing and panicing on error.
@@ -54,7 +54,7 @@ pub fn self_hosted() -> Result<()> {
 
     let llast = ast(&lits, vm.environment.peek().unwrap()).unwrap();
 
-    let code = compiler::pack_compile_lifted(&llast).unwrap();
+    let code = compiler::compile(&llast).unwrap();
 
     let mut exec = exec::Exec::new();
 

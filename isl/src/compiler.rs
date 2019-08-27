@@ -25,7 +25,7 @@ pub type IrChunkSlice<'a> = &'a [IrOp];
 ///
 /// As an intermediate representation, it's largely flat, except for [`IrOp::JumpCond`], which
 /// represents its potential jump targets as pointers to other IrChunks. Functions
-/// are handled by [`function_lifter`] and [`pack_compile_lifted()`] rather
+/// are handled by [`function_lifter`] and [`compile()`] rather
 /// represented in IrOp.
 #[derive(Debug, PartialEq)]
 #[allow(missing_docs)]
@@ -276,7 +276,7 @@ fn alloc_chunk(code: &mut Bytecode) -> usize {
 }
 
 /// Compile and pack a [`LiftedAST`](function_lifter::LiftedAST) into a new bytecode.
-pub fn pack_compile_lifted(llast: &local::LocalLiftedAST) -> Result<Bytecode> {
+pub fn compile(llast: &local::LocalLiftedAST) -> Result<Bytecode> {
     let mut code = Bytecode::new(vec![]);
 
     // allocate chunks first
@@ -403,7 +403,7 @@ mod tests {
 
         let ast = ast::ast(&lits, vm.environment.peek()?)?;
 
-        let code = pack_compile_lifted(&ast)?;
+        let code = compile(&ast)?;
 
         vm.import_jump(&code);
 
@@ -436,11 +436,11 @@ mod tests {
         let last = function_lifter::lift_functions(&ast).unwrap();
         let llast = local::pass(&last).unwrap();
 
-        pack_compile_lifted(&llast).unwrap()
+        compile(&llast).unwrap()
     }
 
     #[test]
-    fn test_pack_compile_lifted() {
+    fn test_compile() {
         let code = lifted_compile("(def x (lambda () 5)) (x)");
 
         let mut vm = VM::new(code);
@@ -451,7 +451,7 @@ mod tests {
     }
 
     #[test]
-    fn test_pack_compile_lifted_arguments() {
+    fn test_compile_arguments() {
         let code = lifted_compile("(def x (lambda (y z) z)) (x 5 6)");
 
         code.dissassemble();
@@ -462,7 +462,7 @@ mod tests {
     }
 
     #[test]
-    fn test_pack_compile_lifted_env() {
+    fn test_compile_env() {
         let code = lifted_compile("(def x (lambda (y) y)) (let (y 4) (do (x 5) y))");
 
         code.dissassemble();
@@ -609,7 +609,7 @@ mod tests {
 
             let llast = local::pass(&last).unwrap();
 
-            test::black_box(pack_compile_lifted(&llast).unwrap());
+            test::black_box(compile(&llast).unwrap());
         })
     }
 }

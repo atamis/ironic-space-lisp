@@ -50,7 +50,7 @@ impl Evaler for vm::VM {
     fn lit_eval(&mut self, lit: &[Literal]) -> Result<Literal> {
         let last = ast::ast(&lit, self.environment.peek().unwrap())?;
 
-        let code = compiler::pack_compile_lifted(&last).unwrap();
+        let code = compiler::compile(&last).unwrap();
 
         self.import_jump(&code);
 
@@ -89,7 +89,7 @@ impl HostedEvaler {
 
         let last = ast::ast(&lits, vm.environment.peek().unwrap()).unwrap();
 
-        let code = compiler::pack_compile_lifted(&last).unwrap();
+        let code = compiler::compile(&last).unwrap();
 
         vm.import_jump(&code);
 
@@ -142,7 +142,7 @@ impl Evaler for HostedEvaler {
 
         let llast = hosted_launcher_llast(lits, vm.environment.peek()?)?;
 
-        vm.import_jump(&compiler::pack_compile_lifted(&llast)?);
+        vm.import_jump(&compiler::compile(&llast)?);
 
         vm.step_until_value()
     }

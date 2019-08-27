@@ -79,7 +79,7 @@ impl LiftedAST {
 /// Stored as a vector of `ASTFunctions` where the index of the function
 /// in the vector is assumed to be its future address in the form `(idx, 0)`.
 /// This is a naive method of function registry to go with the naive code
-/// packer in `compiler::pack_compile_lifted`.
+/// packer in `compiler::compile`.
 #[derive(Clone, Debug, Default)]
 pub struct FunctionRegistry {
     /// The functions in the registry.
