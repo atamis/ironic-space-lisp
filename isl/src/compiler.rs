@@ -21,13 +21,8 @@ use ast::passes::local::visitors::LocalDefVisitor;
 use ast::passes::local::GlobalDef;
 use ast::passes::local::LocalAST;
 use ast::passes::local::LocalDef;
-use ast::AST;
 use data::Keyword;
-use data::Literal;
 use errors::*;
-use vm::bytecode::Bytecode;
-use vm::bytecode::Chunk;
-use vm::op::Op;
 
 /// A vector of [`IrOp`]s.
 pub type IrChunk = Vec<IrOp>;
@@ -411,7 +406,6 @@ mod tests {
     use test::Bencher;
     use test::Bencher;
     use vm::bytecode;
-    use vm::VM;
 
     use ast::passes::function_lifter;
 

@@ -13,15 +13,12 @@ use crate::vm;
 use crate::vm::bytecode;
 use ast::ast;
 use ast::passes::local;
-use ast::LiftedAST;
 use compiler;
 use compiler::pack_compile_lifted;
 use data;
 use env;
 use errors::*;
 use parser;
-use vm;
-use vm::bytecode;
 
 /// Read ISL lisp implementation. See `examples/lisp.isl`.
 pub fn read_lisp<'a>() -> Result<&'a str> {

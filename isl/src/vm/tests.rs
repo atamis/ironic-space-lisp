@@ -450,9 +450,7 @@ fn bench_nested_envs(b: &mut Bencher) {
     use crate::compiler::pack_start;
     use crate::str_to_ast;
     use ast;
-    use compiler::compile;
     use compiler::pack_compile_lifted;
-    use compiler::pack_start;
     use parser;
     use str_to_ast;
 
@@ -483,11 +481,8 @@ fn bench_infinite_recursion(b: &mut Bencher) {
     use crate::compiler;
     use crate::str_to_ast;
     use ast;
-    use ast::passes::function_lifter;
     use ast::passes::local;
-    use compiler;
     use parser;
-    use str_to_ast;
 
     let s = "(def x (lambda () (x))) (x)";
 
