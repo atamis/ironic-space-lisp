@@ -52,6 +52,8 @@ fn main() {
         ("(def f (fn [x y] x)) (f 1)", None),
         ("(def f (fn [x y] x)) (f 1 2)", Some(1.into())),
         ("(def f (fn [x y] x)) (f 1 2 3)", None),
+        ("(let (x 2) (do (def y 1) y))", Some(1.into())),
+        ("(def y 3) (let (x 2) (def y 1)) y", Some(3.into())),
     ];
     let mut evalers: Vec<(&str, Box<dyn Evaler>)> = vec![
         ("vm", Box::new(self_hosted::empty_vm())),

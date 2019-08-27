@@ -127,7 +127,10 @@ impl visitors::LocalASTVisitor<IrChunk> for Compiler {
     fn do_expr(&mut self, exprs: &[LocalAST]) -> Result<IrChunk> {
         let mut chunk: IrChunk = vec![];
 
-        let e_chunks = self.multi_visit(&exprs).into_iter().flat_map(|e| e);
+        let e_chunks = self
+            .multi_visit(&exprs)
+            .context("Visiting do expr bodies")?
+            .into_iter();
 
         for (idx, mut e_chunk) in e_chunks.enumerate() {
             chunk.append(&mut e_chunk);
@@ -141,14 +144,16 @@ impl visitors::LocalASTVisitor<IrChunk> for Compiler {
         Ok(chunk)
     }
 
-    /*fn lambda_expr(&mut self, _args: &[Keyword], _body: &Rc<AST>) -> Result<IrChunk> {
-        Err(err_msg(
-            "Not implemented: run the function lifter pass first",
-        ))
-    }*/
+    fn localdef_expr(&mut self, def: &Rc<local::LocalDef>) -> Result<IrChunk> {
+        let mut chunk = self.visit_single_localdef(def)?;
 
-    fn localdef_expr(&mut self, _def: &Rc<local::LocalDef>) -> Result<IrChunk> {
-        Err(err_msg("Not implemented"))
+        chunk.append(
+            &mut self
+                .localvar_expr(def.name)
+                .context("While visiting the value return part")?,
+        );
+
+        Ok(chunk)
     }
 
     fn globalvar_expr(&mut self, name: &Keyword) -> Result<IrChunk> {
@@ -435,7 +440,6 @@ mod tests {
     }
 
     fn lifted_compile(s: &'static str) -> Bytecode {
-        use crate::ast::passes::function_lifter;
         let ast = str_to_ast(s).unwrap();
         let last = function_lifter::lift_functions(&ast).unwrap();
         let llast = local::pass(&last).unwrap();
@@ -515,6 +519,36 @@ mod tests {
         println!("{:?}", res);
 
         assert!(res.is_err())
+    }
+
+    #[test]
+    fn test_localdefs() {
+        let code = lifted_compile("(let (x 2) (do (def y 1) y))");
+
+        code.dissassemble();
+
+        let mut vm = VM::new(code);
+
+        let res = vm.step_until_cost(10000);
+
+        println!("{:?}", res);
+
+        assert_eq!(res.unwrap().unwrap(), 1.into())
+    }
+
+    #[test]
+    fn test_localdefs2() {
+        let code = lifted_compile("(def y 3) (let (x 2) (def y 1)) y");
+
+        code.dissassemble();
+
+        let mut vm = VM::new(code);
+
+        let res = vm.step_until_cost(10000);
+
+        println!("{:?}", res);
+
+        assert_eq!(res.unwrap().unwrap(), 3.into())
     }
 
     #[bench]

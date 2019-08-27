@@ -114,7 +114,7 @@ impl LASTVisitor<LocalFunction> for Localizer {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct FunctionLocalizer {
     names: HashMap<Keyword, usize>,
     index: usize,
@@ -187,18 +187,13 @@ impl ASTVisitor<LocalAST> for FunctionLocalizer {
     }
 
     fn let_expr(&mut self, defs: &[Def], body: &Rc<AST>) -> Result<LocalAST> {
-        // Save TLD, then disable them inside the let, then restore it.
-        let tld = self.top_level_defs;
-        self.top_level_defs = false;
+        let mut ctx = self.clone();
+        ctx.top_level_defs = false;
 
-        let ans = Ok(LocalAST::Let {
-            defs: self.visit_multi_def(defs)?,
-            body: Rc::new(self.visit(body)?),
-        });
-
-        self.top_level_defs = tld;
-
-        ans
+        Ok(LocalAST::Let {
+            defs: ctx.visit_multi_def(defs)?,
+            body: Rc::new(ctx.visit(body)?),
+        })
     }
 
     fn do_expr(&mut self, exprs: &[AST]) -> Result<LocalAST> {
