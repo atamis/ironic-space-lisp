@@ -5,6 +5,7 @@ use rustyline::Editor;
 
 use crate::ast::passes::function_lifter;
 use crate::ast::passes::internal_macro;
+use crate::ast::passes::local;
 use crate::ast::passes::unbound;
 use crate::compiler;
 use crate::errors::*;
@@ -13,6 +14,8 @@ use crate::size::*;
 use crate::str_to_ast;
 use crate::vm;
 use crate::vm::bytecode;
+
+
 
 /// Run a REPL executing on a [`vm::VM`].
 pub fn repl() {
@@ -84,7 +87,9 @@ pub fn compile(vm: &mut vm::VM, s: &str) -> Result<bytecode::Bytecode> {
 
     let last = function_lifter::lift_functions(&ast)?;
 
-    let code = compiler::pack_compile_lifted(&last)?;
+    let llast = local::pass(&last)?;
+
+    let code = compiler::pack_compile_lifted(&llast)?;
 
     //vm.import_jump(&code);
 

@@ -114,7 +114,7 @@ impl LASTVisitor<LocalFunction> for Localizer {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct FunctionLocalizer {
     names: HashMap<Keyword, usize>,
     index: usize,
@@ -187,18 +187,13 @@ impl ASTVisitor<LocalAST> for FunctionLocalizer {
     }
 
     fn let_expr(&mut self, defs: &[Def], body: &Rc<AST>) -> Result<LocalAST> {
-        // Save TLD, then disable them inside the let, then restore it.
-        let tld = self.top_level_defs;
-        self.top_level_defs = false;
+        let mut ctx = self.clone();
+        ctx.top_level_defs = false;
 
-        let ans = Ok(LocalAST::Let {
-            defs: self.visit_multi_def(defs)?,
-            body: Rc::new(self.visit(body)?),
-        });
-
-        self.top_level_defs = tld;
-
-        ans
+        Ok(LocalAST::Let {
+            defs: ctx.visit_multi_def(defs)?,
+            body: Rc::new(ctx.visit(body)?),
+        })
     }
 
     fn do_expr(&mut self, exprs: &[AST]) -> Result<LocalAST> {
@@ -226,7 +221,12 @@ impl ASTVisitor<LocalAST> for FunctionLocalizer {
 
 pub use self::visitors::*;
 
-mod visitors {
+/// Contains visitor traits for [`LocalLiftedAST`] and related structs.
+///
+/// Traits include single generic visit method that dispatches on the enum
+/// values, and abstract methods for each individual sub-value that take the
+/// deconstructed data as parameters.
+pub mod visitors {
     use super::GlobalDef;
     use super::LocalAST;
     use super::LocalDef;
@@ -300,7 +300,7 @@ mod visitors {
         fn localdef_expr(&mut self, def: &Rc<LocalDef>) -> Result<R>;
 
         /// Callback for `LocalAST::Let`, passing in a slice of `LocalDef` and a reference to the body.
-        fn let_expr(&mut self, defs: &[LocalDef], body: &LocalAST) -> Result<R>;
+        fn let_expr(&mut self, defs: &[LocalDef], body: &Rc<LocalAST>) -> Result<R>;
 
         /// Callback for `LocalAST::Do`, passing in a slice of `LocalAST`.
         fn do_expr(&mut self, exprs: &[LocalAST]) -> Result<R>;
@@ -368,10 +368,10 @@ mod visitors {
         /// Visit a single `GlobalDef`.
         ///
         /// This atuomatically destructures the `GlobalDef`, and tags the result with context.
-        fn visit_single_localdef(&mut self, d: &GlobalDef) -> Result<R> {
+        fn visit_single_globaldef(&mut self, d: &GlobalDef) -> Result<R> {
             let res = self
                 .visit_globaldef(&d.name, &d.value)
-                .context(format!("While visiting localdef {:}", d.name))?;
+                .context(format!("While visiting globaldef {:}", d.name))?;
             Ok(res)
         }
 

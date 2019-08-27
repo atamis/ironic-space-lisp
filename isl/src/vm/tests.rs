@@ -532,18 +532,25 @@ fn test_syscalls() {
 
 #[bench]
 fn bench_nested_envs(b: &mut Bencher) {
-    use crate::compiler::compile;
-    use crate::compiler::pack_start;
-    use crate::str_to_ast;
+    
+    
+    
+    use crate::ast;
+    use crate::compiler::pack_compile_lifted;
+    use crate::parser;
 
     let s = "(let (x 0) (let (y 1) (let (z 2) x)))";
-    let ast = str_to_ast(s).unwrap();
+    let lits = parser::parse(&s).unwrap();
 
-    let ir = compile(&ast).unwrap();
+    let mut vm = VM::new(bytecode::Bytecode::new(vec![]));
 
-    let code = pack_start(&ir).unwrap();
+    let ast = ast::ast(&lits, vm.environment.peek().unwrap()).unwrap();
 
-    let mut vm = VM::new(code);
+    let code = pack_compile_lifted(&ast).unwrap();
+
+    vm.import_jump(&code);
+
+    vm.code.dissassemble();
 
     vm.step_until_cost(10000).unwrap().unwrap();
 
@@ -555,16 +562,22 @@ fn bench_nested_envs(b: &mut Bencher) {
 
 #[bench]
 fn bench_infinite_recursion(b: &mut Bencher) {
-    use crate::ast::passes::function_lifter;
+    
     use crate::compiler;
-    use crate::str_to_ast;
+    
+    use crate::ast;
+    
+    use crate::parser;
 
     let s = "(def x (lambda () (x))) (x)";
-    let ast = str_to_ast(s).unwrap();
 
-    let last = function_lifter::lift_functions(&ast).unwrap();
+    let lits = parser::parse(&s).unwrap();
 
-    let code = compiler::pack_compile_lifted(&last).unwrap();
+    let vm = VM::new(bytecode::Bytecode::new(vec![vec![]]));
+
+    let ast = ast::ast(&lits, vm.environment.peek().unwrap()).unwrap();
+
+    let code = compiler::pack_compile_lifted(&ast).unwrap();
 
     code.dissassemble();
 

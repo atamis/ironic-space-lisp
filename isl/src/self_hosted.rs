@@ -3,8 +3,8 @@
 //! Not very useful or reusable.
 
 use crate::ast::ast;
-use crate::ast::LiftedAST;
 use crate::compiler;
+use crate::compiler::pack_compile_lifted;
 use crate::data;
 use crate::env;
 use crate::errors::*;
@@ -16,10 +16,6 @@ use crate::vm::bytecode;
 /// Read ISL lisp implementation. See `examples/lisp.isl`.
 pub fn read_lisp<'a>() -> Result<&'a str> {
     Ok(include_str!("../examples/lisp.isl"))
-}
-
-fn compile(last: &LiftedAST) -> Result<bytecode::Bytecode> {
-    compiler::pack_compile_lifted(&last)
 }
 
 /// An empty [`vm::VM`] with the default libraries.
@@ -45,7 +41,7 @@ fn make_double(lits: &[data::Literal], e: &env::Env) -> Result<bytecode::Bytecod
     );
 
     let last = ast(&[caller], e)?;
-    compile(&last)
+    pack_compile_lifted(&last)
 }
 
 /// Run the ISL implementation on a [`vm::VM`], returning nothing and panicing on error.
@@ -56,9 +52,9 @@ pub fn self_hosted() -> Result<()> {
 
     let lits = parser::parse(&s).unwrap();
 
-    let last = ast(&lits, vm.environment.peek().unwrap()).unwrap();
+    let llast = ast(&lits, vm.environment.peek().unwrap()).unwrap();
 
-    let code = compiler::pack_compile_lifted(&last).unwrap();
+    let code = compiler::pack_compile_lifted(&llast).unwrap();
 
     let mut exec = exec::Exec::new();
 

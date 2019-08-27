@@ -1,11 +1,14 @@
 //! Compile [`AST`](ast::AST)s to [`Bytecode`](vm::bytecode::Bytecode).
 use std::rc::Rc;
 
-use crate::ast::passes::function_lifter;
-use crate::ast::ASTVisitor;
-use crate::ast::Def;
-use crate::ast::DefVisitor;
-use crate::ast::AST;
+use crate::ast::passes::local;
+use crate::ast::passes::local::visitors;
+use crate::ast::passes::local::visitors::GlobalDefVisitor;
+use crate::ast::passes::local::visitors::LLASTVisitor;
+use crate::ast::passes::local::visitors::LocalASTVisitor;
+use crate::ast::passes::local::visitors::LocalDefVisitor;
+use crate::ast::passes::local::GlobalDef;
+use crate::ast::passes::local::LocalAST;
 use crate::data::Keyword;
 use crate::data::Literal;
 use crate::errors::*;
@@ -56,23 +59,38 @@ pub enum IrOp {
 /// See `ASTVisitor<IrChunk>` and [`ASTVisitor`] for information.
 pub struct Compiler;
 
-impl DefVisitor<IrChunk> for Compiler {
-    fn visit_def(&mut self, name: &str, value: &AST) -> Result<IrChunk> {
+impl visitors::GlobalDefVisitor<IrChunk> for Compiler {
+    fn visit_globaldef(&mut self, name: &Keyword, value: &LocalAST) -> Result<IrChunk> {
         let mut body_chunk = self.visit(value)?;
 
-        body_chunk.push(IrOp::Lit(name.into()));
+        body_chunk.push(IrOp::Lit(name.clone().into()));
         body_chunk.push(IrOp::Store);
 
         Ok(body_chunk)
     }
 }
 
-impl ASTVisitor<IrChunk> for Compiler {
+impl visitors::LocalDefVisitor<IrChunk> for Compiler {
+    fn visit_localdef(&mut self, index: usize, value: &LocalAST) -> Result<IrChunk> {
+        let mut body_chunk = self.visit(value)?;
+
+        body_chunk.push(IrOp::StoreLocal(index));
+
+        Ok(body_chunk)
+    }
+}
+
+impl visitors::LocalASTVisitor<IrChunk> for Compiler {
     fn value_expr(&mut self, l: &Literal) -> Result<IrChunk> {
         Ok(vec![IrOp::Lit(l.clone())])
     }
 
-    fn if_expr(&mut self, pred: &Rc<AST>, then: &Rc<AST>, els: &Rc<AST>) -> Result<IrChunk> {
+    fn if_expr(
+        &mut self,
+        pred: &Rc<LocalAST>,
+        then: &Rc<LocalAST>,
+        els: &Rc<LocalAST>,
+    ) -> Result<IrChunk> {
         let pred_chunk = self.visit(pred)?;
         let then_chunk = self.visit(then)?;
         let els_chunk = self.visit(els)?;
@@ -86,18 +104,18 @@ impl ASTVisitor<IrChunk> for Compiler {
         ])
     }
 
-    fn def_expr(&mut self, def: &Rc<Def>) -> Result<IrChunk> {
-        let mut chunk = self.visit_single_def(def)?;
+    fn def_expr(&mut self, def: &Rc<GlobalDef>) -> Result<IrChunk> {
+        let mut chunk = self.visit_single_globaldef(def)?;
 
-        chunk.append(&mut self.var_expr(&def.name)?);
+        chunk.append(&mut self.globalvar_expr(&def.name)?);
 
         Ok(chunk)
     }
 
-    fn let_expr(&mut self, defs: &[Def], body: &Rc<AST>) -> Result<IrChunk> {
+    fn let_expr(&mut self, defs: &[local::LocalDef], body: &Rc<LocalAST>) -> Result<IrChunk> {
         let mut chunk = vec![IrOp::PushEnv];
 
-        for mut def_chunk in self.visit_multi_def(defs)?.into_iter() {
+        for mut def_chunk in self.visit_multi_localdef(defs)?.into_iter() {
             chunk.append(&mut def_chunk);
         }
 
@@ -110,10 +128,13 @@ impl ASTVisitor<IrChunk> for Compiler {
         Ok(chunk)
     }
 
-    fn do_expr(&mut self, exprs: &[AST]) -> Result<IrChunk> {
+    fn do_expr(&mut self, exprs: &[LocalAST]) -> Result<IrChunk> {
         let mut chunk: IrChunk = vec![];
 
-        let e_chunks = self.multi_visit(&exprs).into_iter().flat_map(|e| e);
+        let e_chunks = self
+            .multi_visit(&exprs)
+            .context("Visiting do expr bodies")?
+            .into_iter();
 
         for (idx, mut e_chunk) in e_chunks.enumerate() {
             chunk.append(&mut e_chunk);
@@ -127,17 +148,27 @@ impl ASTVisitor<IrChunk> for Compiler {
         Ok(chunk)
     }
 
-    fn lambda_expr(&mut self, _args: &[Keyword], _body: &Rc<AST>) -> Result<IrChunk> {
-        Err(err_msg(
-            "Not implemented: run the function lifter pass first",
-        ))
+    fn localdef_expr(&mut self, def: &Rc<local::LocalDef>) -> Result<IrChunk> {
+        let mut chunk = self.visit_single_localdef(def)?;
+
+        chunk.append(
+            &mut self
+                .localvar_expr(def.name)
+                .context("While visiting the value return part")?,
+        );
+
+        Ok(chunk)
     }
 
-    fn var_expr(&mut self, k: &Keyword) -> Result<IrChunk> {
-        Ok(vec![IrOp::Lit(Literal::Keyword(k.clone())), IrOp::Load])
+    fn globalvar_expr(&mut self, name: &Keyword) -> Result<IrChunk> {
+        Ok(vec![IrOp::Lit(Literal::Keyword(name.clone())), IrOp::Load])
     }
 
-    fn application_expr(&mut self, f: &Rc<AST>, args: &[AST]) -> Result<IrChunk> {
+    fn localvar_expr(&mut self, index: usize) -> Result<IrChunk> {
+        Ok(vec![IrOp::LoadLocal(index)])
+    }
+
+    fn application_expr(&mut self, f: &Rc<LocalAST>, args: &[LocalAST]) -> Result<IrChunk> {
         let mut chunk = vec![];
 
         for e in args.iter().rev() {
@@ -165,7 +196,7 @@ impl ASTVisitor<IrChunk> for Compiler {
         // if let with this bool.
         let mut normal_call = false;
 
-        if let AST::Var(s) = &**f {
+        if let LocalAST::GlobalVar(s) = &**f {
             match s.as_ref() {
                 "fork" => {
                     arg_check("fork", 0)?;
@@ -201,10 +232,39 @@ impl ASTVisitor<IrChunk> for Compiler {
     }
 }
 
-/// Compiles a raw [ `AST` ] into an [ `IrChunk` ]. See [ `Compiler` ] for implementation.
-pub fn compile(a: &AST) -> Result<IrChunk> {
-    let mut c = Compiler {};
-    c.visit(a)
+impl visitors::LLASTVisitor<IrChunk> for Compiler {
+    fn visit_local_function(
+        &mut self,
+        args: &[Keyword],
+        body: &Rc<LocalAST>,
+        entry: bool,
+    ) -> Result<IrChunk> {
+        let mut ir = self.visit(body)?;
+
+        if !entry {
+            ir.push(IrOp::PopEnv);
+        }
+
+        ir.push(IrOp::Return);
+
+        let mut arg_ir: IrChunk = args
+            .iter()
+            .enumerate()
+            .map(|(i, _)| IrOp::StoreLocal(i))
+            .collect();
+
+        if !entry {
+            arg_ir.insert(0, IrOp::PushEnv);
+        }
+
+        arg_ir.append(&mut ir);
+
+        if !entry {
+            tail_call_optimization(&mut arg_ir);
+        }
+
+        Ok(arg_ir)
+    }
 }
 
 // Allocate an empty chunk and return its idx.
@@ -216,90 +276,45 @@ fn alloc_chunk(code: &mut Bytecode) -> usize {
 }
 
 /// Compile and pack a [`LiftedAST`](function_lifter::LiftedAST) into a new bytecode.
-pub fn pack_compile_lifted(last: &function_lifter::LiftedAST) -> Result<Bytecode> {
+pub fn pack_compile_lifted(llast: &local::LocalLiftedAST) -> Result<Bytecode> {
     let mut code = Bytecode::new(vec![]);
 
     // allocate chunks first
-    for (id, _) in last.fr.functions.iter().enumerate() {
+    // The previous compiler phases assume that then nth function is in the nth chunk
+    // This is how the packing works later in the function, and how the previous passes
+    // lift functions and replace them with addresses or closures.
+    for (id, _) in llast.functions.iter().enumerate() {
         let chunk = alloc_chunk(&mut code);
         if id != chunk {
             panic!("id chunk missalignment");
         }
     }
 
-    // load functions into the chunks
-    for (id, function) in last.fr.functions.iter().enumerate() {
-        let chunk = id;
-        let is_entry = id == last.entry;
+    let mut c = Compiler {};
 
-        let mut ir = compile(&function.body)?;
-
-        if !is_entry {
-            ir.push(IrOp::PopEnv);
-        }
-        ir.push(IrOp::Return);
-
-        let mut arg_ir: IrChunk = function
-            .args
-            .iter()
-            .map(|k| vec![IrOp::Lit(Literal::Keyword(k.clone())), IrOp::Store])
-            .flat_map(|x| x)
-            .collect();
-
-        if !is_entry {
-            arg_ir.insert(0, IrOp::PushEnv);
-        }
-
-        arg_ir.append(&mut ir);
-
-        if !is_entry {
-            tail_call_optimization(&mut arg_ir);
-        }
-
-        pack(&arg_ir, &mut code, chunk, 0)?;
+    for (id, chunk) in c.llast_visit(llast)?.into_iter().enumerate() {
+        pack(&chunk, &mut code, id, 0)?;
     }
-
-    // function 0 is a dummy function in FunctionRegistry, so stick the root there.
-    //code.chunks[0].ops.clear();
-
-    //let mut root_ir = compile(&last.root)?;
-    //root_ir.push(IrOp::Return);
-
-    //pack(&root_ir, &mut code, 0, 0)?;
 
     Ok(code)
 }
 
-// This doesn't really work.
 fn tail_call_optimization(chunk: &mut IrChunk) {
+    use IrOp::*;
     let len = chunk.len();
-    if len >= 3
-        && chunk[len - 3] == IrOp::Call
-        && chunk[len - 2] == IrOp::PopEnv
-        && chunk[len - 1] == IrOp::Return
-    {
-        chunk[len - 3] = IrOp::PopEnv;
-        chunk[len - 2] = IrOp::Jump;
+
+    if len >= 3 {
+        let tc = match (&chunk[len - 3], &chunk[len - 2], &chunk[len - 1]) {
+            (Call, PopEnv, Return) => true,
+            (CallArity(_), PopEnv, Return) => true,
+            _ => false,
+        };
+
+        if tc {
+            chunk[len - 3] = IrOp::PopEnv;
+            chunk[len - 2] = IrOp::Jump;
+        }
     }
-}
-
-/// Pack an [ `IrChunk` ] into a new [ `Bytecode` ] and return it.
-pub fn pack_start(ir: IrChunkSlice) -> Result<Bytecode> {
-    let mut code = Bytecode::new(vec![vec![]]);
-
-    let chunk_idx = alloc_chunk(&mut code);
-
-    pack(ir, &mut code, chunk_idx, 0)?;
-
-    code.chunks[0].ops.append(&mut vec![
-        Op::Lit(Literal::Address((chunk_idx, 0))),
-        Op::Call,
-        Op::Return,
-    ]);
-
-    code.chunks[chunk_idx].ops.push(Op::Return);
-
-    Ok(code)
 }
 
 /// Pack an [ `IrChunk` ] into bytecode at a particular chunk and op index. Returns ending op index.
@@ -373,18 +388,24 @@ pub fn pack(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ast;
+    use crate::ast::passes::function_lifter;
+    use crate::parser;
     use crate::str_to_ast;
+    use crate::vm::bytecode;
     use crate::vm::VM;
     use test::Bencher;
 
     fn run(s: &'static str) -> Result<Literal> {
-        let ast = str_to_ast(s)?;
+        let lits = parser::parse(s)?;
 
-        let ir = compile(&ast)?;
+        let mut vm = VM::new(bytecode::Bytecode::new(vec![vec![]]));
 
-        let code = pack_start(&ir)?;
+        let ast = ast::ast(&lits, vm.environment.peek()?)?;
 
-        let mut vm = VM::new(code);
+        let code = pack_compile_lifted(&ast)?;
+
+        vm.import_jump(&code);
 
         vm.step_until_cost(10000).map(Option::unwrap)
     }
@@ -413,8 +434,9 @@ mod tests {
     fn lifted_compile(s: &'static str) -> Bytecode {
         let ast = str_to_ast(s).unwrap();
         let last = function_lifter::lift_functions(&ast).unwrap();
+        let llast = local::pass(&last).unwrap();
 
-        pack_compile_lifted(&last).unwrap()
+        pack_compile_lifted(&llast).unwrap()
     }
 
     #[test]
@@ -431,6 +453,8 @@ mod tests {
     #[test]
     fn test_pack_compile_lifted_arguments() {
         let code = lifted_compile("(def x (lambda (y z) z)) (x 5 6)");
+
+        code.dissassemble();
 
         let mut vm = VM::new(code);
 
@@ -490,6 +514,54 @@ mod tests {
     }
 
     #[test]
+    fn test_localdefs() {
+        let code = lifted_compile("(let (x 2) (do (def y 1) y))");
+
+        code.dissassemble();
+
+        let mut vm = VM::new(code);
+
+        let res = vm.step_until_cost(10000);
+
+        println!("{:?}", res);
+
+        assert_eq!(res.unwrap().unwrap(), 1.into())
+    }
+
+    #[test]
+    fn test_localdefs2() {
+        let code = lifted_compile("(def y 3) (let (x 2) (def y 1)) y");
+
+        code.dissassemble();
+
+        let mut vm = VM::new(code);
+
+        let res = vm.step_until_cost(10000);
+
+        println!("{:?}", res);
+
+        assert_eq!(res.unwrap().unwrap(), 3.into())
+    }
+
+    #[test]
+    fn test_async_ops_execution() {
+        use crate::exec;
+
+        let code =
+            lifted_compile("(let (me (pid)) (if (fork) (send me 'hello) (do (wait) (wait))))");
+
+        code.dissassemble();
+
+        let mut exec = exec::Exec::new();
+
+        let vm = VM::new(Bytecode::new(vec![vec![]]));
+
+        let (_vm, res) = exec.sched(vm, &code);
+
+        assert_eq!(res.unwrap(), "hello".into())
+    }
+
+    #[test]
     fn test_async_ops() {
         let code = lifted_compile("(fork)");
 
@@ -518,7 +590,6 @@ mod tests {
         assert_eq!(code.addr((0, 2)).unwrap(), Op::Send);
         assert_eq!(code.addr((0, 3)).unwrap(), Op::Return);
     }
-
     #[test]
     fn test_async_ops_arity() {
         assert!(run("(fork 1)").is_err());
@@ -526,24 +597,6 @@ mod tests {
         assert!(run("(pid 1)").is_err());
         assert!(run("(send 1)").is_err());
         assert!(run("(send)").is_err());
-    }
-
-    #[test]
-    fn test_async_ops_execution() {
-        use crate::exec;
-
-        let code =
-            lifted_compile("(let (me (pid)) (if (fork) (send me 'hello) (do (wait) (wait))))");
-
-        code.dissassemble();
-
-        let mut exec = exec::Exec::new();
-
-        let vm = VM::new(Bytecode::new(vec![vec![]]));
-
-        let (_vm, res) = exec.sched(vm, &code);
-
-        assert_eq!(res.unwrap(), "hello".into())
     }
 
     #[bench]
@@ -554,7 +607,9 @@ mod tests {
 
             let last = function_lifter::lift_functions(&ast).unwrap();
 
-            test::black_box(pack_compile_lifted(&last).unwrap());
+            let llast = local::pass(&last).unwrap();
+
+            test::black_box(pack_compile_lifted(&llast).unwrap());
         })
     }
 }

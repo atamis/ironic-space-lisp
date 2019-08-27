@@ -453,7 +453,7 @@ impl VM {
             .stack
             .pop()
             .ok_or_else(|| err_msg("Attempted to pop stack for address"))?
-            .ensure_address()?;
+            .ensure_address_flexible()?;
 
         self.jump(address)
     }
