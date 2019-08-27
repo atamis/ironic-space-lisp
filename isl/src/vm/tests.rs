@@ -445,6 +445,17 @@ fn test_load_local() {
 }
 
 #[test]
+fn test_op_terminate() {
+    let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+
+    vm.op_lit(1.into()).unwrap();
+    vm.op_terminate().unwrap();
+
+    assert_eq!(*vm.stack.last().unwrap(), 1.into());
+    assert!(vm.frames.is_empty());
+}
+
+#[test]
 fn test_step_until() {
     let mut ret = VM::new(Bytecode::new(vec![vec![Op::Return]]));
     assert!(ret.step_until_value().is_err());

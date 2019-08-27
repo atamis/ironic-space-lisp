@@ -98,6 +98,12 @@ pub enum Op {
     /// parameter: index
     /// `<value>`
     StoreLocal(usize),
+
+    /// Terminate the VM immediately, returning the value. This should also
+    /// empty the frames and stack.
+    ///
+    /// `<value>`
+    Terminate,
 }
 
 impl Op {
@@ -123,6 +129,7 @@ impl Op {
             Op::Pid => "Pid",
             Op::LoadLocal(_) => "LoadLocal",
             Op::StoreLocal(_) => "StoreLocal",
+            Op::Terminate => "Terminate",
         }
     }
 
@@ -154,6 +161,7 @@ impl fmt::Debug for Op {
             Op::Pid => write!(f, "oMe"),
             Op::LoadLocal(i) => write!(f, "oLL{:}", i),
             Op::StoreLocal(i) => write!(f, "oSL{:}", i),
+            Op::Terminate => write!(f, "oT"),
         }
     }
 }

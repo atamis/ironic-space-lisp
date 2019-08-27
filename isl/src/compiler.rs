@@ -52,6 +52,7 @@ pub enum IrOp {
     Pid,
     LoadLocal(usize),
     StoreLocal(usize),
+    Terminate,
 }
 
 /// Empty struct that implements `ASTVisitor<IrChunk>`.
@@ -214,6 +215,10 @@ impl visitors::LocalASTVisitor<IrChunk> for Compiler {
                     arg_check("pid", 0)?;
                     chunk.push(IrOp::Pid);
                 }
+                "terminate" => {
+                    arg_check("terminate", 1)?;
+                    chunk.push(IrOp::Terminate);
+                }
 
                 _ => normal_call = true,
             };
@@ -371,6 +376,7 @@ pub fn pack(
             IrOp::Pid => Op::Pid,
             IrOp::LoadLocal(idx) => Op::LoadLocal(*idx),
             IrOp::StoreLocal(idx) => Op::StoreLocal(*idx),
+            IrOp::Terminate => Op::Terminate,
             //_ => { return Err(err_msg("not implemented"))},
         };
 
@@ -597,6 +603,22 @@ mod tests {
         assert!(run("(pid 1)").is_err());
         assert!(run("(send 1)").is_err());
         assert!(run("(send)").is_err());
+    }
+
+    #[test]
+    fn test_terminate() {
+        let code =
+            lifted_compile("(def s (lambda (n) (if (= n 0) (terminate 'ok) (s (- n 1))))) (s 10)");
+
+        code.dissassemble();
+
+        let mut vm = VM::new(code);
+
+        let val = vm.step_until_value().unwrap();
+
+        assert_eq!(val, "ok".into());
+        assert!(vm.stack.is_empty());
+        assert!(vm.frames.is_empty());
     }
 
     #[bench]

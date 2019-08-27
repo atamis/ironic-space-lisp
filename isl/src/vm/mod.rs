@@ -416,6 +416,9 @@ impl VM {
             Op::StoreLocal(i) => self
                 .op_store_local(i)
                 .context("Executing operation store local")?,
+            Op::Terminate => self
+                .op_terminate()
+                .context("Executing operation terminate")?,
         }
         Ok(())
     }
@@ -665,6 +668,18 @@ impl VM {
 
         *local_ref = msg;
 
+        Ok(())
+    }
+
+    fn op_terminate(&mut self) -> Result<()> {
+        let ret = self
+            .stack
+            .pop()
+            .ok_or_else(|| err_msg("Attempted to pop stack for terminate value"))?;
+
+        self.frames.clear();
+        self.stack.clear();
+        self.stack.push(ret);
         Ok(())
     }
 }
