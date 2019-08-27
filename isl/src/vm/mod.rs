@@ -15,6 +15,7 @@ use crate::data::Literal;
 use crate::env::EnvStack;
 use crate::errors::*;
 use crate::exec;
+use crate::exec::ExecHandle;
 use crate::syscall;
 use crate::vm::bytecode::Bytecode;
 use crate::vm::op::Op;
@@ -96,7 +97,7 @@ impl VMState {
 }
 
 /// Configuration options for VMs.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct VMConfig {
     /// When using [`step_until_cost`](VM::step_until_cost), should the VM reset if it encounters an error?
     ///
@@ -120,7 +121,7 @@ impl Default for VMConfig {
 /// Stack frame used by the VM.
 ///
 /// Consists of an address and a vector of local variables.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Frame {
     addr: data::Address,
     locals: Vec<Literal>,
@@ -139,7 +140,7 @@ impl Frame {
 /// A non-reusable bytecode VM.
 ///
 /// Keeps track of data stack, frame stack, environment stack, and the code.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct VM {
     /// The live code repo.
     pub code: Bytecode,
@@ -155,7 +156,7 @@ pub struct VM {
     pub state: VMState,
     conf: VMConfig,
     /// This fields contains an optional [`ExecHandle`](exec::ExecHandle) the VM uses to interface with the execution environment.
-    pub proc: Option<Box<dyn exec::ExecHandle>>,
+    pub proc: Option<Box<exec::RouterHandle>>,
 }
 
 impl VM {
@@ -407,6 +408,7 @@ impl VM {
                 .context("Executing operation call-arity")?,
             Op::Wait => self.op_wait().context("Executing operation wait")?,
             Op::Send => self.op_send().context("Executing operation send")?,
+            Op::Fork => self.op_fork().context("Executing operation fork")?,
             Op::Pid => self.op_pid().context("Executing operation pid")?,
             Op::LoadLocal(i) => self
                 .op_load_local(i)
@@ -602,6 +604,8 @@ impl VM {
 
         proc.send(pid, msg)?;
 
+        self.stack.push(pid.into());
+
         Ok(())
     }
 
@@ -613,6 +617,18 @@ impl VM {
             self.stack.push(false.into());
             Ok(())
         }
+    }
+
+    fn op_fork(&mut self) -> Result<()> {
+        let mut new_vm = self.clone();
+        new_vm.stack.push(true.into());
+        self.stack.push(false.into());
+        self.proc
+            .as_mut()
+            .expect("Forking requires registered ExecHandler")
+            .spawn(new_vm)?;
+
+        Ok(())
     }
 
     fn local_cap_ref(&mut self, index: usize) -> Result<&mut Literal> {

@@ -43,6 +43,10 @@ pub enum IrOp {
     Dup,
     Pop,
     CallArity(usize),
+    Wait,
+    Send,
+    Fork,
+    Pid,
     LoadLocal(usize),
     StoreLocal(usize),
 }
@@ -141,10 +145,57 @@ impl ASTVisitor<IrChunk> for Compiler {
             chunk.append(&mut e_chunk);
         }
 
-        let mut f_chunk = self.visit(f)?;
-        chunk.append(&mut f_chunk);
+        let arg_check = |name, arity| {
+            if args.len() != arity {
+                return Err(err_msg(format!(
+                    "{:} takes {:} arguments, given {:}",
+                    name,
+                    arity,
+                    args.len()
+                )));
+            } else {
+                Ok(())
+            }
+        };
 
-        chunk.push(IrOp::CallArity(args.len()));
+        // Ideally this would be handled by a combined else
+        // clause, ie, the match expression would match over
+        // the struct rather than the string, but that doesn't
+        // work, so we combine the else clauses of the match and the
+        // if let with this bool.
+        let mut normal_call = false;
+
+        if let AST::Var(s) = &**f {
+            match s.as_ref() {
+                "fork" => {
+                    arg_check("fork", 0)?;
+                    chunk.push(IrOp::Fork);
+                }
+                "wait" => {
+                    arg_check("fork", 0)?;
+                    chunk.push(IrOp::Wait);
+                }
+                "send" => {
+                    arg_check("send", 2)?;
+                    chunk.push(IrOp::Send);
+                }
+                "pid" => {
+                    arg_check("pid", 0)?;
+                    chunk.push(IrOp::Pid);
+                }
+
+                _ => normal_call = true,
+            };
+        } else {
+            normal_call = true;
+        }
+
+        if normal_call {
+            let mut f_chunk = self.visit(f)?;
+            chunk.append(&mut f_chunk);
+
+            chunk.push(IrOp::CallArity(args.len()));
+        }
 
         Ok(chunk)
     }
@@ -299,6 +350,10 @@ pub fn pack(
                 Op::JumpCond
             }
             IrOp::CallArity(a) => Op::CallArity(*a),
+            IrOp::Wait => Op::Wait,
+            IrOp::Send => Op::Send,
+            IrOp::Fork => Op::Fork,
+            IrOp::Pid => Op::Pid,
             IrOp::LoadLocal(idx) => Op::LoadLocal(*idx),
             IrOp::StoreLocal(idx) => Op::StoreLocal(*idx),
             //_ => { return Err(err_msg("not implemented"))},
@@ -319,8 +374,8 @@ pub fn pack(
 mod tests {
     use super::*;
     use crate::str_to_ast;
-    use test::Bencher;
     use crate::vm::VM;
+    use test::Bencher;
 
     fn run(s: &'static str) -> Result<Literal> {
         let ast = str_to_ast(s)?;
@@ -432,6 +487,63 @@ mod tests {
         println!("{:?}", res);
 
         assert!(res.is_err())
+    }
+
+    #[test]
+    fn test_async_ops() {
+        let code = lifted_compile("(fork)");
+
+        assert_eq!(code.addr((0, 0)).unwrap(), Op::Fork);
+        assert_eq!(code.addr((0, 1)).unwrap(), Op::Return);
+
+        let code = lifted_compile("(wait)");
+
+        code.dissassemble();
+
+        assert_eq!(code.addr((0, 0)).unwrap(), Op::Wait);
+        assert_eq!(code.addr((0, 1)).unwrap(), Op::Return);
+
+        let code = lifted_compile("(pid)");
+
+        code.dissassemble();
+
+        assert_eq!(code.addr((0, 0)).unwrap(), Op::Pid);
+        assert_eq!(code.addr((0, 1)).unwrap(), Op::Return);
+
+        let code = lifted_compile("(send (pid) 'test)");
+
+        code.dissassemble();
+
+        assert_eq!(code.addr((0, 1)).unwrap(), Op::Pid);
+        assert_eq!(code.addr((0, 2)).unwrap(), Op::Send);
+        assert_eq!(code.addr((0, 3)).unwrap(), Op::Return);
+    }
+
+    #[test]
+    fn test_async_ops_arity() {
+        assert!(run("(fork 1)").is_err());
+        assert!(run("(wait 1)").is_err());
+        assert!(run("(pid 1)").is_err());
+        assert!(run("(send 1)").is_err());
+        assert!(run("(send)").is_err());
+    }
+
+    #[test]
+    fn test_async_ops_execution() {
+        use crate::exec;
+
+        let code =
+            lifted_compile("(let (me (pid)) (if (fork) (send me 'hello) (do (wait) (wait))))");
+
+        code.dissassemble();
+
+        let mut exec = exec::Exec::new();
+
+        let vm = VM::new(Bytecode::new(vec![vec![]]));
+
+        let (_vm, res) = exec.sched(vm, &code);
+
+        assert_eq!(res.unwrap(), "hello".into())
     }
 
     #[bench]

@@ -6,6 +6,7 @@ use std::fmt;
 /// Basic operations (or instructions).
 ///
 /// Manually implements `Debug` to provide short 2-3 character names.
+/// Arguments are provided in the order they're popped off the stack.
 #[derive(Clone, PartialEq)]
 pub enum Op {
     /// Pushes a literal datum to the stack.
@@ -26,7 +27,7 @@ pub enum Op {
     /// Conditionally jump to one of two addresses. This is pretty inconvenient to use by hand.
     /// If pred is true, jump to then, otherwise jump to else
     ///
-    /// `<else then pred>`
+    /// `<pred then else>`
     ///
     /// Where else and then are addresses and pred is a boolean.
     JumpCond,
@@ -38,7 +39,7 @@ pub enum Op {
 
     /// Store a value from the stack in the environment.
     ///
-    /// `<value keyword>`
+    /// `<keyword value>`
     Store,
 
     /// Push an Environment onto the environment stack (see the `environment` module).
@@ -59,7 +60,7 @@ pub enum Op {
 
     /// Make a closure from an address and an arity
     ///
-    /// `<address arity>`
+    /// `<arity address>`
     MakeClosure,
 
     /// Call a function with a given arity
@@ -72,15 +73,20 @@ pub enum Op {
     /// Puts the next message recieved onto the stack.
     Wait,
 
-    /// Send an external message.
+    /// Send an external message. Returns the pid.
     ///
-    /// `<data pid>`
+    /// `<pid data>`
     Send,
 
     /// Returns the Pid of this VM, if available.
     ///
     /// Puts this VM's Pid on the stack, or #f if the VM has no Pid.
     Pid,
+
+    /// Fork this VM, returning #t if in the forked VM, #f if in the orignal.
+    ///
+    /// Throws an error if this VM does not have an execution handle installed.
+    Fork,
 
     /// Load a local var.
     ///
@@ -113,6 +119,7 @@ impl Op {
             Op::CallArity(_) => "CallArity",
             Op::Wait => "Wait",
             Op::Send => "Send",
+            Op::Fork => "Fork",
             Op::Pid => "Pid",
             Op::LoadLocal(_) => "LoadLocal",
             Op::StoreLocal(_) => "StoreLocal",
@@ -143,6 +150,7 @@ impl fmt::Debug for Op {
             Op::CallArity(a) => write!(f, "oC{:}", a),
             Op::Wait => write!(f, "o<"),
             Op::Send => write!(f, "o>"),
+            Op::Fork => write!(f, "oF"),
             Op::Pid => write!(f, "oMe"),
             Op::LoadLocal(i) => write!(f, "oLL{:}", i),
             Op::StoreLocal(i) => write!(f, "oSL{:}", i),

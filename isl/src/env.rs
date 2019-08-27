@@ -21,7 +21,7 @@ impl fmt::Debug for EnvStack {
 pub type Env = HashMap<String, data::Literal>;
 
 /// Represents multiple nested environment bindings.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct EnvStack {
     envs: Vec<Env>,
 }

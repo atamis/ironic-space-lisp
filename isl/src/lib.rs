@@ -5,6 +5,7 @@
 //! This crate contains an eclectic mix of related tools. Primarily a compiler and
 //! bytecode VM, but also an interpreter.
 
+#![feature(async_await, async_closure)]
 #![warn(missing_docs)]
 // because clippy
 #![allow(unknown_lints)]
@@ -22,6 +23,7 @@ extern crate test;
 extern crate derive_is_enum_variant;
 #[macro_use]
 extern crate nom;
+extern crate async_trait;
 extern crate futures;
 extern crate rand;
 extern crate tokio;

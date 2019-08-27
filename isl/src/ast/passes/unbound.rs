@@ -9,6 +9,8 @@ use crate::errors::*;
 use im::hashset;
 use std::rc::Rc;
 
+const OP_FUNCS: &'static [&'static str] = &["fork", "wait", "send", "pid"];
+
 #[allow(dead_code)]
 type KeywordSet = hashset::HashSet<Keyword>;
 
@@ -26,6 +28,10 @@ pub fn pass_default(asts: &[AST]) -> Result<()> {
 /// Check variables against an existing environment.
 pub fn pass(ast: &AST, env: &Env) -> Result<()> {
     let mut hs: KeywordSet = env.keys().cloned().collect();
+
+    for op_key in OP_FUNCS.iter().map(|s| *s) {
+        hs.insert(op_key.to_string());
+    }
 
     hs.visit(ast).context("Pass with specific env")?;
     Ok(())

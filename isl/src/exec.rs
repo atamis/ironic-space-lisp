@@ -4,60 +4,32 @@
 use crate::data;
 use crate::data::Literal;
 use crate::errors::*;
-use futures::sync::mpsc;
+use crate::vm;
+use futures::channel::mpsc;
+use futures::future::{Future, FutureExt, self};
 use std::collections::HashMap;
 use std::fmt;
-use tokio::prelude::future::{loop_fn, ok, Future, Loop};
-use tokio::prelude::stream::Stream;
+use std::pin::Pin;
 use tokio::runtime::Runtime;
-use crate::vm;
+use futures::stream::StreamExt;
+use async_trait::async_trait;
 
 /// A channel to the message router.
 pub type RouterChan = mpsc::Sender<RouterMessage>;
 
-/// Inserted into VMs to allow them to send messages to the router, and know their `Pid`.
-#[derive(Debug)]
-pub struct ProcInfo {
-    /// The [`Pid`](data::Pid), or unique identifier, for this handle.
-    pub pid: data::Pid,
-    /// A channel back to the central router for this executor.
-    pub chan: RouterChan,
-}
-
 /// A trait for interfacing between a [`vm::VM`] and its execution environment.
+#[async_trait]
 pub trait ExecHandle: Send + Sync + fmt::Debug {
     /// Return the `Pid`, or unique identifier of the exec handle.
     fn get_pid(&mut self) -> data::Pid;
     /// Send a message to a particular `Pid`.
-    fn send(&mut self, recv: data::Pid, msg: Literal) -> Result<()>;
+    fn send(&mut self, pid: data::Pid, msg: Literal) -> Result<()>;
     /// Spawn a new `VM`, consuming the `VM` and returning its `Pid`.
     fn spawn(&mut self, vm: vm::VM) -> Result<data::Pid>;
+    /// Asynchronously receive a Literal from your inbox.
+    async fn receive(&mut self) -> Option<Literal>;
 }
 
-impl ExecHandle for ProcInfo {
-    fn get_pid(&mut self) -> data::Pid {
-        self.pid
-    }
-
-    fn send(&mut self, recv: data::Pid, msg: Literal) -> Result<()> {
-        Ok(self
-            .chan
-            .try_send(RouterMessage::Send(recv, msg))
-            .context("Error sending on router channel")?)
-    }
-
-    fn spawn(&mut self, vm: vm::VM) -> Result<data::Pid> {
-        //let builder = builder::Builder::new();
-        //builder.code(vm.code.clone()).default_libs().;
-
-        let (pid, f) = exec_future(vm, &self.chan);
-        let f = f.then(|_| ok(()));
-
-        tokio::spawn(f);
-
-        Ok(pid)
-    }
-}
 
 type RouterState = HashMap<data::Pid, mpsc::Sender<Literal>>;
 
@@ -70,15 +42,16 @@ pub enum RouterMessage {
     Register(data::Pid, mpsc::Sender<Literal>),
     /// Send some data to the channel associated with a Pid.
     Send(data::Pid, Literal),
+    /// Safely close the router once all other handlers are dropped..
+    Quit,
 }
 
 /// Represents a handle on a Router.
 ///
-/// Automatically manages registration and deregistration. Can't implement clone
-/// because the channel receiver can't be cloned.
+/// Automatically manages registration and deregistration.
 pub struct RouterHandle {
     pid: data::Pid,
-    rx: Option<mpsc::Receiver<Literal>>,
+    rx: mpsc::Receiver<Literal>,
     router: RouterChan,
 }
 
@@ -91,42 +64,63 @@ impl RouterHandle {
 
         RouterHandle {
             pid,
-            rx: Some(rx),
+            rx: rx,
             router: chan,
-        }
-    }
-
-    /// Returns a future that resolves to the next message this handle receives, and the handle.
-    pub fn receive(mut self) -> impl Future<Item = (Literal, RouterHandle), Error = ()> {
-        use std::mem;
-        let rx = mem::replace(&mut self.rx, None).unwrap();
-
-        rx.into_future().then(move |res| {
-            let (msg, rx) = res.unwrap();
-            mem::replace(&mut self.rx, Some(rx));
-            ok::<(Literal, RouterHandle), ()>((msg.unwrap(), self))
-        })
-    }
-
-    /// Send a message through  to a pid.
-    pub fn send(&mut self, pid: data::Pid, msg: Literal) {
-        self.router.try_send(RouterMessage::Send(pid, msg)).unwrap()
-    }
-
-    /// Returns a procinfo suitable for inserting into a VM associated with this handle.
-    pub fn get_procinfo(&self) -> ProcInfo {
-        ProcInfo {
-            pid: self.pid,
-            chan: self.router.clone(),
         }
     }
 }
 
+#[async_trait]
+impl ExecHandle for RouterHandle {
+    fn get_pid(&mut self) -> data::Pid {
+        self.pid
+    }
+
+    /// Asynchronously receive a Literal from this channel.
+    async fn receive(&mut self) -> Option<Literal> {
+        self.rx
+            .next()
+            .await
+    }
+
+    /// Send a message through  to a pid.
+    fn send(&mut self, pid: data::Pid, msg: Literal) -> Result<()> {
+        Ok(self
+            .router
+            .try_send(RouterMessage::Send(pid, msg))
+            .context("Error sending on router channel")?)
+    }
+
+    fn spawn(&mut self, vm: vm::VM) -> Result<data::Pid> {
+        let (pid, f) = exec_future(vm, &self.router);
+        let f = f.then(|_| future::ready(()));
+
+        tokio::spawn(f);
+
+        Ok(pid)
+    }
+}
+
+impl Clone for RouterHandle {
+    fn clone(&self) -> Self {
+        RouterHandle::new(self.router.clone())
+    }
+}
+
+impl fmt::Debug for RouterHandle {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // Derive implementation includes all fields, most of which
+        // aren't relevant.
+       write!(f, "RouterHandle({:?})", self.pid)
+    }
+}
+
+
 impl Drop for RouterHandle {
     fn drop(&mut self) {
-        self.router
-            .try_send(RouterMessage::Close(self.pid))
-            .unwrap();
+        if let Err(e) = self.router .try_send(RouterMessage::Close(self.pid)) {
+            eprintln!("Error encountered while closing RouterHandle: {:?}", e);
+        }
     }
 }
 
@@ -136,25 +130,49 @@ impl Drop for RouterHandle {
 pub fn router(runtime: &mut Runtime) -> mpsc::Sender<RouterMessage> {
     let (tx, rx) = mpsc::channel::<RouterMessage>(10);
 
-    let f = rx
-        .fold(RouterState::new(), |mut state, msg| {
+    let f = async move || {
+        let mut rx = rx;
+        let mut state = RouterState::new();
+        let mut quitting = false;
+
+        loop {
+            if quitting && state.is_empty() {
+                    break;
+            }
+
+            let msg = rx.next().await;
+
+            println!("Recieved message {:?}", msg);
+
             match msg {
-                RouterMessage::Close(p) => {
+                None => break,
+                Some(RouterMessage::Close(p)) => {
                     state.remove(&p);
                 }
-                RouterMessage::Register(p, tx) => {
+                Some(RouterMessage::Register(p, tx)) => {
                     state.insert(p, tx);
                 }
-                RouterMessage::Send(p, l) => state.get_mut(&p).unwrap().try_send(l).unwrap(),
+                Some(RouterMessage::Send(p, l)) => {
+                    //state.get_mut(&p).unwrap(),
+                    if let Some(chan) = state.get_mut(&p) {
+                        if let Err(e) = chan.try_send(l) {
+                            eprintln!("Attempted to send on closed channel {:?}, but encountered error: {:?}", p, e);
+                            state.remove(&p);
+                        }
+                    } else {
+                        eprintln!("Attempted to send to non-existant pid {:?}: {:?}", p, l)
+                    }
+                },
+                Some(RouterMessage::Quit) => quitting = true,
             };
-            ok(state)
-        })
-        .then(|x| {
-            println!("Router exited: {:?}", x);
-            ok::<(), ()>(())
-        });
+        }
 
-    runtime.spawn(f);
+        println!("Router finished (quitting: {:?}): {:?}", quitting,  state);
+
+        ()
+        };
+
+    runtime.spawn(f());
 
     tx
 }
@@ -164,63 +182,60 @@ fn exec_future(
     router: &RouterChan,
 ) -> (
     data::Pid,
-    Box<dyn Future<Item = (vm::VM, data::Literal), Error = failure::Error> + 'static + Send>,
+    Pin<Box<impl Future<Output = (vm::VM, Result<data::Literal>)>>>,
 ) {
     use crate::vm::VMState;
 
-    let mut handle = RouterHandle::new(router.clone());
+    // Whether or not the VM already has a proc
+    // If it does, we don't want to replace it, or remove it later.
+    let mut has_proc = false;
 
-    let proc = handle.get_procinfo();
+    let pid = if vm.proc.is_none() {
+        let mut handle = RouterHandle::new(router.clone());
 
-    let pid = proc.pid;
+        let pid = handle.pid;
 
-    vm.proc = Some(Box::new(proc));
+        handle.send(handle.pid, "dummy-message".into()).unwrap();
+        vm.proc = Some(Box::new(handle));
+        pid
+    } else {
+        has_proc = true;
+        vm.proc.as_mut().unwrap().get_pid()
+    };
 
-    handle
-        .router
-        .try_send(RouterMessage::Send(handle.pid, "dummy-message".into()))
-        .unwrap();
+    let f2 = async move || {
+        loop {
+            vm.state = VMState::RunningUntil(100);
 
-    let f = loop_fn((vm, handle), move |(vm, handle)| {
-        ok((vm, handle)).and_then(
-            |(mut vm, handle)| -> Box<
-                dyn Future<
-                        Item = Loop<(vm::VM, Literal), (vm::VM, RouterHandle)>,
-                        Error = failure::Error,
-                    > + Send,
-            > {
-                vm.state = VMState::RunningUntil(100);
-                vm.state_step().unwrap();
+            if let Err(e) = vm.state_step() {
+                eprintln!("Encountered error while running vm: {:?} ", e);
+                return (vm, Err(e))
+            };
 
-                if let VMState::Done(_) = vm.state {
-                    let l = { vm.state.get_ret().unwrap() };
+            if let VMState::Done(_) = vm.state {
+                let l = { vm.state.get_ret().unwrap() };
+                if !has_proc {
                     vm.proc = None;
-                    return Box::new(ok(Loop::Break((vm, l))));
                 }
+                return (vm, Ok(l));
+            }
 
-                if let VMState::Stopped = vm.state {
-                    return Box::new(ok(Loop::Continue((vm, handle))));
-                }
+            if let VMState::Waiting = vm.state {
+                println!("Waiting");
+                let opt_lit = vm.proc.as_mut().map(move |proc| proc.receive()).unwrap().await.unwrap();
+                vm.answer_waiting(opt_lit).unwrap()
+            }
+        }
+    };
 
-                if let VMState::Waiting = vm.state {
-                    return Box::new(handle.receive().then(|res| {
-                        let (opt_lit, handle) = res.unwrap();
-                        vm.answer_waiting(opt_lit).unwrap();
-                        Ok(Loop::Continue((vm, handle)))
-                    }));
-                }
-
-                panic!("VM state not done, stopped, or waiting");
-            },
-        )
-    });
-
-    (pid, Box::new(f))
+    (pid, Box::pin(f2()))
 }
 
 /// Holds handles to its Runtime and router.
 pub struct Exec {
-    runtime: Runtime,
+    /// The Tokio Runtime this Exec uses. All VMs and the router
+    /// get launched on this runtime.
+    pub runtime: Runtime,
     router_chan: RouterChan,
 }
 
@@ -247,7 +262,8 @@ impl Exec {
         &mut self,
         mut vm: vm::VM,
         code: &vm::bytecode::Bytecode,
-    ) -> Result<(vm::VM, Literal)> {
+    ) -> ( vm::VM, Result<Literal> )
+    {
         vm.import_jump(code);
         let (_, f) = exec_future(vm, &self.router_chan);
 
@@ -255,8 +271,11 @@ impl Exec {
     }
 
     /// Wait for all futures to resolve.
-    pub fn wait(self) {
-        self.runtime.shutdown_on_idle().wait().unwrap();
+    pub fn wait(mut self) {
+        if let Err(e) = self.router_chan.try_send(RouterMessage::Quit) {
+            eprintln!("Encountered error shutting down router: {:?}", e);
+        }
+        self.runtime.shutdown_on_idle();
     }
 }
 
@@ -270,6 +289,7 @@ impl Default for Exec {
 mod tests {
     use super::*;
     use crate::vm::op::Op;
+    use futures::executor;
 
     fn empty_vm() -> vm::VM {
         let mut builder = vm::Builder::new();
@@ -298,8 +318,9 @@ mod tests {
                     Op::CallArity(1),
                     Op::Return,
                 ]]),
-            )
-            .unwrap();
+            );
+
+        let lit = lit.unwrap();
 
         assert_eq!(lit, "dummy-message".into());
         println!("{:?}", lit);
@@ -323,10 +344,9 @@ mod tests {
                     Op::Wait,
                     Op::Return,
                 ]]),
-            )
-            .unwrap();
+            );
 
-        assert_eq!(lit, "from-myself".into());
+        assert_eq!(lit.unwrap(), "from-myself".into());
     }
 
     #[test]
@@ -335,14 +355,14 @@ mod tests {
         let router = router(&mut runtime);
 
         let mut handle1 = RouterHandle::new(router.clone());
-        let handle2 = RouterHandle::new(router.clone());
+        let mut handle2 = RouterHandle::new(router.clone());
 
-        handle1.send(handle2.pid, "test-message".into());
-        let (msg, mut handle2) = handle2.receive().wait().unwrap();
+        handle1.send(handle2.pid, "test-message".into()).unwrap();
+        let msg = executor::block_on(handle2.receive()).unwrap();
         assert_eq!(msg, "test-message".into());
 
-        handle2.send(handle1.pid, "test-message2".into());
-        let (msg, _) = handle1.receive().wait().unwrap();
+        handle2.send(handle1.pid, "test-message2".into()).unwrap();
+        let msg = executor::block_on(handle1.receive()).unwrap();
         assert_eq!(msg, "test-message2".into());
     }
 }
