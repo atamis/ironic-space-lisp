@@ -6,16 +6,16 @@
 //! This should be called before `unbound` because it converts `list`, which
 //! has no binding, to `cons`, which is a syscall.
 
-use ast::ASTVisitor;
-use ast::Def;
-use ast::DefVisitor;
-use ast::AST;
-use data;
-use data::Keyword;
-use data::Literal;
-use errors::*;
+use crate::ast::ASTVisitor;
+use crate::ast::Def;
+use crate::ast::DefVisitor;
+use crate::ast::AST;
+use crate::data;
+use crate::data::Keyword;
+use crate::data::Literal;
+use crate::errors::*;
 use std::rc::Rc;
-use util::*;
+use crate::util::*;
 
 /// Do the pass over a normal [`AST`]. See [`internal_macro`](super::internal_macro) for more information.
 pub fn pass(a: &AST) -> Result<AST> {
@@ -175,11 +175,11 @@ impl DefVisitor<Def> for Pass {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ast;
-    use ast::AST;
-    use data::list;
-    use data::Literal;
-    use parser;
+    use crate::ast;
+    use crate::ast::AST;
+    use crate::data::list;
+    use crate::data::Literal;
+    use crate::parser;
 
     fn p(s: &str) -> Result<AST> {
         let p = parser::Parser::new();

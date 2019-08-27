@@ -1,14 +1,14 @@
 //! Pass to lift functions out of the [`AST`](super::AST) and into a function registry.
 use std::rc::Rc;
 
-use ast::ASTVisitor;
-use ast::Def;
-use ast::DefVisitor;
-use ast::AST;
-use data::Address;
-use data::Keyword;
-use data::Literal;
-use errors::*;
+use crate::ast::ASTVisitor;
+use crate::ast::Def;
+use crate::ast::DefVisitor;
+use crate::ast::AST;
+use crate::data::Address;
+use crate::data::Keyword;
+use crate::data::Literal;
+use crate::errors::*;
 
 /// Represents a function as a list of arguments and an `AST` node.
 #[derive(Clone, Debug, PartialEq)]
@@ -297,10 +297,10 @@ mod import {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ast;
-    use ast::passes::unbound::pass_default;
-    use ast::AST;
-    use parser;
+    use crate::ast;
+    use crate::ast::passes::unbound::pass_default;
+    use crate::ast::AST;
+    use crate::parser;
 
     fn p(s: &str) -> Result<LiftedAST> {
         let p = parser::Parser::new();

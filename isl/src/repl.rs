@@ -3,6 +3,15 @@
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 
+use crate::ast::passes::function_lifter;
+use crate::ast::passes::internal_macro;
+use crate::ast::passes::unbound;
+use crate::compiler;
+use crate::data;
+use crate::errors::*;
+use crate::size::*;
+use crate::str_to_ast;
+use crate::vm;
 use ast::passes::function_lifter;
 use ast::passes::internal_macro;
 use ast::passes::local;

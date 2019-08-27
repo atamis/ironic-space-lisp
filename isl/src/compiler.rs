@@ -1,6 +1,17 @@
 //! Compile [`AST`](ast::AST)s to [`Bytecode`](vm::bytecode::Bytecode).
 use std::rc::Rc;
 
+use crate::ast::passes::function_lifter;
+use crate::ast::ASTVisitor;
+use crate::ast::Def;
+use crate::ast::DefVisitor;
+use crate::ast::AST;
+use crate::data::Keyword;
+use crate::data::Literal;
+use crate::errors::*;
+use crate::vm::bytecode::Bytecode;
+use crate::vm::bytecode::Chunk;
+use crate::vm::op::Op;
 use ast::passes::local;
 use ast::passes::local::visitors;
 use ast::passes::local::visitors::GlobalDefVisitor;
@@ -392,9 +403,12 @@ pub fn pack(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::str_to_ast;
+    use crate::vm::VM;
     use ast;
     use parser;
     use str_to_ast;
+    use test::Bencher;
     use test::Bencher;
     use vm::bytecode;
     use vm::VM;

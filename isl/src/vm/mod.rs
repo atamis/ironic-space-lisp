@@ -9,15 +9,15 @@ mod tests;
 
 pub use self::builder::Builder;
 
-use data;
-use data::Address;
-use data::Literal;
-use env::EnvStack;
-use errors::*;
-use exec;
-use syscall;
-use vm::bytecode::Bytecode;
-use vm::op::Op;
+use crate::data;
+use crate::data::Address;
+use crate::data::Literal;
+use crate::env::EnvStack;
+use crate::errors::*;
+use crate::exec;
+use crate::syscall;
+use crate::vm::bytecode::Bytecode;
+use crate::vm::op::Op;
 
 /// Enum representing the different states a [`VM`] can be in.
 ///
@@ -155,7 +155,7 @@ pub struct VM {
     pub state: VMState,
     conf: VMConfig,
     /// This fields contains an optional [`ExecHandle`](exec::ExecHandle) the VM uses to interface with the execution environment.
-    pub proc: Option<Box<exec::ExecHandle>>,
+    pub proc: Option<Box<dyn exec::ExecHandle>>,
 }
 
 impl VM {
@@ -288,7 +288,7 @@ impl VM {
     }
 
     fn invoke_syscall(stack: &mut Vec<Literal>, syscall: &syscall::Syscall) -> Result<()> {
-        use syscall::Syscall;
+        use crate::syscall::Syscall;
         match syscall {
             Syscall::Stack(ref f) => f(stack),
             Syscall::A1(ref f) => {

@@ -1,16 +1,16 @@
 //! [`LiftedAST`](function_lifter::LiftedAST) pass to rename local rebindings to unique names
 
-use ast::passes::function_lifter;
-use ast::passes::function_lifter::ASTFunction;
-use ast::passes::function_lifter::LASTVisitor;
-use ast::passes::function_lifter::LiftedAST;
-use ast::ASTVisitor;
-use ast::Def;
-use ast::DefVisitor;
-use ast::AST;
-use data::Keyword;
-use data::Literal;
-use errors::*;
+use crate::ast::passes::function_lifter;
+use crate::ast::passes::function_lifter::ASTFunction;
+use crate::ast::passes::function_lifter::LASTVisitor;
+use crate::ast::passes::function_lifter::LiftedAST;
+use crate::ast::ASTVisitor;
+use crate::ast::Def;
+use crate::ast::DefVisitor;
+use crate::ast::AST;
+use crate::data::Keyword;
+use crate::data::Literal;
+use crate::errors::*;
 use im::hashmap::HashMap;
 use im::hashset::HashSet;
 use std::rc::Rc;
@@ -158,10 +158,10 @@ impl ASTVisitor<AST> for Unique {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ast;
-    use ast::passes::function_lifter;
-    use ast::passes::internal_macro;
-    use parser;
+    use crate::ast;
+    use crate::ast::passes::function_lifter;
+    use crate::ast::passes::internal_macro;
+    use crate::parser;
 
     fn do_pass(s: &str) -> Result<LiftedAST> {
         let ast = ast::parse_multi(&parser::parse(s).unwrap()).unwrap();

@@ -1,6 +1,6 @@
 //! Single VM executable operations.
 
-use data;
+use crate::data;
 use std::fmt;
 
 /// Basic operations (or instructions).

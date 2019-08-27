@@ -6,11 +6,11 @@
 // they don't _have_ to be pass by value.
 #![allow(clippy::needless_pass_by_value)]
 
-use data::Address;
-use data::Keyword;
-use data::Literal;
-use env;
-use errors::*;
+use crate::data::Address;
+use crate::data::Keyword;
+use crate::data::Literal;
+use crate::env;
+use crate::errors::*;
 use std::collections::HashMap;
 use std::fmt;
 use std::usize;
@@ -20,13 +20,13 @@ pub mod math;
 pub mod util;
 
 /// A syscall that mutates a stack directly.
-pub type StackFn = Box<Fn(&mut Vec<Literal>) -> Result<()> + Send + Sync + 'static>;
+pub type StackFn = Box<dyn Fn(&mut Vec<Literal>) -> Result<()> + Send + Sync + 'static>;
 
 /// A syscall that takes 1 value and returns 1 value.
-pub type A1Fn = Box<Fn(Literal) -> Result<Literal> + Send + Sync + 'static>;
+pub type A1Fn = Box<dyn Fn(Literal) -> Result<Literal> + Send + Sync + 'static>;
 
 /// A syscall that takes 2 values and returns 1 value.
-pub type A2Fn = Box<Fn(Literal, Literal) -> Result<Literal> + Sync + Send + 'static>;
+pub type A2Fn = Box<dyn Fn(Literal, Literal) -> Result<Literal> + Sync + Send + 'static>;
 
 /// Tagged pointers to syscall implementations.
 pub enum Syscall {
@@ -98,7 +98,7 @@ impl SyscallRegistry {
     ///
     /// This is intended to be used to associated the name with the address in some runtime name binding,
     /// possiblly with the arity in a [`Closure`](super::data::Literal::Closure).
-    pub fn ingest(&mut self, fact: &SyscallFactory) -> Vec<(String, Option<usize>, Address)> {
+    pub fn ingest(&mut self, fact: &dyn SyscallFactory) -> Vec<(String, Option<usize>, Address)> {
         fact.syscalls()
             .into_iter()
             .map(|(name, syscall)| {
@@ -120,7 +120,11 @@ impl fmt::Debug for SyscallRegistry {
 
 /// Use a [`SyscallFactory`], registering the syscalls with the [`SyscallRegistry`],
 /// and the names with the [`env::Env`].
-pub fn ingest_environment(sys: &mut SyscallRegistry, env: &mut env::Env, fact: &SyscallFactory) {
+pub fn ingest_environment(
+    sys: &mut SyscallRegistry,
+    env: &mut env::Env,
+    fact: &dyn SyscallFactory,
+) {
     for (name, arity_opt, addr) in sys.ingest(fact) {
         let f = match arity_opt {
             Some(n) => Literal::Closure(n, addr),

@@ -2,6 +2,15 @@
 //!
 //! Not very useful or reusable.
 
+use crate::ast::ast;
+use crate::ast::LiftedAST;
+use crate::compiler;
+use crate::data;
+use crate::env;
+use crate::errors::*;
+use crate::parser;
+use crate::vm;
+use crate::vm::bytecode;
 use ast::ast;
 use ast::passes::local;
 use ast::LiftedAST;

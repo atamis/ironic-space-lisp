@@ -1,22 +1,22 @@
 use super::VMConfig;
 use super::VMState;
 use super::VM;
-use data::Address;
-use data::Keyword;
-use data::Literal;
-use env;
-use errors::*;
-use syscall;
-use vm::bytecode::Bytecode;
-use vm::bytecode::Chunk;
-use vm::op::Op;
-use vm::Frame;
+use crate::data::Address;
+use crate::data::Keyword;
+use crate::data::Literal;
+use crate::env;
+use crate::errors::*;
+use crate::syscall;
+use crate::vm::bytecode::Bytecode;
+use crate::vm::bytecode::Chunk;
+use crate::vm::op::Op;
+use crate::vm::Frame;
 
 /// Construct a VM.
 #[derive(Default)]
 pub struct Builder {
     codes: Vec<Bytecode>,
-    sys_facts: Vec<Box<syscall::SyscallFactory>>,
+    sys_facts: Vec<Box<dyn syscall::SyscallFactory>>,
     env: Vec<(Keyword, Literal)>,
     conf: VMConfig,
 }
@@ -40,7 +40,7 @@ impl Builder {
     }
 
     /// Added a [`syscall::SyscallFactory`] to the syscalls.
-    pub fn syscalls(&mut self, fact: Box<syscall::SyscallFactory>) -> &mut Builder {
+    pub fn syscalls(&mut self, fact: Box<dyn syscall::SyscallFactory>) -> &mut Builder {
         self.sys_facts.push(fact);
         self
     }

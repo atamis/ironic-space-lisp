@@ -1,5 +1,5 @@
 use super::*;
-use data;
+use crate::data;
 use test::Bencher;
 
 #[test]
@@ -276,7 +276,7 @@ fn test_wait() {
 
 #[test]
 fn test_pid() {
-    use exec;
+    use crate::exec;
     use futures::sync::mpsc;
 
     let mut vm = VM::new(Bytecode::new(vec![vec![]]));
@@ -299,7 +299,7 @@ fn test_pid() {
 
 #[test]
 fn test_send() {
-    use exec;
+    use crate::exec;
     use futures::sync::mpsc;
     use tokio::prelude::*;
 
@@ -446,6 +446,9 @@ fn test_syscalls() {
 
 #[bench]
 fn bench_nested_envs(b: &mut Bencher) {
+    use crate::compiler::compile;
+    use crate::compiler::pack_start;
+    use crate::str_to_ast;
     use ast;
     use compiler::compile;
     use compiler::pack_compile_lifted;
@@ -476,6 +479,9 @@ fn bench_nested_envs(b: &mut Bencher) {
 
 #[bench]
 fn bench_infinite_recursion(b: &mut Bencher) {
+    use crate::ast::passes::function_lifter;
+    use crate::compiler;
+    use crate::str_to_ast;
     use ast;
     use ast::passes::function_lifter;
     use ast::passes::local;
