@@ -194,12 +194,28 @@ pub trait ASTVisitor<R> {
     fn application_expr(&mut self, f: &Rc<AST>, args: &[AST]) -> Result<R>;
 }
 
+/// Convert a variable number of ASTs to a single AST.
+///
+/// With 1 AST, return the AST
+///
+/// With 0 ASTs, return an AST that returns false
+///
+/// With any other number, return the ASTs wrapped in a do
+/// expression, which evaluates to the last expression.
+fn wrap_do(mut asts: Vec<AST>) -> AST {
+    match asts.len() {
+        1 => asts.remove(0),
+        0 => AST::Value(false.into()),
+        _ => AST::Do(asts),
+    }
+}
+
 /// Parse potentially multiple exprs, returning exactly 1 AST.
 ///
 /// Returns either the single [`AST`] contained in the literals,
 /// or multiple [`AST`]s from the literals, wrapped in a [`AST::Do`] expr.
 pub fn parse_multi(exprs: &[Literal]) -> Result<AST> {
-    let mut asts: Vec<AST> = exprs
+    let asts: Vec<AST> = exprs
         .iter()
         .enumerate()
         .map(|(i, lit)| {
@@ -208,11 +224,7 @@ pub fn parse_multi(exprs: &[Literal]) -> Result<AST> {
         })
         .collect::<Result<_>>()?;
 
-    match asts.len() {
-        1 => Ok(asts.remove(0)),
-        0 => Err(err_msg("Program empty")),
-        _ => Ok(AST::Do(asts)),
-    }
+    Ok(wrap_do(asts))
 }
 
 /// Parse raw sexprs ([`Literal`]) into an AST.
@@ -323,13 +335,7 @@ fn parse_let(_first: &Literal, rest: &Vector<Literal>) -> Result<AST> {
         .ensure_list()
         .context("Parsing list of defs")?;
 
-    let body_literal = rest
-        .get(1)
-        .ok_or_else(|| err_msg("let requires body as second term (let (defs+) body)"))?;
-
-    if rest.len() != 2 {
-        return Err(err_msg("Malformed let, (let (defs+) body)"));
-    }
+    let body_literals = rest.skip(1);
 
     if def_literals.is_empty() {
         return Err(err_msg("empty list of let bindings is not allowed"));
@@ -339,7 +345,13 @@ fn parse_let(_first: &Literal, rest: &Vector<Literal>) -> Result<AST> {
         return Err(err_msg("in let, def list must be even"));
     }
 
-    let body = Rc::new(parse(body_literal).context("While parsing body of let")?);
+    let body_asts = body_literals
+        .iter()
+        .map(parse)
+        .collect::<Result<_>>()
+        .context("While parsing body of let")?;
+
+    let body = Rc::new(wrap_do(body_asts));
 
     let mut defs = Vec::with_capacity(def_literals.len() / 2);
 
@@ -376,9 +388,12 @@ fn parse_lambda(_first: &Literal, rest: &Vector<Literal>) -> Result<AST> {
         .collect::<Result<_>>()?;
 
     let body = rest
-        .get(1)
-        .ok_or_else(|| err_msg("lambda requires body, (lambda (args*) body)"))?;
-    let body = Rc::new(parse(body)?);
+        .skip(1)
+        .iter()
+        .map(parse)
+        .collect::<Result<_>>()
+        .context("lambda requires body, (lambda (args*) body)")?;
+    let body = Rc::new(wrap_do(body));
 
     Ok(AST::Lambda { args, body })
 }
@@ -585,9 +600,18 @@ mod tests {
 
         assert!(p3.is_err());
 
-        let p4 = ps("(let (test 0))");
+        let p4 = ps("(let (test 0))").unwrap();
 
-        assert!(p4.is_err());
+        assert_eq!(
+            p4,
+            AST::Let {
+                defs: vec![Def {
+                    name: "test".to_string(),
+                    value: AST::Value(Literal::Number(0))
+                },],
+                body: Rc::new(AST::Value(false.into()))
+            }
+        );
 
         let p5 = ps("(let () 0)");
 
@@ -650,7 +674,16 @@ mod tests {
             }
         );
 
-        assert!(ps("(lambda (test))").is_err());
+        let p3 = ps("(lambda ())").unwrap();
+
+        assert_eq!(
+            p3,
+            AST::Lambda {
+                args: vec![],
+                body: Rc::new(AST::Value(false.into())),
+            }
+        );
+
         assert!(ps("(lambda 0)").is_err());
     }
 
