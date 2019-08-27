@@ -248,36 +248,22 @@ pub fn pack_compile_lifted(llast: &local::LocalLiftedAST) -> Result<Bytecode> {
     Ok(code)
 }
 
-// This doesn't really work.
 fn tail_call_optimization(chunk: &mut IrChunk) {
+    use IrOp::*;
     let len = chunk.len();
-    if len >= 3
-        && chunk[len - 3] == IrOp::Call
-        && chunk[len - 2] == IrOp::PopEnv
-        && chunk[len - 1] == IrOp::Return
-    {
-        chunk[len - 3] = IrOp::PopEnv;
-        chunk[len - 2] = IrOp::Jump;
+
+    if len >= 3 {
+        let tc = match (&chunk[len - 3], &chunk[len - 2], &chunk[len - 1]) {
+            (Call, PopEnv, Return) => true,
+            (CallArity(_), PopEnv, Return) => true,
+            _ => false,
+        };
+
+        if tc {
+            chunk[len - 3] = IrOp::PopEnv;
+            chunk[len - 2] = IrOp::Jump;
+        }
     }
-}
-
-/// Pack an [ `IrChunk` ] into a new [ `Bytecode` ] and return it.
-pub fn pack_start(ir: IrChunkSlice) -> Result<Bytecode> {
-    let mut code = Bytecode::new(vec![vec![]]);
-
-    let chunk_idx = alloc_chunk(&mut code);
-
-    pack(ir, &mut code, chunk_idx, 0)?;
-
-    code.chunks[0].ops.append(&mut vec![
-        Op::Lit(Literal::Address((chunk_idx, 0))),
-        Op::Call,
-        Op::Return,
-    ]);
-
-    code.chunks[chunk_idx].ops.push(Op::Return);
-
-    Ok(code)
 }
 
 /// Pack an [ `IrChunk` ] into bytecode at a particular chunk and op index. Returns ending op index.
