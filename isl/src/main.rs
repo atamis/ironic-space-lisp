@@ -50,8 +50,6 @@ fn exec(content: &str) -> Result<()> {
 
         let (vm, res) = exec.sched(vm, &code);
 
-        println!("{:?}", (&vm, &res));
-
         match res {
             Ok(x) => println!("{:#?}", x),
             Err(e) => {

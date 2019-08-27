@@ -124,6 +124,7 @@ impl Drop for RouterHandle {
 ///
 /// Routers respond to router messages sent on the sender channel this function returns.
 pub fn router(runtime: &mut Runtime) -> mpsc::Sender<RouterMessage> {
+    let debug = false;
     let (tx, rx) = mpsc::channel::<RouterMessage>(10);
 
     let f = async move || {
@@ -138,7 +139,9 @@ pub fn router(runtime: &mut Runtime) -> mpsc::Sender<RouterMessage> {
 
             let msg = rx.next().await;
 
-            println!("Recieved message {:?}", msg);
+            if debug {
+                println!("Recieved message {:?}", msg);
+            }
 
             match msg {
                 None => break,
@@ -163,7 +166,9 @@ pub fn router(runtime: &mut Runtime) -> mpsc::Sender<RouterMessage> {
             };
         }
 
-        println!("Router finished (quitting: {:?}): {:?}", quitting, state);
+        if debug {
+            println!("Router finished (quitting: {:?}): {:?}", quitting, state);
+        }
 
         ()
     };
@@ -215,7 +220,6 @@ fn exec_future(
         }
 
         if let VMState::Waiting = vm.state {
-            println!("Waiting");
             let opt_lit = vm
                 .proc
                 .as_mut()
