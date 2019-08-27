@@ -12,16 +12,8 @@ use crate::errors::*;
 use crate::size::*;
 use crate::str_to_ast;
 use crate::vm;
-use ast::passes::function_lifter;
-use ast::passes::internal_macro;
-use ast::passes::local;
-use ast::passes::unbound;
-use compiler;
-use data;
 use errors::*;
 use size::*;
-use str_to_ast;
-use vm;
 
 /// Run a REPL executing on a [`vm::VM`].
 pub fn repl() {

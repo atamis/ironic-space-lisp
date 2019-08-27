@@ -21,7 +21,6 @@ use ast::passes::local::visitors::LocalDefVisitor;
 use ast::passes::local::GlobalDef;
 use ast::passes::local::LocalAST;
 use ast::passes::local::LocalDef;
-use data::Keyword;
 use errors::*;
 
 /// A vector of [`IrOp`]s.
@@ -402,8 +401,6 @@ mod tests {
     use crate::vm::VM;
     use ast;
     use parser;
-    use str_to_ast;
-    use test::Bencher;
     use test::Bencher;
     use vm::bytecode;
 

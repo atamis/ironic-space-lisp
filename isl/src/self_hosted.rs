@@ -11,14 +11,9 @@ use crate::errors::*;
 use crate::parser;
 use crate::vm;
 use crate::vm::bytecode;
-use ast::ast;
 use ast::passes::local;
-use compiler;
 use compiler::pack_compile_lifted;
-use data;
-use env;
 use errors::*;
-use parser;
 
 /// Read ISL lisp implementation. See `examples/lisp.isl`.
 pub fn read_lisp<'a>() -> Result<&'a str> {

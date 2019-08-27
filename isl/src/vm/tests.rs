@@ -452,7 +452,6 @@ fn bench_nested_envs(b: &mut Bencher) {
     use ast;
     use compiler::pack_compile_lifted;
     use parser;
-    use str_to_ast;
 
     let s = "(let (x 0) (let (y 1) (let (z 2) x)))";
     let lits = parser::parse(&s).unwrap();
