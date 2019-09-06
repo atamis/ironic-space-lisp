@@ -29,7 +29,7 @@ pub fn address_inc(a: &mut Address) {
 }
 
 /// Represents the address of another executing VM that can recieve messages.
-#[derive(Eq, PartialEq, Clone, Copy, PartialOrd, Hash, Debug)]
+#[derive(Eq, PartialEq, Clone, Copy, PartialOrd, Ord, Hash, Debug)]
 pub struct Pid(pub usize);
 
 impl Pid {

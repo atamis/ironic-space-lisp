@@ -4,8 +4,8 @@ use crate::data;
 use std::collections::HashMap;
 use futures::channel::mpsc;
 use crate::futures::StreamExt;
-use petgraph::graphmap::DiGraphMap;
 use std::collections::VecDeque;
+use petgraph::graphmap::DiGraphMap;
 
 /// A channel to the message router.
 pub type RouterChan = mpsc::Sender<RouterMessage>;
@@ -27,8 +27,8 @@ pub enum RouterMessage {
 struct Router {
     rx: mpsc::Receiver<RouterMessage>,
     queue: VecDeque<RouterMessage>,
-    state:  RouterState,
     watches: DiGraphMap<data::Pid, ()>,
+    state:  RouterState,
     quitting: bool,
     debug: bool,
 }
@@ -61,8 +61,7 @@ impl Router {
                 None => break,
                 Some(RouterMessage::Close(p)) => self.close(p),
                 Some(RouterMessage::Register(p, tx)) => self.register(p, tx) ,
-                Some(RouterMessage::Send(p, l)) =>
-                    self.send(p, l),
+                Some(RouterMessage::Send(p, l)) => self.send(p, l),
                 Some(RouterMessage::Quit) => self.quit(),
             };
         }
