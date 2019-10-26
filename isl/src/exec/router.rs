@@ -3,8 +3,12 @@ use crate::data::Literal;
 use crate::data;
 use std::collections::HashMap;
 use futures::channel::mpsc;
+use futures::future::select;
+use futures::future::Either;
 use crate::futures::StreamExt;
 use std::collections::VecDeque;
+use std::time::{Duration, Instant};
+use tokio::timer;
 use petgraph::graphmap::DiGraphMap;
 
 /// A channel to the message router.
@@ -47,11 +51,22 @@ impl Router {
 
     async fn run(mut self) {
         loop {
-            if self.is_done() {
-                break;
-            }
+            let m = if let Some(m) = self.queue.pop_front() {
+                Some(m)
+            } else {
+                if self.is_done() {
+                    // 2s timeout of no messages before quiting
+                    let t = timer::delay(Instant::now() +
+                                         Duration::from_millis(2000));
 
-            let m = self.next().await;
+                    match select(self.rx.next(), t).await {
+                        Either::Left((m, _)) => m,
+                        Either::Right((_, _)) => break,
+                    }
+                } else {
+                    self.rx.next().await
+                }
+            };
 
             if self.debug {
                 println!("Recieved message {:?}", m);
@@ -79,14 +94,6 @@ impl Router {
         self.state.insert(p, tx);
     }
 
-    async fn next(&mut self) -> Option<RouterMessage> {
-        if let Some(m) = self.queue.pop_front() {
-            Some(m)
-        } else {
-            self.rx.next().await
-        }
-    }
-
     fn send(&mut self, p: data::Pid, l: data::Literal) {
         if let Some(chan) = self.state.get_mut(&p) {
             if let Err(e) = chan.try_send(l) {
@@ -103,7 +110,7 @@ impl Router {
     }
 
     fn is_done(&mut self) -> bool {
-        self.quitting && self.state.is_empty()
+        self.quitting && self.state.is_empty() && self.queue.is_empty()
     }
 }
 
