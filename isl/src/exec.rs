@@ -277,7 +277,7 @@ impl Exec {
         if let Err(e) = self.router_chan.try_send(RouterMessage::Quit) {
             eprintln!("Encountered error shutting down router: {:?}", e);
         }
-        self.runtime.shutdown_on_idle();
+        //self.runtime.shutdown_on_idle();
     }
 }
 
