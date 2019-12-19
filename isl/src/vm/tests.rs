@@ -1,4 +1,5 @@
 use super::*;
+use crate::futures::StreamExt;
 use test::Bencher;
 
 #[test]
@@ -313,7 +314,6 @@ fn test_send() {
     use crate::exec::ExecHandle;
     use futures::channel::mpsc;
     use futures::executor;
-    use tokio::prelude::*;
 
     let mut vm = VM::new(Bytecode::new(vec![vec![]]));
 
@@ -346,7 +346,7 @@ fn test_fork() {
     use crate::exec;
     use futures::future;
 
-    let exec = exec::Exec::new();
+    let mut exec = exec::Exec::new();
 
     let mut vm = VM::new(Bytecode::new(vec![vec![]]));
 
@@ -364,7 +364,7 @@ fn test_fork2() {
     use crate::exec;
     use crate::exec::ExecHandle;
     use std::time::Duration;
-    use tokio::timer::Timeout;
+    use tokio::time;
 
     let dur = Duration::from_millis(1000);
 
@@ -392,14 +392,16 @@ fn test_fork2() {
 
     ans.push(
         exec.runtime
-            .block_on(Timeout::new(test_handler.receive(), dur))
+            .block_on(async { time::timeout(dur, test_handler.receive()).await })
             .unwrap()
             .unwrap(),
     );
 
+    println!("{:?}", ans);
+
     ans.push(
         exec.runtime
-            .block_on(Timeout::new(test_handler.receive(), dur))
+            .block_on(async { time::timeout(dur, test_handler.receive()).await })
             .unwrap()
             .unwrap(),
     );

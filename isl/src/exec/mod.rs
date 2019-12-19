@@ -4,18 +4,20 @@
 use crate::data;
 use crate::data::Literal;
 use crate::errors::*;
+use crate::exec::router::router;
+use crate::exec::router::RouterChan;
 use crate::vm;
 use async_trait::async_trait;
 use futures::channel::mpsc;
 use futures::future::{self, Future, FutureExt};
 use futures::stream::StreamExt;
-use std::collections::HashMap;
 use std::fmt;
 use std::pin::Pin;
 use tokio::runtime::Runtime;
 
-/// A channel to the message router.
-pub type RouterChan = mpsc::Sender<RouterMessage>;
+pub mod router;
+
+pub use crate::exec::router::RouterMessage;
 
 /// A trait for interfacing between a [`vm::VM`] and its execution environment.
 #[async_trait]
@@ -28,21 +30,6 @@ pub trait ExecHandle: Send + Sync + fmt::Debug {
     fn spawn(&mut self, vm: vm::VM) -> Result<data::Pid>;
     /// Asynchronously receive a Literal from your inbox.
     async fn receive(&mut self) -> Option<Literal>;
-}
-
-type RouterState = HashMap<data::Pid, mpsc::Sender<Literal>>;
-
-/// Messages you can send to the router.
-#[derive(Debug)]
-pub enum RouterMessage {
-    /// Deregister a Pid.
-    Close(data::Pid),
-    /// Register a Pid with a Sender channel.
-    Register(data::Pid, mpsc::Sender<Literal>),
-    /// Send some data to the channel associated with a Pid.
-    Send(data::Pid, Literal),
-    /// Safely close the router once all other handlers are dropped..
-    Quit,
 }
 
 /// Represents a handle on a Router.
@@ -63,7 +50,7 @@ impl RouterHandle {
 
         RouterHandle {
             pid,
-            rx: rx,
+            rx,
             router: chan,
         }
     }
@@ -118,64 +105,6 @@ impl Drop for RouterHandle {
             eprintln!("Error encountered while closing RouterHandle: {:?}", e);
         }
     }
-}
-
-/// Spawn a router on the runtime.
-///
-/// Routers respond to router messages sent on the sender channel this function returns.
-pub fn router(runtime: &mut Runtime) -> mpsc::Sender<RouterMessage> {
-    let debug = false;
-    let (tx, rx) = mpsc::channel::<RouterMessage>(10);
-
-    let f = async move || {
-        let mut rx = rx;
-        let mut state = RouterState::new();
-        let mut quitting = false;
-
-        loop {
-            if quitting && state.is_empty() {
-                break;
-            }
-
-            let msg = rx.next().await;
-
-            if debug {
-                println!("Recieved message {:?}", msg);
-            }
-
-            match msg {
-                None => break,
-                Some(RouterMessage::Close(p)) => {
-                    state.remove(&p);
-                }
-                Some(RouterMessage::Register(p, tx)) => {
-                    state.insert(p, tx);
-                }
-                Some(RouterMessage::Send(p, l)) => {
-                    //state.get_mut(&p).unwrap(),
-                    if let Some(chan) = state.get_mut(&p) {
-                        if let Err(e) = chan.try_send(l) {
-                            eprintln!("Attempted to send on closed channel {:?}, but encountered error: {:?}", p, e);
-                            state.remove(&p);
-                        }
-                    } else {
-                        eprintln!("Attempted to send to non-existant pid {:?}: {:?}", p, l)
-                    }
-                }
-                Some(RouterMessage::Quit) => quitting = true,
-            };
-        }
-
-        if debug {
-            println!("Router finished (quitting: {:?}): {:?}", quitting, state);
-        }
-
-        ()
-    };
-
-    runtime.spawn(f());
-
-    tx
 }
 
 fn exec_future(
