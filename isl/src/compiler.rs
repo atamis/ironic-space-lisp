@@ -9,8 +9,8 @@ use crate::ast::passes::local::visitors::LocalASTVisitor;
 use crate::ast::passes::local::visitors::LocalDefVisitor;
 use crate::ast::passes::local::GlobalDef;
 use crate::ast::passes::local::LocalAST;
-use crate::data::Keyword;
 use crate::data::Literal;
+use crate::data::Symbol;
 use crate::errors::*;
 use crate::vm::bytecode::Bytecode;
 use crate::vm::bytecode::Chunk;
@@ -61,7 +61,7 @@ pub enum IrOp {
 pub struct Compiler;
 
 impl visitors::GlobalDefVisitor<IrChunk> for Compiler {
-    fn visit_globaldef(&mut self, name: &Keyword, value: &LocalAST) -> Result<IrChunk> {
+    fn visit_globaldef(&mut self, name: &Symbol, value: &LocalAST) -> Result<IrChunk> {
         let mut body_chunk = self.visit(value)?;
 
         body_chunk.push(IrOp::Lit(name.clone().into()));
@@ -161,8 +161,8 @@ impl visitors::LocalASTVisitor<IrChunk> for Compiler {
         Ok(chunk)
     }
 
-    fn globalvar_expr(&mut self, name: &Keyword) -> Result<IrChunk> {
-        Ok(vec![IrOp::Lit(Literal::Keyword(name.clone())), IrOp::Load])
+    fn globalvar_expr(&mut self, name: &Symbol) -> Result<IrChunk> {
+        Ok(vec![IrOp::Lit(Literal::Symbol(name.clone())), IrOp::Load])
     }
 
     fn localvar_expr(&mut self, index: usize) -> Result<IrChunk> {
@@ -240,7 +240,7 @@ impl visitors::LocalASTVisitor<IrChunk> for Compiler {
 impl visitors::LLASTVisitor<IrChunk> for Compiler {
     fn visit_local_function(
         &mut self,
-        args: &[Keyword],
+        args: &[Symbol],
         body: &Rc<LocalAST>,
         entry: bool,
     ) -> Result<IrChunk> {

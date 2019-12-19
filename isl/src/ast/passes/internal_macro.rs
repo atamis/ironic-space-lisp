@@ -11,8 +11,8 @@ use crate::ast::Def;
 use crate::ast::DefVisitor;
 use crate::ast::AST;
 use crate::data;
-use crate::data::Keyword;
 use crate::data::Literal;
+use crate::data::Symbol;
 use crate::errors::*;
 use crate::util::*;
 use std::rc::Rc;
@@ -42,7 +42,7 @@ impl Pass {
 
     fn condify(&mut self, mut terms: Vec<(AST, AST)>) -> Result<AST> {
         if terms.is_empty() {
-            Ok(AST::Value(Literal::Keyword(
+            Ok(AST::Value(Literal::Symbol(
                 "incomplete-cond-use-true".to_string(),
             )))
         } else {
@@ -136,14 +136,14 @@ impl ASTVisitor<AST> for Pass {
         Ok(AST::Do(new_exprs))
     }
 
-    fn lambda_expr(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<AST> {
+    fn lambda_expr(&mut self, args: &[Symbol], body: &Rc<AST>) -> Result<AST> {
         Ok(AST::Lambda {
             args: args.to_vec(),
             body: Rc::new(self.visit(body)?),
         })
     }
 
-    fn var_expr(&mut self, k: &Keyword) -> Result<AST> {
+    fn var_expr(&mut self, k: &Symbol) -> Result<AST> {
         Ok(AST::Var(k.clone()))
     }
 
@@ -221,7 +221,7 @@ mod tests {
                 els: Rc::new(AST::If {
                     pred: Rc::new(n(3)),
                     then: Rc::new(n(4)),
-                    els: Rc::new(AST::Value(Literal::Keyword(
+                    els: Rc::new(AST::Value(Literal::Symbol(
                         "incomplete-cond-use-true".to_string()
                     )))
                 })

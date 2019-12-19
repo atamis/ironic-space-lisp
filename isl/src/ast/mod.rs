@@ -10,8 +10,8 @@ use im::vector::Vector;
 use std::rc::Rc;
 
 use crate::data;
-use crate::data::Keyword;
 use crate::data::Literal;
+use crate::data::Symbol;
 use crate::env;
 use crate::errors::*;
 
@@ -35,10 +35,10 @@ pub enum AST {
         then: Rc<AST>,
         /// The false branch.
         ///
-        /// This would be `else`, but that's a reserved keyword.
+        /// This would be `else`, but that's a reserved Symbol.
         els: Rc<AST>,
     },
-    /// A single def expression, defining a keyword based on a body.
+    /// A single def expression, defining a Symbol based on a body.
     Def(Rc<Def>),
     /// A let expression, allowing for local bindings in a body.
     Let {
@@ -52,12 +52,12 @@ pub enum AST {
     /// Lambda expression representing a function, having args and a body.
     Lambda {
         /// A list of the argument names.
-        args: Vec<Keyword>,
+        args: Vec<Symbol>,
         /// The body.
         body: Rc<AST>,
     },
     /// A variable ref expression.
-    Var(Keyword),
+    Var(Symbol),
     /// A function application expression.
     Application {
         /// The function expression.
@@ -71,7 +71,7 @@ pub enum AST {
 #[derive(Debug, PartialEq)]
 pub struct Def {
     /// The name of the `Def`.
-    pub name: Keyword,
+    pub name: Symbol,
     /// The [`AST`] representing the body of the `Def`.
     pub value: AST,
 }
@@ -184,11 +184,11 @@ pub trait ASTVisitor<R> {
     fn do_expr(&mut self, exprs: &[AST]) -> Result<R>;
 
     /// Callback for `AST::Lambda`, passing in a slice of the arguments and the body.
-    fn lambda_expr(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<R>;
+    fn lambda_expr(&mut self, args: &[Symbol], body: &Rc<AST>) -> Result<R>;
 
     /// Callback for `AST::Var`, passing in the name.
     #[allow(clippy::ptr_arg)]
-    fn var_expr(&mut self, k: &Keyword) -> Result<R>;
+    fn var_expr(&mut self, k: &Symbol) -> Result<R>;
 
     /// Callback for `AST::Application`, passing in the function, and a slice of the arguments.
     fn application_expr(&mut self, f: &Rc<AST>, args: &[AST]) -> Result<R>;
@@ -240,7 +240,7 @@ pub fn parse(e: &Literal) -> Result<AST> {
                 }
             }
         }
-        Literal::Keyword(k) => Ok(AST::Var(k.clone())),
+        Literal::Symbol(k) => Ok(AST::Var(k.clone())),
         Literal::Boolean(_) => Ok(AST::Value(e.clone())),
         Literal::Number(_) => Ok(AST::Value(e.clone())),
         Literal::Address(_) => Err(err_msg("Address literals not supported")),
@@ -250,7 +250,7 @@ pub fn parse(e: &Literal) -> Result<AST> {
 }
 
 fn parse_compound(first: &Literal, rest: &Vector<Literal>) -> Result<AST> {
-    let r = if let Literal::Keyword(s) = first {
+    let r = if let Literal::Symbol(s) = first {
         match s.as_ref() {
             "if" => parse_if(first, rest).context("Parsing let expr"),
             "def" => parse_def_expr(first, rest).context("Parsing def expr"),
@@ -287,10 +287,10 @@ fn parse_def_partial(v: &Vector<Literal>) -> Result<Def> {
 
     let name;
 
-    if let Literal::Keyword(ref s) = v[0] {
+    if let Literal::Symbol(ref s) = v[0] {
         name = s.clone();
     } else {
-        return Err(err_msg("first term of def must be keyword"));
+        return Err(err_msg("first term of def must be Symbol"));
     }
 
     let v = parse(&v[1]).context("Second term of def must be valid AST")?;
@@ -380,7 +380,7 @@ fn parse_lambda(_first: &Literal, rest: &Vector<Literal>) -> Result<AST> {
         .ok_or_else(|| err_msg("lambda requires an argument list, (lambda (args*) body)"))?
         .ensure_list()?
         .iter()
-        .map(Literal::ensure_keyword)
+        .map(Literal::ensure_Symbol)
         .collect::<Result<_>>()?;
 
     let body = rest
@@ -415,7 +415,7 @@ fn parse_quasiquote(_first: &Literal, rest: &Vector<Literal>) -> Result<AST> {
 }
 
 fn dynamic_quasiquote(a: &Literal) -> Result<AST> {
-    let uq = Literal::Keyword("unquote".to_string());
+    let uq = Literal::Symbol("unquote".to_string());
     // Is dynamic structure necessary
     if a.contains(&uq) {
         if let Literal::List(l) = a {

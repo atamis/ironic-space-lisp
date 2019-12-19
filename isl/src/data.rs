@@ -1,6 +1,6 @@
 //! Runtime data definitions
 //!
-//! For the singleton `Literal` structs (Number, Boolean, Address, keyword, List),
+//! For the singleton `Literal` structs (Number, Boolean, Address, Symbol, List),
 //! this module implemented `From` on the base Rust data types to ease literal
 //! construction.
 
@@ -17,11 +17,11 @@ use std::fmt;
 /// be used in future interpreter implementations.
 pub type Address = (usize, usize);
 
-/// Type alias for base keyword type.
+/// Type alias for base Symbol type.
 ///
-/// `Strings` are not efficient keywords, so in theory, this alias could be used to
+/// `Strings` are not efficient Symbols, so in theory, this alias could be used to
 /// replace `Strings` with some other data structure.
-pub type Keyword = String;
+pub type Symbol = String;
 
 /// Mutate an address to increase the second value (the operation index) by 1.
 pub fn address_inc(a: &mut Address) {
@@ -52,8 +52,8 @@ pub enum Literal {
     /// An `[Address]`, or a tuple of 2 `usize`, representing an executable block of code.
     Address(Address),
 
-    /// A keyword, stored as a string.
-    Keyword(Keyword),
+    /// A Symbol, stored as a string.
+    Symbol(Symbol),
 
     /// A list, using the immutable [`Vector`](im::vector::Vector) data structure.
     List(Vector<Literal>),
@@ -77,7 +77,7 @@ impl fmt::Debug for Literal {
             Literal::Boolean(true) => write!(f, "#t"),
             Literal::Boolean(false) => write!(f, "#f"),
             Literal::Address(a) => write!(f, "A({:?})", a),
-            Literal::Keyword(k) => write!(f, ":{:}", k),
+            Literal::Symbol(k) => write!(f, ":{:}", k),
             Literal::List(ref v) => write!(f, "{:?}", v),
             Literal::Closure(arity, address) => write!(f, "{:?}/{:}", address, arity),
             Literal::Pid(Pid(n)) => write!(f, "<{}>", n),
@@ -86,12 +86,12 @@ impl fmt::Debug for Literal {
 }
 
 impl Literal {
-    /// Make a new keyword from something that can be turned into a `String`
-    pub fn new_keyword<T>(s: T) -> Literal
+    /// Make a new Symbol from something that can be turned into a `String`
+    pub fn new_Symbol<T>(s: T) -> Literal
     where
         T: Into<String>,
     {
-        Literal::Keyword(s.into())
+        Literal::Symbol(s.into())
     }
 
     /// Is something truthy? Used by if expressions and [ `JumpCond` ](super::vm::op::Op)
@@ -143,12 +143,12 @@ impl Literal {
         }
     }
 
-    /// Attempt to destructure a [`Literal`] into a keyword, returning `Err()` if not possible.
-    pub fn ensure_keyword(&self) -> Result<Keyword> {
-        if let Literal::Keyword(a) = self {
+    /// Attempt to destructure a [`Literal`] into a Symbol, returning `Err()` if not possible.
+    pub fn ensure_Symbol(&self) -> Result<Symbol> {
+        if let Literal::Symbol(a) = self {
             Ok(a.clone())
         } else {
-            Err(format_err!("Type error, expected keyword, got {:?}", self))
+            Err(format_err!("Type error, expected Symbol, got {:?}", self))
         }
     }
 
@@ -199,13 +199,13 @@ impl From<i64> for Literal {
 
 impl From<String> for Literal {
     fn from(s: String) -> Literal {
-        Literal::new_keyword(s)
+        Literal::new_Symbol(s)
     }
 }
 
 impl<'a> From<&'a str> for Literal {
     fn from(s: &str) -> Literal {
-        Literal::new_keyword(s)
+        Literal::new_Symbol(s)
     }
 }
 
@@ -288,7 +288,7 @@ mod tests {
 
         assert!(list(vec![Literal::Number(1)]).contains(&Literal::Number(1)));
         assert!(list(vec![
-            Literal::Keyword("test".to_string()),
+            Literal::Symbol("test".to_string()),
             Literal::Number(1)
         ])
         .contains(&Literal::Number(1)));
@@ -302,8 +302,8 @@ mod tests {
         ])])])])])
         .contains(&Literal::Number(1)));
 
-        assert!(list(vec![Literal::Keyword("test".to_string())])
-            .contains(&Literal::Keyword("test".to_string())))
+        assert!(list(vec![Literal::Symbol("test".to_string())])
+            .contains(&Literal::Symbol("test".to_string())))
     }
 
     #[test]
@@ -312,10 +312,10 @@ mod tests {
         assert_eq!(a1, Literal::Number(1));
 
         let a2: Literal = "test".into();
-        assert_eq!(a2, Literal::Keyword("test".to_string()));
+        assert_eq!(a2, Literal::Symbol("test".to_string()));
 
         let a3: Literal = ("test".to_string()).into();
-        assert_eq!(a3, Literal::Keyword("test".to_string()));
+        assert_eq!(a3, Literal::Symbol("test".to_string()));
 
         let a4: Literal = true.into();
         assert_eq!(a4, Literal::Boolean(true));

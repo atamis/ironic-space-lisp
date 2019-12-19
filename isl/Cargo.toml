@@ -7,14 +7,13 @@ edition = '2018'
 
 [dependencies]
 failure = "0.1.2"
-im = "12.1.0"
+im = "14.1.0"
 rustyline = "4.0.0"
 clap = "~2.32"
 derive_is_enum_variant = "0.1.1"
 nom = "^4.0"
 rand = "0.5.5"
 edn = "0.3"
-rpds = "0.7"
 
 # Semi-lockless hashmap.
 #chashmap = "2.2.0

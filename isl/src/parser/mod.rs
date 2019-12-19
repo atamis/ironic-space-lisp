@@ -113,7 +113,7 @@ impl Parser {
 // }
 
 pub fn parse(input: &str) -> Result<Vec<data::Literal>> {
-    Ok(read_all(input)?.iter().map(edn_to_isl).collect())
+    Ok(read_all(input)?.iter().map(Literal::from).collect())
 }
 
 fn read_all(input: &str) -> Result<Vec<edn::Value>> {
@@ -127,12 +127,16 @@ fn read_all(input: &str) -> Result<Vec<edn::Value>> {
     Ok(out)
 }
 
-fn edn_to_isl(v: &edn::Value) -> data::Literal {
-    use edn::Value;
+impl From<&edn::Value> for Literal {
+    fn from(v: &edn::Value) -> Literal {
+        use edn::Value;
 
-    match v {
-        Value::Integer(n) => Literal::Number(*n),
-        _ => panic!("Not implemented"),
+        match v {
+            Value::Integer(n) => Literal::Number(*n),
+            Value::Symbol(s) => Literal::Symbol(s.to_string()),
+            Value::List(v) => Literal::List(v.iter().map(|x| x.into()).collect::<im::Vector<_>>()),
+            _ => panic!(format!("Not implemented: {:?}", v)),
+        }
     }
 }
 

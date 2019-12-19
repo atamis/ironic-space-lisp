@@ -30,7 +30,7 @@ pub fn empty_vm() -> vm::VM {
 fn make_double(lits: &[data::Literal], e: &env::Env) -> Result<bytecode::Bytecode> {
     let mut d = Vec::with_capacity(lits.len() + 1);
     let mut new_lits: Vec<data::Literal> = lits.to_vec();
-    d.push(data::Literal::Keyword("do".to_string()));
+    d.push(data::Literal::Symbol("do".to_string()));
     d.append(&mut new_lits);
 
     // (eval (quote (do *lits)) '())

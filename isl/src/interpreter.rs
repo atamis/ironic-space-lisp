@@ -8,8 +8,8 @@ use crate::ast::Def;
 use crate::ast::DefVisitor;
 use crate::ast::AST;
 use crate::data::Address;
-use crate::data::Keyword;
 use crate::data::Literal;
+use crate::data::Symbol;
 use crate::env::Env;
 use crate::errors::*;
 use crate::syscall;
@@ -88,11 +88,11 @@ impl<'a, 'b> ASTVisitor<Literal> for Context<'a, 'b> {
             .ok_or_else(|| err_msg("do expressions can't be empty"))?)
     }
 
-    fn lambda_expr(&mut self, _args: &[Keyword], _body: &Rc<AST>) -> Result<Literal> {
+    fn lambda_expr(&mut self, _args: &[Symbol], _body: &Rc<AST>) -> Result<Literal> {
         Err(err_msg("Not implemented"))
     }
 
-    fn var_expr(&mut self, k: &Keyword) -> Result<Literal> {
+    fn var_expr(&mut self, k: &Symbol) -> Result<Literal> {
         let r = self
             .env
             .get(k)

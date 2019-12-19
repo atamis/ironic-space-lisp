@@ -7,8 +7,8 @@
 #![allow(clippy::needless_pass_by_value)]
 
 use crate::data::Address;
-use crate::data::Keyword;
 use crate::data::Literal;
+use crate::data::Symbol;
 use crate::env;
 use crate::errors::*;
 use std::collections::HashMap;
@@ -53,11 +53,11 @@ impl Syscall {
 /// Produces a list of names and syscalls.
 pub trait SyscallFactory {
     /// Returns a list associating a name with a syscall function pointer.
-    fn syscalls(&self) -> Vec<(Keyword, Syscall)>;
+    fn syscalls(&self) -> Vec<(Symbol, Syscall)>;
 }
 
 /// Convert static strings to String structs. Useful for naming syscalls after string literals.
-fn destatic(v: Vec<(&'static str, Syscall)>) -> Vec<(Keyword, Syscall)> {
+fn destatic(v: Vec<(&'static str, Syscall)>) -> Vec<(Symbol, Syscall)> {
     v.into_iter().map(|(k, s)| (k.to_string(), s)).collect()
 }
 

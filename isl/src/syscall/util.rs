@@ -1,6 +1,6 @@
 //! Holds general utility syscalls.
 //!
-//! Registers syscalls `list?, keyword?, print, or, and, even?, odd?, error`
+//! Registers syscalls `list?, Symbol?, print, or, and, even?, odd?, error`
 use crate::data::Literal;
 use crate::errors::*;
 use crate::syscall::destatic;
@@ -22,7 +22,7 @@ impl SyscallFactory for Factory {
     fn syscalls(&self) -> Vec<(String, Syscall)> {
         destatic(vec![
             ("list?", Syscall::A1(Box::new(list_pred))),
-            ("keyword?", Syscall::A1(Box::new(keyword_pred))),
+            ("symbol?", Syscall::A1(Box::new(Symbol_pred))),
             ("print", Syscall::A1(Box::new(println))),
             ("or", Syscall::A2(Box::new(or))),
             ("and", Syscall::A2(Box::new(and))),
@@ -38,8 +38,8 @@ fn list_pred(a: Literal) -> Result<Literal> {
     Ok(Literal::Boolean(a.is_list()))
 }
 
-fn keyword_pred(a: Literal) -> Result<Literal> {
-    Ok(Literal::Boolean(a.is_keyword()))
+fn Symbol_pred(a: Literal) -> Result<Literal> {
+    Ok(Literal::Boolean(a.is_symbol()))
 }
 
 fn println(a: Literal) -> Result<Literal> {
@@ -92,12 +92,12 @@ mod tests {
     }
 
     #[test]
-    fn test_keyword_pred() {
+    fn test_Symbol_pred() {
         assert_eq!(
-            keyword_pred(Literal::Keyword("test".to_string())).unwrap(),
+            Symbol_pred(Literal::Symbol("test".to_string())).unwrap(),
             mytrue()
         );
-        assert_eq!(keyword_pred(Literal::Number(1)).unwrap(), myfalse());
+        assert_eq!(Symbol_pred(Literal::Number(1)).unwrap(), myfalse());
     }
 
     #[test]
