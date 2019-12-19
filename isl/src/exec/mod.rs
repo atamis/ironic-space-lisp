@@ -51,7 +51,7 @@ impl RouterHandle {
 
         RouterHandle {
             pid,
-            rx: rx,
+            rx,
             router: chan,
         }
     }

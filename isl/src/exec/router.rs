@@ -1,7 +1,8 @@
- use tokio::runtime::Runtime;
+//! Contains router runtime code including channels,
+//! valid router messages, and the router spawning function.
+use tokio::runtime::Runtime;
 use crate::data::Literal;
 use crate::data;
-use futures::future::Future;
 use std::collections::HashMap;
 use futures::channel::mpsc;
 use futures::future::select;
@@ -57,8 +58,7 @@ impl Router {
         loop {
             let m = if let Some(m) = self.queue.pop_front() {
                 Some(m)
-            } else {
-                if self.is_done() {
+            } else if self.is_done() {
                     // 2s timeout of no messages before quiting
                     let t = tokio_timer::delay_for(Duration::from_millis(2000));
 
@@ -68,8 +68,7 @@ impl Router {
                     }
                 } else {
                     self.rx.next().await
-                }
-            };
+                } ;
 
             if self.debug {
                 println!("Recieved message {:?}", m);

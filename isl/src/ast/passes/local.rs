@@ -147,7 +147,7 @@ impl FunctionLocalizer {
     }
 
     pub fn get_keyword(&mut self, k: &str) -> Option<usize> {
-        self.names.get(k).map(|i| *i)
+        self.names.get(k).copied()
     }
 }
 

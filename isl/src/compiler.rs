@@ -179,12 +179,12 @@ impl visitors::LocalASTVisitor<IrChunk> for Compiler {
 
         let arg_check = |name, arity| {
             if args.len() != arity {
-                return Err(err_msg(format!(
+                Err(err_msg(format!(
                     "{:} takes {:} arguments, given {:}",
                     name,
                     arity,
                     args.len()
-                )));
+                )))
             } else {
                 Ok(())
             }
