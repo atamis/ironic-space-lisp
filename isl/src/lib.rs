@@ -27,7 +27,6 @@ extern crate async_trait;
 extern crate futures;
 extern crate rand;
 extern crate tokio;
-extern crate tokio_timer;
 
 pub mod ast;
 pub mod compiler;

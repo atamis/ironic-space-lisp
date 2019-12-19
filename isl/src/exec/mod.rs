@@ -4,6 +4,8 @@
 use crate::data;
 use crate::data::Literal;
 use crate::errors::*;
+use crate::exec::router::router;
+use crate::exec::router::RouterChan;
 use crate::vm;
 use async_trait::async_trait;
 use futures::channel::mpsc;
@@ -12,8 +14,6 @@ use futures::stream::StreamExt;
 use std::fmt;
 use std::pin::Pin;
 use tokio::runtime::Runtime;
-use crate::exec::router::router;
-use crate::exec::router::RouterChan;
 
 pub mod router;
 
@@ -31,7 +31,6 @@ pub trait ExecHandle: Send + Sync + fmt::Debug {
     /// Asynchronously receive a Literal from your inbox.
     async fn receive(&mut self) -> Option<Literal>;
 }
-
 
 /// Represents a handle on a Router.
 ///
@@ -107,7 +106,6 @@ impl Drop for RouterHandle {
         }
     }
 }
-
 
 fn exec_future(
     mut vm: vm::VM,

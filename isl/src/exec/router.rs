@@ -1,17 +1,17 @@
 //! Contains router runtime code including channels,
 //! valid router messages, and the router spawning function.
-use tokio::runtime::Runtime;
-use crate::data::Literal;
 use crate::data;
-use std::collections::HashMap;
+use crate::data::Literal;
+use crate::futures::StreamExt;
 use futures::channel::mpsc;
 use futures::future::select;
 use futures::future::Either;
-use crate::futures::StreamExt;
+use petgraph::graphmap::DiGraphMap;
+use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::time::Duration;
-use tokio_timer;
-use petgraph::graphmap::DiGraphMap;
+use tokio::runtime::Runtime;
+use tokio::time;
 
 /// A channel to the message router.
 pub type RouterChan = mpsc::Sender<RouterMessage>;
@@ -34,7 +34,7 @@ struct Router {
     rx: mpsc::Receiver<RouterMessage>,
     queue: VecDeque<RouterMessage>,
     watches: DiGraphMap<data::Pid, ()>,
-    state:  RouterState,
+    state: RouterState,
     quitting: bool,
     debug: bool,
 }
@@ -59,16 +59,16 @@ impl Router {
             let m = if let Some(m) = self.queue.pop_front() {
                 Some(m)
             } else if self.is_done() {
-                    // 2s timeout of no messages before quiting
-                    let t = tokio_timer::delay_for(Duration::from_millis(2000));
+                // 2s timeout of no messages before quiting
+                let t = time::delay_for(Duration::from_millis(2000));
 
-                    match select(self.rx.next(), t).await {
-                        Either::Left((m, _)) => m,
-                        Either::Right((_, _)) => break,
-                    }
-                } else {
-                    self.rx.next().await
-                } ;
+                match select(self.rx.next(), t).await {
+                    Either::Left((m, _)) => m,
+                    Either::Right((_, _)) => break,
+                }
+            } else {
+                self.rx.next().await
+            };
 
             if self.debug {
                 println!("Recieved message {:?}", m);
@@ -77,14 +77,17 @@ impl Router {
             match m {
                 None => break,
                 Some(RouterMessage::Close(p)) => self.close(p),
-                Some(RouterMessage::Register(p, tx)) => self.register(p, tx) ,
+                Some(RouterMessage::Register(p, tx)) => self.register(p, tx),
                 Some(RouterMessage::Send(p, l)) => self.send(p, l),
                 Some(RouterMessage::Quit) => self.quit(),
             };
         }
 
         if self.debug {
-            println!("Router finished (quitting: {:?}): {:?}", self.quitting, self.state);
+            println!(
+                "Router finished (quitting: {:?}): {:?}",
+                self.quitting, self.state
+            );
         }
     }
 
@@ -99,7 +102,10 @@ impl Router {
     fn send(&mut self, p: data::Pid, l: data::Literal) {
         if let Some(chan) = self.state.get_mut(&p) {
             if let Err(e) = chan.try_send(l) {
-                eprintln!("Attempted to send on closed channel {:?}, but encountered error: {:?}", p, e);
+                eprintln!(
+                    "Attempted to send on closed channel {:?}, but encountered error: {:?}",
+                    p, e
+                );
                 self.state.remove(&p);
             }
         } else {
