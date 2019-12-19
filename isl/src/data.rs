@@ -48,13 +48,17 @@ impl Pid {
 /// Enum representing valid runtime values for Ironic Space Lisp.
 #[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash, is_enum_variant)]
 pub enum Literal {
+    /// Nil, styled `nil`, representing no value.
     Nil,
 
     /// Boolean, styled `true` or `false`.
     Boolean(bool),
 
+    /// A string, styled surrounded by double quotes, representing a string of
+    /// characters.
     String(String),
 
+    /// A single character.
     Char(char),
 
     /// A Symbol, stored as a string.
@@ -66,17 +70,27 @@ pub enum Literal {
     /// Signed 64 bit number.
     Number(i64), // TODO Integer
 
+    /// A floating point number (`f64`), wrapped in an
+    /// [`OrderedFloat`](ordered_float::OrderedFloat) to support ordering.
     Float(OrderedFloat<f64>),
 
     /// A list, using the immutable [`Vector`](im::vector::Vector) data structure.
     List(Vector<Literal>),
 
+    /// A vector, using the immutable [`Vector`](im::vector::Vector) data
+    /// structure.
     Vector(Vector<Literal>),
 
+    /// A map, using the immutable [`OrdMap`](im::OrdMap) data structure. Maps
+    /// `Literal` to `Literal`.
     Map(OrdMap<Literal, Literal>),
 
+    /// A set, using the immutable [`OrdSet`](im::OrdSet) data structure. Values
+    /// must be unique.
     Set(OrdSet<Literal>),
 
+    /// A tagged value, with the first argument being the tag and the second the
+    /// literal itself.
     Tagged(String, Box<Literal>),
 
     /// An `[Address]`, or a tuple of 2 `usize`, representing an executable block of code.
