@@ -35,7 +35,7 @@ impl SyscallFactory for Factory {
 }
 
 fn len(a: Literal) -> Result<Literal> {
-    Ok(Literal::Number(a.ensure_list()?.len() as u32))
+    Ok(Literal::Number(a.ensure_list()?.len() as i64))
 }
 
 // improper lists banned BTFO

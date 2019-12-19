@@ -21,11 +21,10 @@ extern crate rustyline;
 extern crate test;
 #[macro_use]
 extern crate derive_is_enum_variant;
-#[macro_use]
-extern crate nom;
 extern crate async_trait;
 extern crate edn;
 extern crate futures;
+extern crate nom;
 extern crate rand;
 extern crate tokio;
 

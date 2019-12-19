@@ -72,11 +72,6 @@
 use crate::data;
 use crate::data::Literal;
 use crate::errors::*;
-use nom::types::CompleteStr;
-use nom::IResult;
-use nom::{anychar, digit};
-use std::fmt::Debug;
-use std::str::FromStr;
 
 /// Legacy struct, delegates to [`parser::parse`](parse)
 pub struct Parser();
@@ -125,32 +120,23 @@ fn read_all(input: &str) -> Result<Vec<edn::Value>> {
     let mut parser = edn::parser::Parser::new(input);
     let mut out = vec![];
 
-    loop {
-        if let Some(r) = parser.read() {
-            out.push(
-                r.map_err(|e| format_err!("Parser error [{}:{}]: {}", e.lo, e.hi, e.message))?,
-            );
-        } else {
-            break;
-        }
+    while let Some(r) = parser.read() {
+        out.push(r.map_err(|e| format_err!("Parser error [{}:{}]: {}", e.lo, e.hi, e.message))?);
     }
 
     Ok(out)
 }
 
 fn edn_to_isl(v: &edn::Value) -> data::Literal {
-    use data::Literal;
     use edn::Value;
 
     match v {
-        Value::Integer(n) => Literal::Number(n),
+        Value::Integer(n) => Literal::Number(*n),
         _ => panic!("Not implemented"),
     }
 }
 
-//pub fn parse(input: &str) -> Result<Vec<data::Literal>> {}
-
-fn cstr(s: &str) -> CompleteStr {
+/*fn cstr(s: &str) -> CompleteStr {
     CompleteStr(s)
 }
 
@@ -403,3 +389,4 @@ mod tests {
         );
     }
 }
+*/

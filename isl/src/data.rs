@@ -191,8 +191,8 @@ impl Literal {
     }
 }
 
-impl From<u32> for Literal {
-    fn from(n: u32) -> Literal {
+impl From<i64> for Literal {
+    fn from(n: i64) -> Literal {
         Literal::Number(n)
     }
 }
@@ -308,7 +308,7 @@ mod tests {
 
     #[test]
     fn test_from() {
-        let a1: Literal = (1 as u32).into();
+        let a1: Literal = (1 as i64).into();
         assert_eq!(a1, Literal::Number(1));
 
         let a2: Literal = "test".into();

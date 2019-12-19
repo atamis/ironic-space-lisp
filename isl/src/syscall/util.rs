@@ -69,7 +69,7 @@ fn vm_error(a: Literal) -> Result<Literal> {
 
 fn size(a: Literal) -> Result<Literal> {
     use crate::size::DataSize;
-    Ok(Literal::Number(a.data_size() as u32))
+    Ok(Literal::Number(a.data_size() as i64))
 }
 
 #[cfg(test)]

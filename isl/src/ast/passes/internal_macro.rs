@@ -188,7 +188,7 @@ mod tests {
         pass(&ast)
     }
 
-    fn n(n: u32) -> AST {
+    fn n(n: i64) -> AST {
         AST::Value(Literal::Number(n))
     }
 
