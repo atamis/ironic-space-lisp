@@ -136,6 +136,9 @@ impl From<&edn::Value> for Literal {
             Value::Integer(n) => Literal::Number(*n),
             Value::Symbol(s) => Literal::Symbol(s.to_string()),
             Value::List(v) => Literal::List(v.iter().map(|x| x.into()).collect::<im::Vector<_>>()),
+            Value::Vector(v) => {
+                Literal::Vector(v.iter().map(|x| x.into()).collect::<im::Vector<_>>())
+            }
             _ => panic!(format!("Not implemented: {:?}", v)),
         }
     }

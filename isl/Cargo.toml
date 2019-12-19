@@ -15,6 +15,7 @@ nom = "^4.0"
 rand = "0.5.5"
 #edn = { path = "../../edn.rs/"}
 edn = { git = "https://github.com/atamis/edn.rs", branch = "master" }
+ordered-float = "0.4.0"
 
 # Semi-lockless hashmap.
 #chashmap = "2.2.0

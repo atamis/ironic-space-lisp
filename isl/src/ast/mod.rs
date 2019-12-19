@@ -230,23 +230,61 @@ pub fn parse_multi(exprs: &[Literal]) -> Result<AST> {
 /// Parse raw sexprs ([`Literal`]) into an AST.
 pub fn parse(e: &Literal) -> Result<AST> {
     match e {
-        Literal::List(ref vec) => {
-            match vec.len() {
-                0 => Ok(AST::Value(vector![].into())), // TODO
-                1 => parse_compound(&vec[0], &Vector::new()),
-                _ => {
-                    let (first, rest) = vec.clone().split_at(1);
-                    parse_compound(&first[0], &rest)
-                }
+        Literal::List(ref vec) => match vec.len() {
+            0 => Ok(AST::Value(vector![].into())),
+            1 => parse_compound(&vec[0], &Vector::new()),
+            _ => {
+                let (first, rest) = vec.clone().split_at(1);
+                parse_compound(&first[0], &rest)
             }
-        }
-        Literal::Symbol(k) => Ok(AST::Var(k.clone())),
+        },
+        Literal::Nil => Ok(AST::Value(Literal::Nil)),
         Literal::Boolean(_) => Ok(AST::Value(e.clone())),
+        Literal::String(_) => Ok(AST::Value(e.clone())),
+        Literal::Char(_) => Ok(AST::Value(e.clone())),
+        Literal::Symbol(k) => Ok(AST::Var(k.clone())),
+        Literal::Keyword(_) => Ok(AST::Value(e.clone())),
         Literal::Number(_) => Ok(AST::Value(e.clone())),
+        Literal::Float(_) => Ok(AST::Value(e.clone())),
+        Literal::Vector(v) => parse_vector(v),
+        Literal::Map(m) => parse_map(m),
+        Literal::Set(s) => parse_set(s),
+        Literal::Tagged(_, v) => parse(v), // TODO
         Literal::Address(_) => Err(err_msg("Address literals not supported")),
         Literal::Closure(_, _) => Err(err_msg("Closure literals not supported")),
         Literal::Pid(_) => Err(err_msg("Pid literals are not supported")),
     }
+}
+
+fn parse_vector(v: &im::Vector<Literal>) -> Result<AST> {
+    let args: Vec<AST> = v.iter().map(parse).collect::<Result<Vec<AST>>>()?; // make sure there are no parse errors
+
+    return Ok(AST::Application {
+        f: Rc::new(AST::Var("vector".into())),
+        args,
+    });
+}
+
+fn parse_set(v: &im::OrdSet<Literal>) -> Result<AST> {
+    let args: Vec<AST> = v.iter().map(parse).collect::<Result<Vec<AST>>>()?; // make sure there are no parse errors
+
+    return Ok(AST::Application {
+        f: Rc::new(AST::Var("set".into())),
+        args,
+    });
+}
+
+fn parse_map(v: &im::OrdMap<Literal, Literal>) -> Result<AST> {
+    let args: Vec<AST> = v
+        .iter()
+        .flat_map(|(k, v)| vec![k, v])
+        .map(parse)
+        .collect::<Result<Vec<AST>>>()?; // make sure there are no parse errors
+
+    return Ok(AST::Application {
+        f: Rc::new(AST::Var("ord-map".into())),
+        args,
+    });
 }
 
 fn parse_compound(first: &Literal, rest: &Vector<Literal>) -> Result<AST> {

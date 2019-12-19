@@ -7,6 +7,11 @@
 use crate::errors::*;
 #[doc(hidden)]
 pub use im::vector::Vector;
+#[doc(hidden)]
+pub use im::OrdMap;
+#[doc(hidden)]
+pub use im::OrdSet;
+use ordered_float::OrderedFloat;
 use std::fmt;
 
 /// A data type used to represent a code location.
@@ -41,22 +46,41 @@ impl Pid {
 }
 
 /// Enum representing valid runtime values for Ironic Space Lisp.
-#[derive(Clone, Eq, PartialEq, is_enum_variant)]
+#[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash, is_enum_variant)]
 pub enum Literal {
-    /// Unsigned 32 bit number.
-    Number(i64),
+    Nil,
 
     /// Boolean, styled `true` or `false`.
     Boolean(bool),
 
-    /// An `[Address]`, or a tuple of 2 `usize`, representing an executable block of code.
-    Address(Address),
+    String(String),
+
+    Char(char),
 
     /// A Symbol, stored as a string.
     Symbol(Symbol),
 
+    /// A Symbol, stored as a string.
+    Keyword(Symbol),
+
+    /// Signed 64 bit number.
+    Number(i64), // TODO Integer
+
+    Float(OrderedFloat<f64>),
+
     /// A list, using the immutable [`Vector`](im::vector::Vector) data structure.
     List(Vector<Literal>),
+
+    Vector(Vector<Literal>),
+
+    Map(OrdMap<Literal, Literal>),
+
+    Set(OrdSet<Literal>),
+
+    Tagged(String, Box<Literal>),
+
+    /// An `[Address]`, or a tuple of 2 `usize`, representing an executable block of code.
+    Address(Address),
 
     /// A closure, an [`Address`] that includes an arity.
     Closure(usize, Address),
@@ -73,12 +97,68 @@ pub fn list(v: Vec<Literal>) -> Literal {
 impl fmt::Debug for Literal {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Literal::Number(n) => write!(f, "N({:?})", n),
+            Literal::Nil => write!(f, "nil"),
             Literal::Boolean(true) => write!(f, "true"),
             Literal::Boolean(false) => write!(f, "false"),
+            Literal::String(s) => write!(f, "{:?}", s),
+            Literal::Char(c) => write!(f, "\\{}", c),
+            Literal::Number(n) => write!(f, "N({:?})", n),
+            Literal::Float(fl) => write!(f, "F({:?})", fl.into_inner()),
             Literal::Address(a) => write!(f, "A({:?})", a),
-            Literal::Symbol(k) => write!(f, ":{:}", k),
-            Literal::List(ref v) => write!(f, "{:?}", v),
+            Literal::Symbol(s) => write!(f, "{:}", s),
+            Literal::Keyword(k) => write!(f, ":{:}", k),
+            Literal::List(ref v) => {
+                write!(f, "(")?;
+
+                for (idx, l) in v.iter().enumerate() {
+                    write!(f, "{:?}", l)?;
+                    if idx != v.len() - 1 {
+                        write!(f, " ")?;
+                    }
+                }
+
+                write!(f, ")")
+            }
+            Literal::Vector(ref v) => {
+                write!(f, "{:?}", v)?;
+                write!(f, "[")?;
+
+                for (idx, l) in v.iter().enumerate() {
+                    write!(f, "{:?}", l)?;
+                    if idx != v.len() - 1 {
+                        write!(f, " ")?;
+                    }
+                }
+
+                write!(f, "]")
+            }
+            Literal::Map(ref m) => {
+                write!(f, "{{")?;
+
+                for (idx, (k, v)) in m.iter().enumerate() {
+                    write!(f, "{:?} {:?},", k, v)?;
+
+                    if idx != m.len() - 1 {
+                        write!(f, " ")?;
+                    }
+                }
+
+                write!(f, "}}")
+            }
+            Literal::Set(ref s) => {
+                write!(f, "#{{")?;
+
+                for (idx, k) in s.iter().enumerate() {
+                    write!(f, "{:?}", k)?;
+
+                    if idx != s.len() - 1 {
+                        write!(f, " ")?;
+                    }
+                }
+
+                write!(f, "}}")
+            }
+            Literal::Tagged(t, v) => write!(f, "#{} {:?}", t, v),
             Literal::Closure(arity, address) => write!(f, "{:?}/{:}", address, arity),
             Literal::Pid(Pid(n)) => write!(f, "<{}>", n),
         }
