@@ -46,7 +46,7 @@ pub enum Literal {
     /// Unsigned 32 bit number.
     Number(i64),
 
-    /// Boolean, styled `#t` or `#f`.
+    /// Boolean, styled `true` or `false`.
     Boolean(bool),
 
     /// An `[Address]`, or a tuple of 2 `usize`, representing an executable block of code.
@@ -74,8 +74,8 @@ impl fmt::Debug for Literal {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Literal::Number(n) => write!(f, "N({:?})", n),
-            Literal::Boolean(true) => write!(f, "#t"),
-            Literal::Boolean(false) => write!(f, "#f"),
+            Literal::Boolean(true) => write!(f, "true"),
+            Literal::Boolean(false) => write!(f, "false"),
             Literal::Address(a) => write!(f, "A({:?})", a),
             Literal::Symbol(k) => write!(f, ":{:}", k),
             Literal::List(ref v) => write!(f, "{:?}", v),

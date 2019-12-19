@@ -309,19 +309,19 @@ mod tests {
     #[test]
     fn eval_boolean() {
         let mut i = Interpreter::new();
-        assert_eq!(pi(&mut i, "#t").unwrap(), Literal::Boolean(true));
-        assert_eq!(pi(&mut i, "#f").unwrap(), Literal::Boolean(false));
+        assert_eq!(pi(&mut i, "true").unwrap(), Literal::Boolean(true));
+        assert_eq!(pi(&mut i, "false").unwrap(), Literal::Boolean(false));
     }
 
     #[test]
     fn test_if() {
         let mut i = Interpreter::new();
 
-        let p1 = pi(&mut i, "(if #t 1 0)").unwrap();
+        let p1 = pi(&mut i, "(if true 1 0)").unwrap();
 
         assert_eq!(p1, Literal::Number(1));
 
-        let p2 = pi(&mut i, "(if #f 1 0)").unwrap();
+        let p2 = pi(&mut i, "(if false 1 0)").unwrap();
 
         assert_eq!(p2, Literal::Number(0));
     }
@@ -360,7 +360,7 @@ mod tests {
     fn test_import() {
         let mut i = Interpreter::new();
         assert_eq!(pi_last(&mut i, "1").unwrap(), 1.into());
-        assert_eq!(pi_last(&mut i, "(if #f 1 2)").unwrap(), 2.into());
+        assert_eq!(pi_last(&mut i, "(if false 1 2)").unwrap(), 2.into());
     }
 
     #[test]

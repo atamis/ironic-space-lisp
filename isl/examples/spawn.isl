@@ -2,7 +2,7 @@
   (fn [f]
     (if (fork)
       (do (f) (terminate 'ok))
-      #f)))
+      false)))
 
 (def me (pid))
 

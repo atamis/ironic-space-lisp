@@ -11,11 +11,11 @@
 (def assoc-contains?
   (fn (id lst)
     (if (empty? lst)
-      #f
+      false
       (let (pair (car lst)
                  key (car pair))
         (if (= key id)
-          #t
+          true
           (assoc-contains? id (cdr lst))))
       )
     )
@@ -119,7 +119,7 @@
 (def all
   (fn (f lst)
     (if (empty? lst)
-      #t
+      true
       (and (f (car lst)) (all f (cdr lst)))
       ))
   )
@@ -128,9 +128,9 @@
 (def contains?
   (fn (lst a)
     (if (empty? lst)
-      #f
+      false
       (if (= a (car lst))
-        #t
+        true
         (contains? (cdr lst) a))
       )
     ))
@@ -158,7 +158,7 @@
   (fn (ret)
     (if (list? ret)
       (= 'ret (ret-tag ret))
-      #f
+      false
       )))
 
 (def make-func
@@ -174,7 +174,7 @@
   (fn (func)
     (if (list? func)
       (= 'func (func-tag func))
-      #f
+      false
       )))
 
 
@@ -189,7 +189,7 @@
 
 (def map-eval
   (fn (exprs env)
-    (do (if (= env #t) (error (list 'env-is-true exprs)) 0)
+    (do (if (= env true) (error (list 'env-is-true exprs)) 0)
         (if (empty? exprs)
           (ret '() env)
           (let [expr (car exprs)
@@ -227,9 +227,9 @@
        (let [name (nth 0 binding)
              expr (nth 1 binding)
              expr-r (eval expr env)]
-         (if (keyword? name)
+         (if (symbol? name)
            (cons (list name (ret-v expr-r)) (ret-e expr-r))
-           (error `(local-binding-not-keyword ,name))
+           (error `(local-binding-not-symbol ,name))
            )
          )
        )
@@ -239,7 +239,7 @@
 
 (def is-syscall?
   (fn (sys)
-    (contains? '(empty? car cdr odd? cons print list? + = keyword? or - nth len append size) sys)))
+    (contains? '(empty? car cdr odd? cons print list? + = symbol? or - nth len append size) sys)))
 
 (def syscall-invoke
   (fn (sys args)
@@ -251,10 +251,10 @@
         (= sys 'odd?) (odd? a0)
         (= sys 'print) (do (print (list 'hosted a0)) a0)
         (= sys 'list?) (list? a0)
-        (= sys 'keyword?) (keyword? a0)
+        (= sys 'symbol?) (symbol? a0)
         (= sys 'len) (len a0)
         (= sys 'size) (size a0)
-        #t (if (= (len args) 1)
+        true (if (= (len args) 1)
              (error `(syscall-not-found-with-1-arg ,sys ,args))
              (let [a1 (nth 1 args)]
                (cond
@@ -265,7 +265,7 @@
                  (= sys 'or) (or a0 a1)
                  (= sys 'nth) (nth a0 a1)
                  (= sys 'append) (append a0 a1)
-                 #t (error `(syscall-not-found ,sys ,args)))))
+                 true (error `(syscall-not-found ,sys ,args)))))
         )
       )
     ))
@@ -312,7 +312,7 @@
                                                 args-v (ret-v args-r)
                                                 new-env (ret-e args-r)]
                                             (ret (syscall-invoke name args-v) new-env))
-                       #t (let [vs-r (map-eval expr env)
+                       true (let [vs-r (map-eval expr env)
                                 f (car (ret-v vs-r))
                                 args (cdr (ret-v vs-r))
                                 local-bindings (zip (func-args f) args)]
@@ -325,8 +325,8 @@
                               )
                             )
                        ))
-      (keyword? expr) (ret (assoc expr env) env)
-      #t (ret expr env)
+      (symbol? expr) (ret (assoc expr env) env)
+      true (ret expr env)
       )))
 
 
@@ -345,7 +345,7 @@
 (test '1 '((test 1)))
 (test '(do 1) '((test 1)))
 
-(test '(cond #t 1) '((test 1)))
+(test '(cond true 1) '((test 1)))
 
 (print (filter-index (fn (a idx) (odd? idx)) '(a b c d e f g h)))
 
@@ -353,7 +353,7 @@
 
 (test '(def test 123) '())
 
-(test '(if #f 1 2) '())
+(test '(if false 1 2) '())
 
 (test '(do (def test 123) (+ test 2)) '())
 
