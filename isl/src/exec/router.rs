@@ -6,7 +6,6 @@ use crate::futures::StreamExt;
 use futures::channel::mpsc;
 use futures::future::select;
 use futures::future::Either;
-use petgraph::graphmap::DiGraphMap;
 use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::time::Duration;
@@ -44,7 +43,6 @@ impl Router {
             rx,
             queue: VecDeque::new(),
             state: RouterState::new(),
-            watches: DiGraphMap::new(),
             quitting: false,
             debug: false,
         }
