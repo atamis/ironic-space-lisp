@@ -22,7 +22,7 @@ impl SyscallFactory for Factory {
     fn syscalls(&self) -> Vec<(String, Syscall)> {
         destatic(vec![
             ("list?", Syscall::A1(Box::new(list_pred))),
-            ("symbol?", Syscall::A1(Box::new(Symbol_pred))),
+            ("symbol?", Syscall::A1(Box::new(symbol_pred))),
             ("print", Syscall::A1(Box::new(println))),
             ("or", Syscall::A2(Box::new(or))),
             ("and", Syscall::A2(Box::new(and))),
@@ -38,7 +38,7 @@ fn list_pred(a: Literal) -> Result<Literal> {
     Ok(Literal::Boolean(a.is_list()))
 }
 
-fn Symbol_pred(a: Literal) -> Result<Literal> {
+fn symbol_pred(a: Literal) -> Result<Literal> {
     Ok(Literal::Boolean(a.is_symbol()))
 }
 
@@ -92,12 +92,12 @@ mod tests {
     }
 
     #[test]
-    fn test_Symbol_pred() {
+    fn test_symbol_pred() {
         assert_eq!(
-            Symbol_pred(Literal::Symbol("test".to_string())).unwrap(),
+            symbol_pred(Literal::Symbol("test".to_string())).unwrap(),
             mytrue()
         );
-        assert_eq!(Symbol_pred(Literal::Number(1)).unwrap(), myfalse());
+        assert_eq!(symbol_pred(Literal::Number(1)).unwrap(), myfalse());
     }
 
     #[test]

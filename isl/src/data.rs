@@ -87,7 +87,7 @@ impl fmt::Debug for Literal {
 
 impl Literal {
     /// Make a new Symbol from something that can be turned into a `String`
-    pub fn new_Symbol<T>(s: T) -> Literal
+    pub fn new_symbol<T>(s: T) -> Literal
     where
         T: Into<String>,
     {
@@ -144,7 +144,7 @@ impl Literal {
     }
 
     /// Attempt to destructure a [`Literal`] into a Symbol, returning `Err()` if not possible.
-    pub fn ensure_Symbol(&self) -> Result<Symbol> {
+    pub fn ensure_symbol(&self) -> Result<Symbol> {
         if let Literal::Symbol(a) = self {
             Ok(a.clone())
         } else {
@@ -199,13 +199,13 @@ impl From<i64> for Literal {
 
 impl From<String> for Literal {
     fn from(s: String) -> Literal {
-        Literal::new_Symbol(s)
+        Literal::new_symbol(s)
     }
 }
 
 impl<'a> From<&'a str> for Literal {
     fn from(s: &str) -> Literal {
-        Literal::new_Symbol(s)
+        Literal::new_symbol(s)
     }
 }
 

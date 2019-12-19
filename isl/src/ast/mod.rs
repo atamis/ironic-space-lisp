@@ -380,7 +380,7 @@ fn parse_lambda(_first: &Literal, rest: &Vector<Literal>) -> Result<AST> {
         .ok_or_else(|| err_msg("lambda requires an argument list, (lambda (args*) body)"))?
         .ensure_list()?
         .iter()
-        .map(Literal::ensure_Symbol)
+        .map(Literal::ensure_symbol)
         .collect::<Result<_>>()?;
 
     let body = rest

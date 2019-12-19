@@ -130,13 +130,13 @@ impl FunctionLocalizer {
         };
 
         for k in args {
-            l.check_Symbol(k);
+            l.check_symbol(k);
         }
 
         l
     }
 
-    pub fn check_Symbol(&mut self, k: &str) -> usize {
+    pub fn check_symbol(&mut self, k: &str) -> usize {
         if let Some(i) = self.names.get(k) {
             return *i;
         }
@@ -146,7 +146,7 @@ impl FunctionLocalizer {
         i
     }
 
-    pub fn get_Symbol(&mut self, k: &str) -> Option<usize> {
+    pub fn get_symbol(&mut self, k: &str) -> Option<usize> {
         self.names.get(k).copied()
     }
 }
@@ -154,7 +154,7 @@ impl FunctionLocalizer {
 impl DefVisitor<LocalDef> for FunctionLocalizer {
     fn visit_def(&mut self, name: &str, value: &AST) -> Result<LocalDef> {
         Ok(LocalDef {
-            name: self.check_Symbol(&name),
+            name: self.check_symbol(&name),
             value: self.visit(value)?,
         })
     }
@@ -205,7 +205,7 @@ impl ASTVisitor<LocalAST> for FunctionLocalizer {
     }
 
     fn var_expr(&mut self, k: &Symbol) -> Result<LocalAST> {
-        Ok(match self.get_Symbol(k) {
+        Ok(match self.get_symbol(k) {
             Some(i) => LocalAST::LocalVar(i),
             None => LocalAST::GlobalVar(k.to_string()),
         })
@@ -305,6 +305,7 @@ pub mod visitors {
         /// Callback for `LocalAST::Do`, passing in a slice of `LocalAST`.
         fn do_expr(&mut self, exprs: &[LocalAST]) -> Result<R>;
 
+        #[allow(clippy::ptr_arg)]
         /// Callback for `LocalAST::GlobalVar`, passing in a reference to the name.
         fn globalvar_expr(&mut self, name: &Symbol) -> Result<R>;
 
@@ -375,6 +376,7 @@ pub mod visitors {
             Ok(res)
         }
 
+        #[allow(clippy::ptr_arg)]
         /// Callback for a single `GlobalDef`, passing in the name and value `LocalAST`.
         fn visit_globaldef(&mut self, name: &Symbol, value: &LocalAST) -> Result<R>;
     }
@@ -440,11 +442,11 @@ mod tests {
     #[test]
     fn test_localizer() {
         let mut l = FunctionLocalizer::new(&vec![], true);
-        let i1 = l.check_Symbol("test");
+        let i1 = l.check_symbol("test");
 
-        assert_eq!(i1, l.check_Symbol("test"));
+        assert_eq!(i1, l.check_symbol("test"));
 
-        let i2 = l.check_Symbol("test2");
+        let i2 = l.check_symbol("test2");
 
         assert_ne!(i1, i2);
     }

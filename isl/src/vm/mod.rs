@@ -489,30 +489,30 @@ impl VM {
     }
 
     fn op_load(&mut self) -> Result<()> {
-        let Symbol = self
+        let symbol = self
             .stack
             .pop()
             .ok_or_else(|| err_msg("Attempted to pop stack for Symbol for load"))?
-            .ensure_Symbol()?;
+            .ensure_symbol()?;
 
-        let val = self.environment.get(&Symbol)?;
+        let val = self.environment.get(&symbol)?;
 
         self.stack.push(val.clone());
         Ok(())
     }
 
     fn op_store(&mut self) -> Result<()> {
-        let Symbol = self
+        let symbol = self
             .stack
             .pop()
             .ok_or_else(|| err_msg("Attempted to pop stack for Symbol for store"))?
-            .ensure_Symbol()?;
+            .ensure_symbol()?;
         let value = self
             .stack
             .pop()
             .ok_or_else(|| err_msg("Attempted to pop stack for value for store"))?;
 
-        self.environment.insert(Symbol, value)?;
+        self.environment.insert(symbol, value)?;
 
         Ok(())
     }
