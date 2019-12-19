@@ -44,7 +44,7 @@ impl Pid {
 #[derive(Clone, Eq, PartialEq, is_enum_variant)]
 pub enum Literal {
     /// Unsigned 32 bit number.
-    Number(u32),
+    Number(i64),
 
     /// Boolean, styled `#t` or `#f`.
     Boolean(bool),
@@ -103,7 +103,7 @@ impl Literal {
     }
 
     /// Attempt to destructure a [`Literal`] into a number, returning `Err()` if not possible.
-    pub fn ensure_number(&self) -> Result<u32> {
+    pub fn ensure_number(&self) -> Result<i64> {
         if let Literal::Number(n) = self {
             Ok(*n)
         } else {

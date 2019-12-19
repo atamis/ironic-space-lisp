@@ -100,22 +100,55 @@ impl Parser {
 }
 
 /// Parses a string to a vector of [`Literal`](data::Literal)s.
-pub fn parse(input: &str) -> Result<Vec<data::Literal>> {
-    let mut input = CompleteStr(input);
-    let mut lits = vec![];
+// pub fn parse(input: &str) -> Result<Vec<data::Literal>> {
+//     let mut input = CompleteStr(input);
+//     let mut lits = vec![];
 
-    while input != CompleteStr("") {
-        match tagged_expr(input) {
-            Ok((rem, l)) => {
-                lits.push(l);
-                input = rem;
-            }
-            e => return Err(format_err!("Parse error: {:?}", e)),
+//     while input != CompleteStr("") {
+//         match tagged_expr(input) {
+//             Ok((rem, l)) => {
+//                 lits.push(l);
+//                 input = rem;
+//             }
+//             e => return Err(format_err!("Parse error: {:?}", e)),
+//         }
+//     }
+
+//     Ok(lits)
+// }
+
+pub fn parse(input: &str) -> Result<Vec<data::Literal>> {
+    Ok(read_all(input)?.iter().map(edn_to_isl).collect())
+}
+
+fn read_all(input: &str) -> Result<Vec<edn::Value>> {
+    let mut parser = edn::parser::Parser::new(input);
+    let mut out = vec![];
+
+    loop {
+        if let Some(r) = parser.read() {
+            out.push(
+                r.map_err(|e| format_err!("Parser error [{}:{}]: {}", e.lo, e.hi, e.message))?,
+            );
+        } else {
+            break;
         }
     }
 
-    Ok(lits)
+    Ok(out)
 }
+
+fn edn_to_isl(v: &edn::Value) -> data::Literal {
+    use data::Literal;
+    use edn::Value;
+
+    match v {
+        Value::Integer(n) => Literal::Number(n),
+        _ => panic!("Not implemented"),
+    }
+}
+
+//pub fn parse(input: &str) -> Result<Vec<data::Literal>> {}
 
 fn cstr(s: &str) -> CompleteStr {
     CompleteStr(s)
