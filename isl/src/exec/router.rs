@@ -33,7 +33,6 @@ pub enum RouterMessage {
 struct Router {
     rx: mpsc::Receiver<RouterMessage>,
     queue: VecDeque<RouterMessage>,
-    watches: DiGraphMap<data::Pid, ()>,
     state: RouterState,
     quitting: bool,
     debug: bool,
