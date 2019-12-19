@@ -379,13 +379,13 @@ mod tests {
     fn test_syscalls() {
         let mut i = Interpreter::new();
         assert_eq!(pi_last(&mut i, "(+ 1 2)").unwrap(), 3.into());
-        assert_eq!(pi_last(&mut i, "(cons 1 '())").unwrap(), list_lit!(1));
+        assert_eq!(pi_last(&mut i, "(cons 1 ())").unwrap(), list_lit!(1));
     }
 
     #[test]
     fn test_with_last() {
         // TODO: add list syscall, but make it throw error telling you to run ast::passes::internal_macro
-        let last = last_no_unbound("(def a (fn (x y) (cons x (cons y '()))) )");
+        let last = last_no_unbound("(def a (fn (x y) (cons x (cons y ()))) )");
         let mut i = Interpreter::with_last(&last).unwrap();
 
         assert_eq!(pi_last(&mut i, "(a 1 2)").unwrap(), list_lit!(1, 2));

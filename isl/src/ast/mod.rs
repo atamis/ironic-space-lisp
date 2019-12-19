@@ -232,7 +232,7 @@ pub fn parse(e: &Literal) -> Result<AST> {
     match e {
         Literal::List(ref vec) => {
             match vec.len() {
-                0 => Err(err_msg("empty list not valid")), // TODO
+                0 => Ok(AST::Value(vector![].into())), // TODO
                 1 => parse_compound(&vec[0], &Vector::new()),
                 _ => {
                     let (first, rest) = vec.clone().split_at(1);
@@ -705,7 +705,7 @@ mod tests {
             }
         );
 
-        let p2 = ps("(+)").unwrap();
+        let p2 = ps("(+ )").unwrap();
 
         assert_eq!(
             p2,
@@ -728,12 +728,12 @@ mod tests {
         assert_eq!(ps("`1").unwrap(), AST::Value(Literal::Number(1)));
 
         assert_eq!(
-            ps("`(test asdf ,(+ 1 2 3))").unwrap(),
+            ps("`(test asdf ~(+ 1 2 3))").unwrap(),
             ps("(list 'test 'asdf (+ 1 2 3))").unwrap()
         );
 
         assert_eq!(
-            ps("`(test asdf ,x)").unwrap(),
+            ps("`(test asdf ~x)").unwrap(),
             ps("(list 'test 'asdf x)").unwrap()
         );
     }

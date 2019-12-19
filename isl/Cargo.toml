@@ -13,7 +13,8 @@ clap = "~2.32"
 derive_is_enum_variant = "0.1.1"
 nom = "^4.0"
 rand = "0.5.5"
-edn = "0.3"
+edn = { path = "../../edn.rs/"}
+#edn = { git = "https://github.com/atamis/edn.rs", branch = "master" }
 
 # Semi-lockless hashmap.
 #chashmap = "2.2.0
