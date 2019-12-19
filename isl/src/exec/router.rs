@@ -1,14 +1,15 @@
  use tokio::runtime::Runtime;
 use crate::data::Literal;
 use crate::data;
+use futures::future::Future;
 use std::collections::HashMap;
 use futures::channel::mpsc;
 use futures::future::select;
 use futures::future::Either;
 use crate::futures::StreamExt;
 use std::collections::VecDeque;
-use std::time::{Duration, Instant};
-use tokio::timer;
+use std::time::Duration;
+use tokio_timer;
 use petgraph::graphmap::DiGraphMap;
 
 /// A channel to the message router.
@@ -50,14 +51,16 @@ impl Router {
     }
 
     async fn run(mut self) {
+        if self.debug {
+            println!("Router starting");
+        }
         loop {
             let m = if let Some(m) = self.queue.pop_front() {
                 Some(m)
             } else {
                 if self.is_done() {
                     // 2s timeout of no messages before quiting
-                    let t = timer::delay(Instant::now() +
-                                         Duration::from_millis(2000));
+                    let t = tokio_timer::delay_for(Duration::from_millis(2000));
 
                     match select(self.rx.next(), t).await {
                         Either::Left((m, _)) => m,
@@ -120,7 +123,9 @@ impl Router {
 pub fn router(runtime: &mut Runtime) -> mpsc::Sender<RouterMessage> {
     let (tx, rx) = mpsc::channel::<RouterMessage>(10);
 
-    runtime.spawn(Router::new(rx).run());
+    let f = Router::new(rx).run();
+
+    runtime.spawn(f);
 
     tx
 }

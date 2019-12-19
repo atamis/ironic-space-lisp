@@ -1,4 +1,5 @@
 use super::*;
+use crate::futures::StreamExt;
 use test::Bencher;
 
 #[test]
@@ -346,7 +347,7 @@ fn test_fork() {
     use crate::exec;
     use futures::future;
 
-    let exec = exec::Exec::new();
+    let mut exec = exec::Exec::new();
 
     let mut vm = VM::new(Bytecode::new(vec![vec![]]));
 
@@ -364,7 +365,7 @@ fn test_fork2() {
     use crate::exec;
     use crate::exec::ExecHandle;
     use std::time::Duration;
-    use tokio::timer::Timeout;
+    use tokio_timer::timeout::Timeout;
 
     let dur = Duration::from_millis(1000);
 

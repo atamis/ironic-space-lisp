@@ -19,8 +19,10 @@ rand = "0.5.5"
 futures-preview = "0.3.0-alpha.14"
 async-trait = "0.1.10"
 petgraph = "0.4.13"
+tokio-timer = "0.3.0-alpha.5"
+tokio = { version = "0.2", features = ["full"] }
 
-[dependencies.tokio]
-git = "https://github.com/tokio-rs/tokio"
-branch = "master"
+#[dependencies.tokio]
+#git = "https://github.com/tokio-rs/tokio"
+#branch = "master"
 #features = ["async-await-preview"]
