@@ -139,6 +139,16 @@ impl From<&edn::Value> for Literal {
             Value::Vector(v) => {
                 Literal::Vector(v.iter().map(|x| x.into()).collect::<im::Vector<_>>())
             }
+            Value::Map(v) => Literal::Map(
+                v.iter()
+                    .map(|(k, v)| -> (Literal, Literal) { (k.into(), v.into()) })
+                    .collect::<im::OrdMap<_, _>>(),
+            ),
+            Value::Set(s) => Literal::Set(
+                s.iter()
+                    .map(|x| -> Literal { x.into() })
+                    .collect::<im::OrdSet<_>>(),
+            ),
             _ => panic!(format!("Not implemented: {:?}", v)),
         }
     }
@@ -261,8 +271,11 @@ mod tests {
     use super::*;
     use crate::data::list;
     use crate::data::Literal;
+    use crate::data::Literal::Map;
     use crate::data::Literal::Number;
+    use crate::data::Literal::Set;
     use crate::data::Literal::Symbol;
+    use crate::data::Literal::Vector;
 
     fn k(s: &str) -> Literal {
         Symbol(s.to_string())
@@ -390,5 +403,37 @@ mod tests {
                 list(vec![Number(1), Number(2), Number(3), Number(4)])
             ])
         );
+    }
+
+    #[test]
+    fn test_vector() {
+        assert_eq!(p1("[]").unwrap(), Vector(vector![]));
+        assert_eq!(
+            p1("[1 2 3]").unwrap(),
+            Vector(vector![Number(1), Number(2), Number(3)])
+        );
+    }
+
+    #[test]
+    fn test_map() {
+        assert_eq!(p1("{}").unwrap(), Map(ordmap! {}));
+        assert_eq!(
+            p1("{1 2 3 4}").unwrap(),
+            Map(ordmap! {Number(1) => Number(2), Number(3) => Number(4)})
+        );
+        assert!(p1("{1 2 3}").is_err());
+        assert!(p1("{1}").is_err());
+    }
+
+    #[test]
+    fn test_set() {
+        assert_eq!(p1("#{}").unwrap(), Set(ordset![]));
+        assert_eq!(
+            p1("#{1 2 3 4}").unwrap(),
+            Set(ordset![Number(1), Number(2), Number(3), Number(4)])
+        );
+
+        // TODO
+        //assert!(p1("#{1 1}").is_err());
     }
 }
