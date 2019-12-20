@@ -132,9 +132,14 @@ impl From<&edn::Value> for Literal {
         use edn::Value;
 
         match v {
+            Value::Nil => Literal::Nil,
             Value::Boolean(b) => (*b).into(),
+            Value::String(s) => Literal::String(s.into()),
+            Value::Char(c) => Literal::Char(*c),
             Value::Integer(n) => Literal::Number(*n),
+            Value::Float(n) => Literal::Float(*n),
             Value::Symbol(s) => Literal::Symbol(s.to_string()),
+            Value::Keyword(s) => Literal::Keyword(s.to_string()),
             Value::List(v) => Literal::List(v.iter().map(|x| x.into()).collect::<im::Vector<_>>()),
             Value::Vector(v) => {
                 Literal::Vector(v.iter().map(|x| x.into()).collect::<im::Vector<_>>())
@@ -149,7 +154,8 @@ impl From<&edn::Value> for Literal {
                     .map(|x| -> Literal { x.into() })
                     .collect::<im::OrdSet<_>>(),
             ),
-            _ => panic!(format!("Not implemented: {:?}", v)),
+            Value::Tagged(s, b) => Literal::Tagged(s.to_string(), Box::new((&**b).into())),
+            //_ => panic!(format!("Not implemented: {:?}", v)),
         }
     }
 }
@@ -435,5 +441,41 @@ mod tests {
 
         // TODO
         //assert!(p1("#{1 1}").is_err());
+    }
+
+    // It's assumed these are tested more exhaustively by the external parser.
+    #[test]
+    fn test_nil() {
+        assert_eq!(p1("nil").unwrap(), Literal::Nil);
+    }
+
+    #[test]
+    fn test_string() {
+        assert_eq!(p1("\"test\"").unwrap(), Literal::String("test".into()));
+    }
+
+    #[test]
+    fn test_char() {
+        assert_eq!(p1("\\c").unwrap(), Literal::Char('c'));
+    }
+
+    #[test]
+    fn test_keyword() {
+        assert_eq!(p1(":test").unwrap(), Literal::Keyword("test".into()));
+    }
+
+    #[test]
+    fn test_float() {
+        assert_eq!(p1("1.1").unwrap(), Literal::Float((1.1).into()));
+        assert_eq!(p1("+1.1").unwrap(), Literal::Float((1.1).into()));
+        assert_eq!(p1("-1.1").unwrap(), Literal::Float((-1.1).into()));
+    }
+
+    #[test]
+    fn test_tagged() {
+        assert_eq!(
+            p1("#test true").unwrap(),
+            Literal::Tagged("test".into(), Box::new(Literal::Boolean(true)))
+        );
     }
 }
