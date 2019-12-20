@@ -775,4 +775,11 @@ mod tests {
             ps("(list 'test 'asdf x)").unwrap()
         );
     }
+
+    #[test]
+    fn test_im_structures() {
+        assert_eq!(ps("[1 2 3]").unwrap(), ps("(vector 1 2 3)").unwrap());
+        assert_eq!(ps("{1 2 3 4}").unwrap(), ps("(ord-map 1 2 3 4)").unwrap());
+        assert_eq!(ps("#{1 2 3 4}").unwrap(), ps("(set 1 2 3 4)").unwrap());
+    }
 }
