@@ -134,7 +134,6 @@ impl fmt::Debug for Literal {
                 write!(f, ")")
             }
             Literal::Vector(ref v) => {
-                write!(f, "{:?}", v)?;
                 write!(f, "[")?;
 
                 for (idx, l) in v.iter().enumerate() {

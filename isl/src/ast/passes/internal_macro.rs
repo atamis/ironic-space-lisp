@@ -29,13 +29,25 @@ struct Pass;
 impl Pass {
     // If the call adds to the front of the literal, the vector should be
     // reversed.
-    fn vec_to_calls(&mut self, call: &str, base: &data::Literal, mut v: Vec<AST>) -> Result<AST> {
+    fn vec_to_calls<T>(
+        &mut self,
+        call: &str,
+        args: &T,
+        base: &data::Literal,
+        v: &mut Vec<AST>,
+    ) -> Result<AST>
+    where
+        // value, base collection
+        T: Fn(AST, AST) -> Vec<AST>,
+    {
         if v.is_empty() {
             Ok(AST::Value(base.clone()))
         } else {
+            let value = v.pop().unwrap();
+            let coll_ast = self.vec_to_calls(call, args, base, v)?;
             Ok(AST::Application {
                 f: Rc::new(AST::Var(call.to_string())),
-                args: vec![v.pop().unwrap(), self.vec_to_calls(call, base, v)?],
+                args: args(value, coll_ast),
             })
         }
     }
@@ -45,7 +57,30 @@ impl Pass {
     fn consify(&mut self, mut v: Vec<AST>) -> Result<AST> {
         v.reverse();
 
-        self.vec_to_calls("cons", &data::list(vec![]), v)
+        self.vec_to_calls(
+            "cons",
+            &|val, coll| vec![val, coll],
+            &data::list(vec![]),
+            &mut v,
+        )
+    }
+
+    fn vectorize(&mut self, mut v: Vec<AST>) -> Result<AST> {
+        self.vec_to_calls(
+            "conj",
+            &|val, coll| vec![coll, val],
+            &Literal::Vector(vector![]),
+            &mut v,
+        )
+    }
+
+    fn setize(&mut self, mut v: Vec<AST>) -> Result<AST> {
+        self.vec_to_calls(
+            "conj",
+            &|val, coll| vec![coll, val],
+            &Literal::Set(ordset![]),
+            &mut v,
+        )
     }
 
     fn condify(&mut self, mut terms: Vec<(AST, AST)>) -> Result<AST> {
@@ -74,9 +109,17 @@ impl Pass {
                 let new_ast = self.consify(new_args)?;
                 Ok(Some(new_ast))
             }
-            "vector" => unimplemented!(),
+            "vector" => {
+                let new_args = self.multi_visit(args)?;
+                let new_ast = self.vectorize(new_args)?;
+                Ok(Some(new_ast))
+            }
             "ord-map" => unimplemented!(),
-            "set" => unimplemented!(),
+            "set" => {
+                let new_args = self.multi_visit(args)?;
+                let new_ast = self.setize(new_args)?;
+                Ok(Some(new_ast))
+            }
             "cond" => {
                 if args.len() % 2 != 0 {
                     return Err(err_msg(
@@ -239,22 +282,50 @@ mod tests {
         );
     }
 
-    /*#[test]
+    #[test]
     fn test_vector() {
         assert_eq!(
             p("(vector 1 2)").unwrap(),
             AST::Application {
                 f: Rc::new(AST::Var("conj".to_string())),
                 args: vec![
-                    AST::Value(Literal::Number(2)),
                     AST::Application {
                         f: Rc::new(AST::Var("conj".to_string())),
-                        args: vec![AST::Value(Literal::Number(1)), AST::Value(list(vec![]))]
-                    }
+                        args: vec![
+                            AST::Value(Literal::Vector(vector![])),
+                            AST::Value(Literal::Number(1)),
+                        ]
+                    },
+                    AST::Value(Literal::Number(2)),
                 ]
             }
         );
 
-        assert_eq!(p("(list)").unwrap(), AST::Value(list(vec![])),)
-    }*/
+        assert_eq!(
+            p("(vector)").unwrap(),
+            AST::Value(Literal::Vector(vector![])),
+        )
+    }
+
+    #[test]
+    fn test_set() {
+        assert_eq!(
+            p("(set 1 2)").unwrap(),
+            AST::Application {
+                f: Rc::new(AST::Var("conj".to_string())),
+                args: vec![
+                    AST::Application {
+                        f: Rc::new(AST::Var("conj".to_string())),
+                        args: vec![
+                            AST::Value(Literal::Set(ordset![])),
+                            AST::Value(Literal::Number(1)),
+                        ]
+                    },
+                    AST::Value(Literal::Number(2)),
+                ]
+            }
+        );
+
+        assert_eq!(p("(set)").unwrap(), AST::Value(Literal::Set(ordset![])),)
+    }
 }
