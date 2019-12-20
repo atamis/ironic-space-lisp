@@ -27,17 +27,25 @@ pub fn pass(a: &AST) -> Result<AST> {
 struct Pass;
 
 impl Pass {
+    // If the call adds to the front of the literal, the vector should be
+    // reversed.
+    fn vec_to_calls(&mut self, call: &str, base: &data::Literal, mut v: Vec<AST>) -> Result<AST> {
+        if v.is_empty() {
+            Ok(AST::Value(base.clone()))
+        } else {
+            Ok(AST::Application {
+                f: Rc::new(AST::Var(call.to_string())),
+                args: vec![v.pop().unwrap(), self.vec_to_calls(call, base, v)?],
+            })
+        }
+    }
+
     // Vec should be reversed before being passed to consify
     // consify uses Vec::pop for better performance
     fn consify(&mut self, mut v: Vec<AST>) -> Result<AST> {
-        if v.is_empty() {
-            Ok(AST::Value(data::list(vec![])))
-        } else {
-            Ok(AST::Application {
-                f: Rc::new(AST::Var("cons".to_string())),
-                args: vec![v.pop().unwrap(), self.consify(v)?],
-            })
-        }
+        v.reverse();
+
+        self.vec_to_calls("cons", &data::list(vec![]), v)
     }
 
     fn condify(&mut self, mut terms: Vec<(AST, AST)>) -> Result<AST> {
@@ -62,11 +70,13 @@ impl Pass {
     fn expand(&mut self, s: &str, args: &[AST]) -> Result<Option<AST>> {
         match s {
             "list" => {
-                let mut new_args = self.multi_visit(args)?;
-                new_args.reverse();
+                let new_args = self.multi_visit(args)?;
                 let new_ast = self.consify(new_args)?;
                 Ok(Some(new_ast))
             }
+            "vector" => unimplemented!(),
+            "ord-map" => unimplemented!(),
+            "set" => unimplemented!(),
             "cond" => {
                 if args.len() % 2 != 0 {
                     return Err(err_msg(
@@ -228,4 +238,23 @@ mod tests {
             }
         );
     }
+
+    /*#[test]
+    fn test_vector() {
+        assert_eq!(
+            p("(vector 1 2)").unwrap(),
+            AST::Application {
+                f: Rc::new(AST::Var("conj".to_string())),
+                args: vec![
+                    AST::Value(Literal::Number(2)),
+                    AST::Application {
+                        f: Rc::new(AST::Var("conj".to_string())),
+                        args: vec![AST::Value(Literal::Number(1)), AST::Value(list(vec![]))]
+                    }
+                ]
+            }
+        );
+
+        assert_eq!(p("(list)").unwrap(), AST::Value(list(vec![])),)
+    }*/
 }
