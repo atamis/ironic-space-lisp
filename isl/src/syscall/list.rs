@@ -6,6 +6,7 @@ use crate::syscall::destatic;
 use crate::syscall::Syscall;
 use crate::syscall::SyscallFactory;
 use im::vector::Vector;
+use im::OrdSet;
 
 /// A `list` syscall factory.
 #[derive(Default)]
@@ -30,6 +31,7 @@ impl SyscallFactory for Factory {
             ("empty?", Syscall::A1(Box::new(empty))),
             ("nth", Syscall::A2(Box::new(n))),
             ("append", Syscall::A2(Box::new(append))),
+            ("conj", Syscall::A2(Box::new(conj))),
         ])
     }
 }
@@ -88,6 +90,33 @@ fn append(a: Literal, b: Literal) -> Result<Literal> {
     a.append(b);
 
     Ok(Literal::List(a))
+}
+
+fn conj(a: Literal, b: Literal) -> Result<Literal> {
+    // a is collection
+    // b is value
+
+    match a {
+        Literal::List(v) => conj_list(v, b),
+        Literal::Vector(v) => conj_vector(v, b),
+        Literal::Set(s) => conj_set(s, b),
+        a => Err(err_msg(format!("Error attempted to conj onto {:?}", a))),
+    }
+}
+
+fn conj_list(mut v: Vector<Literal>, b: Literal) -> Result<Literal> {
+    v.push_front(b);
+    Ok(Literal::List(v))
+}
+
+fn conj_vector(mut v: Vector<Literal>, b: Literal) -> Result<Literal> {
+    v.push_back(b);
+    Ok(Literal::Vector(v))
+}
+
+fn conj_set(mut s: OrdSet<Literal>, b: Literal) -> Result<Literal> {
+    s.insert(b);
+    Ok(Literal::Set(s))
 }
 
 #[cfg(test)]
@@ -211,5 +240,38 @@ mod tests {
         assert_eq!(append(lst1.clone(), lst2).unwrap(), lst3);
 
         assert_eq!(append(lst1.clone(), list(vec![])).unwrap(), lst1);
+    }
+
+    #[test]
+    fn test_conj_list() {
+        let lst1 = list_lit![1];
+
+        let b = Literal::Number(2);
+
+        let lst2 = list_lit![2, 1];
+
+        assert_eq!(conj(lst1, b).unwrap(), lst2);
+    }
+
+    #[test]
+    fn test_conj_vector() {
+        let lst1 = Literal::Vector(vector![1.into()]);
+
+        let b = Literal::Number(2);
+
+        let lst2 = Literal::Vector(vector![1.into(), 2.into()]);
+
+        assert_eq!(conj(lst1, b).unwrap(), lst2);
+    }
+
+    #[test]
+    fn test_conj_set() {
+        let lst1 = Literal::Set(ordset![2.into()]);
+
+        let b = Literal::Number(1);
+
+        let lst2 = Literal::Set(ordset![1.into(), 2.into()]);
+
+        assert_eq!(conj(lst1, b).unwrap(), lst2);
     }
 }
