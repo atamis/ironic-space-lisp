@@ -227,6 +227,7 @@ impl Interpreter {
                     syscall::Syscall::A1(f) => f(args.remove(0)),
                     // these are both 0 because args gets mutated, and the second arg is now the first.
                     syscall::Syscall::A2(f) => f(args.remove(0), args.remove(0)),
+                    syscall::Syscall::A3(f) => f(args.remove(0), args.remove(0), args.remove(0)),
                 }
             }
             None => Err(format_err!("Couldn't find function for address {:?}", addr)),

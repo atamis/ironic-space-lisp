@@ -311,6 +311,20 @@ impl VM {
                 stack.push(v);
                 Ok(())
             }
+            Syscall::A3(ref f) => {
+                let a = stack.pop().ok_or_else(|| {
+                    err_msg("Error popping stack for first arg of 2-arity syscall")
+                })?;
+                let b = stack.pop().ok_or_else(|| {
+                    err_msg("Error popping stack for second arg of 2-arity syscall")
+                })?;
+                let c = stack.pop().ok_or_else(|| {
+                    err_msg("Error popping stack for third arg of 2-arity syscall")
+                })?;
+                let v = f(a, b, c).context("While executing 3-arity syscall")?;
+                stack.push(v);
+                Ok(())
+            }
         }
     }
 

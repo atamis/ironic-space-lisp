@@ -29,6 +29,9 @@ pub type A1Fn = Box<dyn Fn(Literal) -> Result<Literal> + Send + Sync + 'static>;
 /// A syscall that takes 2 values and returns 1 value.
 pub type A2Fn = Box<dyn Fn(Literal, Literal) -> Result<Literal> + Sync + Send + 'static>;
 
+/// A syscall that takes 3 values and returns 1 value.
+pub type A3Fn = Box<dyn Fn(Literal, Literal, Literal) -> Result<Literal> + Sync + Send + 'static>;
+
 /// Tagged pointers to syscall implementations.
 pub enum Syscall {
     /// A stack function.
@@ -37,6 +40,9 @@ pub enum Syscall {
     A1(A1Fn),
     /// Arity-2 function.
     A2(A2Fn),
+
+    /// Arity-3 function
+    A3(A3Fn),
 }
 
 impl Syscall {
@@ -46,6 +52,7 @@ impl Syscall {
             Syscall::Stack(_) => None,
             Syscall::A1(_) => Some(1),
             Syscall::A2(_) => Some(2),
+            Syscall::A3(_) => Some(3),
         }
     }
 }
