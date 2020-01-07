@@ -263,6 +263,30 @@ impl Literal {
         }
     }
 
+    /// Attempt to destructure a [`Literal`] into a tuple of two literals.
+    ///
+    /// Converts 2 element lists and vectors to a tuple of 2 literals.
+    pub fn ensure_pair(&self) -> Result<(Literal, Literal)> {
+        // TODO maps
+        let v = match self {
+            Literal::List(ref v) => Ok(v),
+            Literal::Vector(ref v) => Ok(v),
+            x => Err(err_msg(format!(
+                "Type error, expected pair ((a b), [a b]), got {:?}",
+                x
+            ))),
+        }?;
+
+        if v.len() != 2 {
+            Err(err_msg(format!(
+                "Type error, expected pair, but len was {}",
+                v.len()
+            )))
+        } else {
+            Ok((v.get(0).unwrap().clone(), v.get(1).unwrap().clone()))
+        }
+    }
+
     /// Check whether a [`Literal`] can be found in this [`Literal`].
     ///
     /// Warning: I think this might be accidentally quadratic when used to
@@ -430,6 +454,17 @@ mod tests {
         assert_eq!(
             list_lit![1, 2, 3,],
             list(vec![1.into(), 2.into(), 3.into()])
+        );
+    }
+
+    #[test]
+    fn test_ensure_pair() {
+        assert_eq!(list_lit![1, 2].ensure_pair().unwrap(), (1.into(), 2.into()));
+        assert_eq!(
+            Literal::Vector(vector![1.into(), 2.into()])
+                .ensure_pair()
+                .unwrap(),
+            (1.into(), 2.into())
         );
     }
 }

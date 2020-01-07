@@ -6,7 +6,7 @@ default-run = "isl"
 edition = '2018'
 
 [dependencies]
-failure = "0.1.2"
+failure = "0.1.6"
 im = "14.1.0"
 rustyline = "4.0.0"
 clap = "~2.32"
