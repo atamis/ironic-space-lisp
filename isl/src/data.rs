@@ -149,10 +149,10 @@ impl fmt::Debug for Literal {
                 write!(f, "{{")?;
 
                 for (idx, (k, v)) in m.iter().enumerate() {
-                    write!(f, "{:?} {:?},", k, v)?;
+                    write!(f, "{:?} {:?}", k, v)?;
 
                     if idx != m.len() - 1 {
-                        write!(f, " ")?;
+                        write!(f, ", ")?;
                     }
                 }
 
