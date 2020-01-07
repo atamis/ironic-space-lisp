@@ -32,6 +32,7 @@ impl SyscallFactory for Factory {
             ("nth", Syscall::A2(Box::new(n))),
             ("append", Syscall::A2(Box::new(append))),
             ("conj", Syscall::A2(Box::new(conj))),
+            ("assoc", Syscall::A3(Box::new(assoc))),
         ])
     }
 }
@@ -117,6 +118,12 @@ fn conj_vector(mut v: Vector<Literal>, b: Literal) -> Result<Literal> {
 fn conj_set(mut s: OrdSet<Literal>, b: Literal) -> Result<Literal> {
     s.insert(b);
     Ok(Literal::Set(s))
+}
+
+fn assoc(a: Literal, b: Literal, c: Literal) -> Result<Literal> {
+    let mut m = a.ensure_map()?;
+    m.insert(b, c);
+    Ok(Literal::Map(m))
 }
 
 #[cfg(test)]
@@ -273,5 +280,29 @@ mod tests {
         let lst2 = Literal::Set(ordset![1.into(), 2.into()]);
 
         assert_eq!(conj(lst1, b).unwrap(), lst2);
+    }
+
+    #[test]
+    fn test_assoc() {
+        let m1 = Literal::Map(ordmap![1.into() => 2.into()]);
+
+        let b = Literal::Number(3);
+        let c = Literal::Number(4);
+
+        let m2 = Literal::Map(ordmap![1.into() => 2.into(), 3.into() => 4.into()]);
+
+        assert_eq!(assoc(m1, b, c).unwrap(), m2);
+    }
+
+    #[test]
+    fn test_assoc_remap() {
+        let m1 = Literal::Map(ordmap![1.into() => 2.into()]);
+
+        let b = Literal::Number(1);
+        let c = Literal::Number(3);
+
+        let m2 = Literal::Map(ordmap![1.into() => 3.into()]);
+
+        assert_eq!(assoc(m1, b, c).unwrap(), m2);
     }
 }

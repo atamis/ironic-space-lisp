@@ -287,6 +287,14 @@ impl Literal {
         }
     }
 
+    pub fn ensure_map(&self) -> Result<OrdMap<Literal, Literal>> {
+        if let Literal::Map(ref m) = self {
+            Ok(m.clone())
+        } else {
+            Err(err_msg(format!("Type error, expected map, got {:?}", self)))
+        }
+    }
+
     /// Check whether a [`Literal`] can be found in this [`Literal`].
     ///
     /// Warning: I think this might be accidentally quadratic when used to

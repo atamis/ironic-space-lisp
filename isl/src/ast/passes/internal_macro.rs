@@ -83,6 +83,27 @@ impl Pass {
         )
     }
 
+    fn mapize(&mut self, mut v: Vec<AST>) -> Result<AST> {
+        if v.is_empty() {
+            Ok(AST::Value(Literal::Map(ordmap![])))
+        } else {
+            // This is outside in.
+            let value = v
+                .pop()
+                .ok_or_else(|| err_msg("Expected value for map, got no value"))?;
+            let key = v
+                .pop()
+                .ok_or_else(|| err_msg("Expected value for map, got no value"))?;
+
+            let coll_ast = self.mapize(v)?;
+
+            Ok(AST::Application {
+                f: Rc::new(AST::Var("assoc".to_string())),
+                args: vec![coll_ast, key, value],
+            })
+        }
+    }
+
     fn condify(&mut self, mut terms: Vec<(AST, AST)>) -> Result<AST> {
         if terms.is_empty() {
             Ok(AST::Value(Literal::Symbol(
@@ -114,7 +135,11 @@ impl Pass {
                 let new_ast = self.vectorize(new_args)?;
                 Ok(Some(new_ast))
             }
-            "ord-map" => unimplemented!(),
+            "ord-map" => {
+                let new_args = self.multi_visit(args)?;
+                let new_ast = self.mapize(new_args)?;
+                Ok(Some(new_ast))
+            }
             "set" => {
                 let new_args = self.multi_visit(args)?;
                 let new_ast = self.setize(new_args)?;
@@ -327,5 +352,33 @@ mod tests {
         );
 
         assert_eq!(p("(set)").unwrap(), AST::Value(Literal::Set(ordset![])),)
+    }
+
+    #[test]
+    fn test_map() {
+        assert_eq!(
+            p("(ord-map 1 2 3 4)").unwrap(),
+            AST::Application {
+                f: Rc::new(AST::Var("assoc".to_string())),
+                args: vec![
+                    //coll
+                    AST::Application {
+                        f: Rc::new(AST::Var("assoc".to_string())),
+                        args: vec![
+                            //coll
+                            AST::Value(Literal::Map(ordmap![])),
+                            // val
+                            AST::Value(Literal::Number(1)),
+                            AST::Value(Literal::Number(2)),
+                        ]
+                    },
+                    // val
+                    AST::Value(Literal::Number(3)),
+                    AST::Value(Literal::Number(4)),
+                ]
+            }
+        );
+
+        assert_eq!(p("(ord-map)").unwrap(), AST::Value(Literal::Map(ordmap![])),)
     }
 }
