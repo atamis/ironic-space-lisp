@@ -2,8 +2,8 @@
   (fn (id lst)
     (if (empty? lst)
       (error `(assoc-not-found ,id))
-      (let (pair (car lst)
-                 key (car pair))
+      (let [pair (car lst)
+            key (car pair)]
         (if (= key id)
           (car (cdr pair))
           (assoc id (cdr lst)))))))
@@ -12,8 +12,8 @@
   (fn (id lst)
     (if (empty? lst)
       false
-      (let (pair (car lst)
-                 key (car pair))
+      (let [pair (car lst)
+            key (car pair)]
         (if (= key id)
           true
           (assoc-contains? id (cdr lst))))

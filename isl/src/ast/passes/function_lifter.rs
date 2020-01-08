@@ -313,7 +313,7 @@ mod tests {
 
     #[test]
     fn test_normal() {
-        p("(let (x 1 y 2) x)").unwrap();
+        p("(let [x 1 y 2] x)").unwrap();
     }
 
     #[test]

@@ -340,7 +340,7 @@ mod tests {
     #[test]
     fn test_let() {
         let mut i = Interpreter::new();
-        let p1 = pi(&mut i, "(let (test 5) test)").unwrap();
+        let p1 = pi(&mut i, "(let [test 5] test)").unwrap();
         assert_eq!(p1, Literal::Number(5));
         assert!(pi(&mut i, "test").is_err());
         assert!(i.global.get(&"test".to_string()).is_none());

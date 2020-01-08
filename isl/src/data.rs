@@ -254,6 +254,15 @@ impl Literal {
         }
     }
 
+    /// Attempt to destructure a [`Literal`] into a vector, returning `Err()` if not possible.
+    pub fn ensure_vector(&self) -> Result<Vector<Literal>> {
+        if let Literal::Vector(ref v) = self {
+            Ok(v.clone())
+        } else {
+            Err(format_err!("Type error, expected vector, got {:?}", self))
+        }
+    }
+
     /// Attempt to destructure a [`Literal`] into a [`Pid`], returning `Err()` if not possible.
     pub fn ensure_pid(&self) -> Result<Pid> {
         if let Literal::Pid(n) = self {
@@ -287,6 +296,7 @@ impl Literal {
         }
     }
 
+    /// Attempt to destructure a [`Literal`] into a map, returning an error otherwise.
     pub fn ensure_map(&self) -> Result<OrdMap<Literal, Literal>> {
         if let Literal::Map(ref m) = self {
             Ok(m.clone())

@@ -178,7 +178,7 @@ mod tests {
 
     #[test]
     fn test_let_rebinding() {
-        let last1 = do_pass("(let (x 2) (let (x 1) x))").unwrap();
+        let last1 = do_pass("(let [x 2] (let [x 1] x))").unwrap();
         let f1 = &last1.fr.functions[0];
 
         if let AST::Let { defs: _, ref body } = *f1.body {
@@ -197,7 +197,7 @@ mod tests {
 
     #[test]
     fn test_internal_defs() {
-        let last1 = do_pass("(let (x 2) (do (def x 1) x))").unwrap();
+        let last1 = do_pass("(let [x 2] (do (def x 1) x))").unwrap();
         let f1 = &last1.fr.functions[0];
 
         if let AST::Let { defs: _, ref body } = *f1.body {

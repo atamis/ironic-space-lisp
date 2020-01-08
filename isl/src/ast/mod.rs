@@ -370,7 +370,7 @@ fn parse_let(_first: &Literal, rest: &Vector<Literal>) -> Result<AST> {
     let def_literals = rest
         .get(0)
         .ok_or_else(|| err_msg("let requires def list as first term (let (defs+) body)"))?
-        .ensure_list()
+        .ensure_vector()
         .context("Parsing list of defs")?;
 
     let body_literals = rest.skip(1);
@@ -598,7 +598,7 @@ mod tests {
 
     #[test]
     fn test_let() {
-        let p1 = ps("(let (test 0) 0)").unwrap();
+        let p1 = ps("(let [test 0] 0)").unwrap();
 
         assert_eq!(
             p1,
@@ -611,7 +611,7 @@ mod tests {
             }
         );
 
-        let p2 = ps("(let (test 0 asdf 0) 0)").unwrap();
+        let p2 = ps("(let [test 0 asdf 0] 0)").unwrap();
 
         assert_eq!(
             p2,
@@ -630,11 +630,11 @@ mod tests {
             }
         );
 
-        let p3 = ps("(let (test 0 asdf) 0)");
+        let p3 = ps("(let [test 0 asdf] 0)");
 
         assert!(p3.is_err());
 
-        let p4 = ps("(let (test 0))").unwrap();
+        let p4 = ps("(let [test 0])").unwrap();
 
         assert_eq!(
             p4,
@@ -647,7 +647,7 @@ mod tests {
             }
         );
 
-        let p5 = ps("(let () 0)").unwrap();
+        let p5 = ps("(let [] 0)").unwrap();
 
         assert_eq!(
             p5,

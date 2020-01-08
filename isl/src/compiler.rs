@@ -433,8 +433,8 @@ mod tests {
 
     #[test]
     fn test_let() {
-        assert_eq!(run("(let (x 1 y 2) x)").unwrap(), Literal::Number(1));
-        assert_eq!(run("(let (x 1 y 2) y)").unwrap(), Literal::Number(2));
+        assert_eq!(run("(let [x 1 y 2] x)").unwrap(), Literal::Number(1));
+        assert_eq!(run("(let [x 1 y 2] y)").unwrap(), Literal::Number(2));
     }
 
     fn lifted_compile(s: &'static str) -> Bytecode {
@@ -469,7 +469,7 @@ mod tests {
 
     #[test]
     fn test_compile_env() {
-        let code = lifted_compile("(def x (lambda (y) y)) (let (y 4) (do (x 5) y))");
+        let code = lifted_compile("(def x (lambda (y) y)) (let [y 4] (do (x 5) y))");
 
         code.dissassemble();
 
@@ -521,7 +521,7 @@ mod tests {
 
     #[test]
     fn test_localdefs() {
-        let code = lifted_compile("(let (x 2) (do (def y 1) y))");
+        let code = lifted_compile("(let [x 2] (do (def y 1) y))");
 
         code.dissassemble();
 
@@ -536,7 +536,7 @@ mod tests {
 
     #[test]
     fn test_localdefs2() {
-        let code = lifted_compile("(def y 3) (let (x 2) (def y 1)) y");
+        let code = lifted_compile("(def y 3) (let [x 2] (def y 1)) y");
 
         code.dissassemble();
 
@@ -553,7 +553,7 @@ mod tests {
     fn test_async_ops_execution() {
         use crate::exec;
 
-        let code = lifted_compile("(let (me (pid)) (if (fork) (send me 'hello) (wait)))");
+        let code = lifted_compile("(let [me (pid)] (if (fork) (send me 'hello) (wait)))");
 
         code.dissassemble();
 
@@ -624,7 +624,7 @@ mod tests {
     fn bench_toolchain(b: &mut Bencher) {
         use test;
         b.iter(|| {
-            let ast = str_to_ast("(def add1 (lambda (x) (let (y 1) (+ 1 1)))) (add1 5)").unwrap();
+            let ast = str_to_ast("(def add1 (lambda (x) (let [y 1] (+ 1 1)))) (add1 5)").unwrap();
 
             let last = function_lifter::lift_functions(&ast).unwrap();
 

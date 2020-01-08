@@ -142,10 +142,10 @@ mod tests {
 
     #[test]
     fn test_let() {
-        assert!(p("(let (test 0) asdf)").is_err());
-        assert!(p("(let (test 0) test)").is_ok());
-        assert!(p("(let (test 1) (let (asdf test) asdf))").is_ok());
-        assert!(p("(let (test 1) (let (asdf nottest) asdf))").is_err());
+        assert!(p("(let [test 0] asdf)").is_err());
+        assert!(p("(let [test 0] test)").is_ok());
+        assert!(p("(let [test 1] (let [asdf test] asdf))").is_ok());
+        assert!(p("(let [test 1] (let [asdf nottest] asdf))").is_err());
     }
 
     #[test]
