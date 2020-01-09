@@ -375,6 +375,12 @@ impl From<Pid> for Literal {
     }
 }
 
+impl From<OrdMap<Literal, Literal>> for Literal {
+    fn from(m: OrdMap<Literal, Literal>) -> Literal {
+        Literal::Map(m)
+    }
+}
+
 /// Macro to easily make a [`Literal::List`](data::Literal::List).
 ///
 /// ```

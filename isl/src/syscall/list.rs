@@ -34,6 +34,7 @@ impl SyscallFactory for Factory {
             ("conj", Syscall::A2(Box::new(conj))),
             ("assoc", Syscall::A3(Box::new(assoc))),
             ("get", Syscall::A2(Box::new(get))),
+            ("merge", Syscall::A2(Box::new(merge))),
         ])
     }
 }
@@ -134,6 +135,13 @@ fn get(a: Literal, b: Literal) -> Result<Literal> {
         Some(l) => l.clone(),
         None => Literal::Nil,
     })
+}
+
+fn merge(a: Literal, b: Literal) -> Result<Literal> {
+    let m1 = a.ensure_map()?;
+    let m2 = b.ensure_map()?;
+
+    Ok(m2.union(m1).into())
 }
 
 #[cfg(test)]
@@ -328,5 +336,18 @@ mod tests {
             get(m, Literal::Keyword("b".to_string())).unwrap(),
             Literal::Nil
         );
+    }
+
+    #[test]
+    fn test_merge() {
+        let m1 = Literal::Map(ordmap![1.into() => 2.into(), 3.into() => 4.into()]);
+
+        let m2 = Literal::Map(ordmap![1.into() => (-1).into(), 5.into() => 6.into()]);
+
+        let m3 = Literal::Map(
+            ordmap![1.into() => (-1).into(), 3.into() => 4.into(), 5.into() => 6.into()],
+        );
+
+        assert_eq!(merge(m1, m2).unwrap(), m3);
     }
 }
