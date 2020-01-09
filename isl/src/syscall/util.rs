@@ -30,6 +30,7 @@ impl SyscallFactory for Factory {
             ("odd?", Syscall::A1(Box::new(odd_pred))),
             ("error", Syscall::A1(Box::new(vm_error))),
             ("size", Syscall::A1(Box::new(size))),
+            ("map?", Syscall::A1(Box::new(map_pred))),
         ])
     }
 }
@@ -70,6 +71,10 @@ fn vm_error(a: Literal) -> Result<Literal> {
 fn size(a: Literal) -> Result<Literal> {
     use crate::size::DataSize;
     Ok(Literal::Number(a.data_size() as i64))
+}
+
+fn map_pred(a: Literal) -> Result<Literal> {
+    Ok(Literal::Boolean(a.is_map()))
 }
 
 #[cfg(test)]
