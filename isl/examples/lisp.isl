@@ -39,10 +39,7 @@
             key (car pair)]
         (if (= key id)
           true
-          (assoc-list-contains? id (cdr lst))))
-      )
-    )
-  )
+          (assoc-list-contains? id (cdr lst)))))))
 
 (def foldl
   (fn (f init lst)
@@ -58,47 +55,33 @@
 
 (def test
   (fn (x env)
-    (print (list x (ret-v (eval x env))))
-    ))
+    (print (list x (ret-v (eval x env))))))
 
 (def zip
   (fn (a b)
     (if (= (len a) (len b))
       (if (empty? a)
         '()
-        (cons (list (car a) (car b)) (zip (cdr a) (cdr b)))
-        )
-      (error 'error-zip-lists-uneven)
-      )
-    )
-  )
+        (cons (list (car a) (car b)) (zip (cdr a) (cdr b))))
+      (error 'error-zip-lists-uneven))))
 
 (def take
   (fn (n lst)
     (if (= n 0)
       '()
-      (cons (car lst) (take (- n 1) (cdr lst)))
-      )
-    )
-  )
+      (cons (car lst) (take (- n 1) (cdr lst))))))
 
 (def after
   (fn (n lst)
     (if (= n 0)
       lst
-      (after (- n 1) (cdr lst))
-      )
-    )
-  )
+      (after (- n 1) (cdr lst)))))
 
 (def group-by
   (fn (n lst)
     (if (empty? lst)
       '()
-      (cons (take n lst) (group-by n (after n lst)))
-      )
-    )
-  )
+      (cons (take n lst) (group-by n (after n lst))))))
 
 (def filter
   (fn (f lst)
@@ -109,19 +92,12 @@
             ]
         (if (f a)
           (cons a recur)
-          recur
-          )
-        )
-      )
-    )
-  )
+          recur)))))
 
 
 (def filter-index
   (fn (f lst)
-    (filter-index-internal f lst 0)
-    )
-  )
+    (filter-index-internal f lst 0)))
 
 (def filter-index-internal
   (fn (f lst n)
@@ -132,20 +108,13 @@
             ]
         (if (f a n)
           (cons a recur)
-          recur
-          )
-        )
-      )
-    )
-  )
+          recur)))))
 
 (def all
   (fn (f lst)
     (if (empty? lst)
       true
-      (and (f (car lst)) (all f (cdr lst)))
-      ))
-  )
+      (and (f (car lst)) (all f (cdr lst))))))
 
 
 (def contains?
@@ -154,9 +123,7 @@
       false
       (if (= a (car lst))
         true
-        (contains? (cdr lst) a))
-      )
-    ))
+        (contains? (cdr lst) a)))))
 
 (def count-items
   (fn (val)
@@ -164,10 +131,7 @@
       (if (empty? val)
         1
         (foldl + 1 (map count-items val)))
-      1
-      )
-    )
-  )
+      1)))
 
 (def ret
   (fn (val env)
@@ -183,8 +147,7 @@
   (fn (ret)
     (if (map? ret)
       (= 'ret (ret-tag ret))
-      false
-      )))
+      false)))
 
 (def make-func
   (fn (args env body)
@@ -205,8 +168,7 @@
        (pair env)
        (let [name (nth 0 pair)
              value (nth 1 pair)]
-         (assoc env name value))
-       )
+         (assoc env name value)))
      env
      (zip (func-args func) vals))))
 
@@ -214,8 +176,7 @@
   (fn (func)
     (if (map? func)
       (= 'func (func-tag func))
-      false
-      )))
+      false)))
 
 
 (def seq-eval
@@ -237,11 +198,7 @@
                 r (eval expr env)
                 recur-r (map-eval remaining (ret-e r))
                 ]
-            (ret (cons (ret-v r) (ret-v recur-r)) (ret-e recur-r))
-            )
-          ))
-    )
-  )
+            (ret (cons (ret-v r) (ret-v recur-r)) (ret-e recur-r)))))))
 
 (def cond-eval
   (fn (clauses env)
@@ -254,11 +211,7 @@
             next-env (ret-e pred-r)]
         (if (ret-v pred-r)
           (eval then next-env)
-          (cond-eval (cdr clauses) next-env)
-          )
-        )
-      )
-    ))
+          (cond-eval (cdr clauses) next-env))))))
 
 (def let-bindings-eval
   (fn (bindings env)
@@ -268,15 +221,11 @@
              expr (nth 1 binding)
              expr-r (eval expr env)]
          (if (symbol? name)
-           (assoc (ret-e expr-r) name (ret-v expr-r) )
+           (assoc (ret-e expr-r) name (ret-v expr-r))
            ;;(cons (list name (ret-v expr-r)) (ret-e expr-r))
-           (error `(local-binding-not-symbol ,name))
-           )
-         )
-       )
+           (error `(local-binding-not-symbol, name)))))
      env
-     bindings)
-    ))
+     bindings)))
 
 (def is-syscall?
   (fn (sys)
@@ -296,20 +245,17 @@
         (= sys 'len) (len a0)
         (= sys 'size) (size a0)
         true (if (= (len args) 1)
-             (error `(syscall-not-found-with-1-arg ,sys ,args))
-             (let [a1 (nth 1 args)]
-               (cond
-                 (= sys 'cons) (cons a0 a1)
-                 (= sys '+) (+ a0 a1)
-                 (= sys '-) (- a0 a1)
-                 (= sys '=) (= a0 a1)
-                 (= sys 'or) (or a0 a1)
-                 (= sys 'nth) (nth a0 a1)
-                 (= sys 'append) (append a0 a1)
-                 true (error `(syscall-not-found ,sys ,args)))))
-        )
-      )
-    ))
+               (error `(syscall-not-found-with-1-arg, sys, args))
+               (let [a1 (nth 1 args)]
+                 (cond
+                   (= sys 'cons) (cons a0 a1)
+                   (= sys '+) (+ a0 a1)
+                   (= sys '-) (- a0 a1)
+                   (= sys '=) (= a0 a1)
+                   (= sys 'or) (or a0 a1)
+                   (= sys 'nth) (nth a0 a1)
+                   (= sys 'append) (append a0 a1)
+                   true (error `(syscall-not-found, sys, args)))))))))
 
 
 
@@ -339,16 +285,15 @@
                        (or (= name 'fn)
                            (= name 'lambda)) (let [args (nth 0 r)
                                                    body (nth 1 r)]
-                                               (ret
-                                                (make-func args env body)
-                                                env))
+                           (ret
+                            (make-func args env body)
+                            env))
                        (= name 'let) (let [bindings (group-by 2 (car r))
                                            body (nth 1 r)
                                            local-env (let-bindings-eval bindings env)
                                            body-val (ret-v (eval body local-env))
                                            ]
-                                       (ret body-val env)
-                                       )
+                                       (ret body-val env))
                        (= name 'cond) (cond-eval (group-by 2 r) env)
                        (= name 'list) (map-eval r env)
                        (= name 'quote) (ret (car r) env)
@@ -361,21 +306,16 @@
                                   args (cdr (ret-v vs-r))
                                   local-bindings (func-apply-args f {} args)
                                   ]
-                            (if (func? f)
-                              (ret
-                               (ret-v (eval (func-body f)
-                                            (merge local-bindings
-                                                   (merge (ret-e vs-r)
-                                                          (func-env f)))))
-                               (ret-e vs-r)
-                               )
-                              (error `(error-cannot-apply-nonfunc ,f))
-                              )
-                            )
-                       ))
-      (symbol? expr) (ret (get env expr ) env)
-      true (ret expr env)
-      )))
+                              (if (func? f)
+                                (ret
+                                 (ret-v (eval (func-body f)
+                                              (merge local-bindings
+                                                     (merge (ret-e vs-r)
+                                                            (func-env f)))))
+                                 (ret-e vs-r))
+                                (error `(error-cannot-apply-nonfunc, f))))))
+      (symbol? expr) (ret (get env expr) env)
+      true (ret expr env))))
 
 
 (def exa '(x 1 y 2))
