@@ -190,6 +190,7 @@ impl Literal {
     /// Is something truthy? Used by if expressions and [ `JumpCond` ](super::vm::op::Op)
     pub fn truthy(&self) -> bool {
         match self {
+            Literal::Nil => false,
             Literal::Boolean(false) => false,
             _ => true,
         }
