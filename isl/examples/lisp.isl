@@ -1,14 +1,14 @@
-(def assoc
+(def assoc-list
   (fn (id lst)
     (if (empty? lst)
-      (error `(assoc-not-found ,id))
+      (error `(assoc-list-not-found ,id))
       (let [pair (car lst)
             key (car pair)]
         (if (= key id)
           (car (cdr pair))
-          (assoc id (cdr lst)))))))
+          (assoc-list id (cdr lst)))))))
 
-(def assoc-contains?
+(def assoc-list-contains?
   (fn (id lst)
     (if (empty? lst)
       false
@@ -16,7 +16,7 @@
             key (car pair)]
         (if (= key id)
           true
-          (assoc-contains? id (cdr lst))))
+          (assoc-list-contains? id (cdr lst))))
       )
     )
   )
@@ -148,31 +148,36 @@
 
 (def ret
   (fn (val env)
-    (list 'ret val env)))
+    {:val val
+     :env env
+     :tag 'ret}))
 
-(def ret-tag (fn (r) (nth 0 r)))
-(def ret-v (fn (r) (nth 1 r)))
-(def ret-e (fn (r) (nth 2 r)))
+(def ret-tag (fn (r) (get r :tag)))
+(def ret-v (fn (r) (get r :val)))
+(def ret-e (fn (r) (get r :env)))
 
 (def ret?
   (fn (ret)
-    (if (list? ret)
+    (if (map? ret)
       (= 'ret (ret-tag ret))
       false
       )))
 
 (def make-func
   (fn (args env body)
-    (list 'func args env body)))
+    {:tag 'func
+     :args args
+     :env env
+     :body body}))
 
-(def func-tag  (fn (func) (nth 0 func)))
-(def func-args (fn (func) (nth 1 func)))
-(def func-env  (fn (func) (nth 2 func)))
-(def func-body (fn (func) (nth 3 func)))
+(def func-tag  (fn (func) (get func :tag)))
+(def func-args (fn (func) (get func :args)))
+(def func-env  (fn (func) (get func :env)))
+(def func-body (fn (func) (get func :body)))
 
 (def func?
   (fn (func)
-    (if (list? func)
+    (if (map? func)
       (= 'func (func-tag func))
       false
       )))
@@ -325,7 +330,7 @@
                               )
                             )
                        ))
-      (symbol? expr) (ret (assoc expr env) env)
+      (symbol? expr) (ret (assoc-list expr env) env)
       true (ret expr env)
       )))
 
