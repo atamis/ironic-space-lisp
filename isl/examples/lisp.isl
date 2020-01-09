@@ -1,3 +1,26 @@
+(def assert-eq
+  (fn (a b)
+    (if (= a b)
+      nil
+      (error (list 'assert-error a b)))))
+
+(assert-eq true true)
+
+(def assert-eval
+  (fn (sexpr env expected)
+    (let [res (eval sexpr env)]
+      (if (= expected (ret-v res))
+        nil
+        (error (list 'assert-eval-error sexpr env expected (ret-v res)))))))
+
+(def assert-eval-ret
+  (fn (sexpr env expected)
+    (let [res (eval sexpr env)]
+      (if (= expected res)
+        nil
+        (error (list 'assert-eval-error sexpr env expected res))))))
+
+
 (def assoc-list
   (fn (id lst)
     (if (empty? lst)
@@ -175,6 +198,18 @@
 (def func-env  (fn (func) (get func :env)))
 (def func-body (fn (func) (get func :body)))
 
+(def func-apply-args
+  (fn (func env vals)
+    (foldl
+     (fn
+       (pair env)
+       (let [name (nth 0 pair)
+             value (nth 1 pair)]
+         (assoc env name value))
+       )
+     env
+     (zip (func-args func) vals))))
+
 (def func?
   (fn (func)
     (if (map? func)
@@ -233,7 +268,8 @@
              expr (nth 1 binding)
              expr-r (eval expr env)]
          (if (symbol? name)
-           (cons (list name (ret-v expr-r)) (ret-e expr-r))
+           (assoc (ret-e expr-r) name (ret-v expr-r) )
+           ;;(cons (list name (ret-v expr-r)) (ret-e expr-r))
            (error `(local-binding-not-symbol ,name))
            )
          )
@@ -287,7 +323,10 @@
                                            e (car (cdr r))
                                            rs (eval e env)
                                            val (ret-v rs)]
-                                       (ret val (cons (list name val) (ret-e rs))))
+                                       (ret val
+                                            (assoc (ret-e rs) name val)
+                                            ;;(cons (list name val) (ret-e rs))
+                                            ))
                        (= name 'do) (seq-eval r env)
                        (= name 'if) (let [pred (nth 0 r)
                                           then (nth 1 r)
@@ -318,70 +357,83 @@
                                                 new-env (ret-e args-r)]
                                             (ret (syscall-invoke name args-v) new-env))
                        true (let [vs-r (map-eval expr env)
-                                f (car (ret-v vs-r))
-                                args (cdr (ret-v vs-r))
-                                local-bindings (zip (func-args f) args)]
+                                  f (car (ret-v vs-r))
+                                  args (cdr (ret-v vs-r))
+                                  local-bindings (func-apply-args f {} args)
+                                  ]
                             (if (func? f)
                               (ret
-                               (ret-v (eval (func-body f) (append local-bindings (append (ret-e vs-r) (func-env f)))))
+                               (ret-v (eval (func-body f)
+                                            (merge local-bindings
+                                                   (merge (ret-e vs-r)
+                                                          (func-env f)))))
                                (ret-e vs-r)
                                )
                               (error `(error-cannot-apply-nonfunc ,f))
                               )
                             )
                        ))
-      (symbol? expr) (ret (assoc-list expr env) env)
+      (symbol? expr) (ret (get env expr ) env)
       true (ret expr env)
       )))
 
 
 (def exa '(x 1 y 2))
 
-(print (take 2 exa))
+(assert-eq '(x 1) (take 2 exa))
 
 (print (size '(1 2 3 4 5)))
 
-(print (after 2 '(y 2)))
+(assert-eq '() (after 2 '(y 2)))
 
-(print (group-by 2 exa))
+(assert-eq '((x 1) (y 2)) (group-by 2 exa))
 
-(test '(let (x 1 y 2) x) '())
+(assert-eval 1 {} 1)
 
-(test '1 '((test 1)))
-(test '(do 1) '((test 1)))
+(assert-eval '(let (x 1 y 2) x) {} 1)
 
-(test '(cond true 1) '((test 1)))
+(assert-eval '1 {'test 1} 1)
 
-(print (filter-index (fn (a idx) (odd? idx)) '(a b c d e f g h)))
+(assert-eval '(do 1) {'test 1} 1)
 
-(test '(+ 1 2 3) '((test 1)))
+(assert-eval '(cond true 1) {'test 1} 1)
 
-(test '(def test 123) '())
+(assert-eq (filter-index (fn (a idx) (odd? idx)) '(a b c d e f g h))
+           '(b d f h))
 
-(test '(if false 1 2) '())
+;; This should either error, or be 6. Instead, it silently drops
+;; the last arg and returns 3
+;; (assert-eval '(+ 1 2 3) {'test 1} 6)
 
-(test '(do (def test 123) (+ test 2)) '())
+(assert-eval-ret '(def test 123) {} (ret 123 {'test 123}))
 
-(test '(list 1 2 3) '())
+(assert-eval '(if false 1 2) {} 2)
 
-(test '(quote asdfasdfasdf) '())
+(assert-eval '(do (def test 123) (+ test 2)) {} 125)
 
-(print (map-eval '() '()))
+(assert-eval '(list 1 2 3) {} '(1 2 3))
 
-(print (map-eval '(1) '()))
+(assert-eval '(quote asdfasdfasdf) {} 'asdfasdfasdf)
 
-(print (map-eval '((+ 1 2 3)
-                   (def x 2)
-                   x
-                   (+ x 1)) '()))
+(assert-eq (map-eval '() {}) (ret '() {}))
 
-(print (zip '(a b c) '(1 2 3)))
+(assert-eq (map-eval '(1) {}) (ret '(1) {}))
 
-(test '((fn (x) (+ 1 x)) 1) '())
+(assert-eq (map-eval '((+ 1 2)
+                       (def x 2)
+                       x
+                       (+ x 1)) {})
+           (ret '(3 2 2 3) {'x 2}))
 
-(test '(let (x 1 y 2) (+ x y)) '())
+(assert-eq (zip '(a b c) '(1 2 3))
+           '((a 1)
+             (b 2)
+             (c 3)))
 
-(test '(let (x 1 y x) y) '())
+(assert-eval '((fn (x) (+ 1 x)) 1) {} 2)
 
+(assert-eval '(let (x 1 y 2) (+ x y)) {} 3)
+
+(assert-eval '(let (x 1 y x) y) {} 1)
 
 'done

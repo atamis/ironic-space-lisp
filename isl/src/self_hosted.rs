@@ -62,11 +62,17 @@ pub fn self_hosted() -> Result<()> {
 
     println!("{:?}", res.unwrap());
 
+    exec.wait();
+
     let double = make_double(&lits, vm.environment.peek().unwrap()).unwrap();
+
+    let mut exec = exec::Exec::new();
 
     let (_, res) = exec.sched(vm, &double);
 
     println!("hosted: {:?}", res?.ensure_list()?[1]);
+
+    exec.wait();
 
     Ok(())
 }
