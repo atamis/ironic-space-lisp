@@ -33,6 +33,7 @@ impl SyscallFactory for Factory {
             ("append", Syscall::A2(Box::new(append))),
             ("conj", Syscall::A2(Box::new(conj))),
             ("assoc", Syscall::A3(Box::new(assoc))),
+            ("get", Syscall::A2(Box::new(get))),
         ])
     }
 }
@@ -124,6 +125,15 @@ fn assoc(a: Literal, b: Literal, c: Literal) -> Result<Literal> {
     let mut m = a.ensure_map()?;
     m.insert(b, c);
     Ok(Literal::Map(m))
+}
+
+fn get(a: Literal, b: Literal) -> Result<Literal> {
+    let m = a.ensure_map()?;
+
+    Ok(match m.get(&b) {
+        Some(l) => l.clone(),
+        None => Literal::Nil,
+    })
 }
 
 #[cfg(test)]
@@ -304,5 +314,19 @@ mod tests {
         let m2 = Literal::Map(ordmap![1.into() => 3.into()]);
 
         assert_eq!(assoc(m1, b, c).unwrap(), m2);
+    }
+
+    #[test]
+    fn test_get() {
+        let b = Literal::Keyword("a".to_string());
+        let m = Literal::Map(ordmap![b.clone() => 1.into()]);
+
+        assert_eq!(get(m.clone(), b.clone()).unwrap(), 1.into());
+        assert!(get(b, Literal::Nil).is_err());
+
+        assert_eq!(
+            get(m, Literal::Keyword("b".to_string())).unwrap(),
+            Literal::Nil
+        );
     }
 }
