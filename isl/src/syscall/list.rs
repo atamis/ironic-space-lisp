@@ -2,7 +2,7 @@
 
 use crate::data::Literal;
 use crate::errors::*;
-use crate::syscall::destatic;
+use crate::syscall;
 use crate::syscall::Syscall;
 use crate::syscall::SyscallFactory;
 use im::vector::Vector;
@@ -21,7 +21,7 @@ impl Factory {
 
 impl SyscallFactory for Factory {
     fn syscalls(&self) -> Vec<(String, Syscall)> {
-        destatic(vec![
+        syscall::destatic(vec![
             ("len", Syscall::A1(Box::new(len))),
             ("cons", Syscall::A2(Box::new(cons))),
             ("car", Syscall::A1(Box::new(car))),
