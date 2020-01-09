@@ -20,27 +20,6 @@
         nil
         (error (list 'assert-eval-error sexpr env expected res))))))
 
-
-(def assoc-list
-  (fn (id lst)
-    (if (empty? lst)
-      (error `(assoc-list-not-found ,id))
-      (let [pair (car lst)
-            key (car pair)]
-        (if (= key id)
-          (car (cdr pair))
-          (assoc-list id (cdr lst)))))))
-
-(def assoc-list-contains?
-  (fn (id lst)
-    (if (empty? lst)
-      false
-      (let [pair (car lst)
-            key (car pair)]
-        (if (= key id)
-          true
-          (assoc-list-contains? id (cdr lst)))))))
-
 (def foldl
   (fn (f init lst)
     (if (empty? lst)
@@ -52,10 +31,6 @@
           (if (empty? lst)
             '()
             (cons (f (car lst)) (map f (cdr lst))))))
-
-(def test
-  (fn (x env)
-    (print (list x (ret-v (eval x env))))))
 
 (def zip
   (fn (a b)
