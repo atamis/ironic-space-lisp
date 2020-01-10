@@ -26,11 +26,16 @@
       init
       (foldl f (f (car lst) init) (cdr lst)))))
 
+(assert-eq (foldl + 0 '(1 2 3 4 5)) 15)
+(assert-eq (foldl cons '() '(:a :b :c)) '(:c :b :a))
+
 (def map
   (lambda (f lst)
           (if (empty? lst)
             '()
             (cons (f (car lst)) (map f (cdr lst))))))
+
+(assert-eq (map (fn (x) (+ x 1)) '(1 2 3 4)) '(2 3 4 5))
 
 (def zip
   (fn (a b)
@@ -40,11 +45,20 @@
         (cons (list (car a) (car b)) (zip (cdr a) (cdr b))))
       (error 'error-zip-lists-uneven))))
 
+(assert-eq (zip '(a b c) '(1 2 3))
+           '((a 1)
+             (b 2)
+             (c 3)))
+
+
 (def take
   (fn (n lst)
     (if (= n 0)
       '()
       (cons (car lst) (take (- n 1) (cdr lst))))))
+
+(assert-eq '(x 1) (take 2 '(x 1 y 2)))
+
 
 (def after
   (fn (n lst)
@@ -52,11 +66,17 @@
       lst
       (after (- n 1) (cdr lst)))))
 
+(assert-eq '() (after 2 '(y 2)))
+
+
 (def group-by
   (fn (n lst)
     (if (empty? lst)
       '()
       (cons (take n lst) (group-by n (after n lst))))))
+
+(assert-eq '((x 1) (y 2)) (group-by 2 '(x 1 y 2)))
+
 
 (def filter
   (fn (f lst)
@@ -198,19 +218,24 @@
          (if (symbol? name)
            (assoc (ret-e expr-r) name (ret-v expr-r))
            ;;(cons (list name (ret-v expr-r)) (ret-e expr-r))
-           (error `(local-binding-not-symbol, name)))))
+           (error `(local-binding-not-symbol ~name)))))
      env
      bindings)))
 
 (def is-syscall?
   (fn (sys)
-    (contains? '(empty? car cdr odd? cons print list? + = symbol? or - nth len append size) sys)))
+    (get '#{empty? car cdr odd? cons print list? + = symbol?
+            first rest
+            or - nth len append size}
+         sys)))
 
 (def syscall-invoke
   (fn (sys args)
     (let [a0 (nth 0 args)]
       (cond
         (= sys 'empty?) (empty? a0)
+        (= sys 'first) (first a0)
+        (= sys 'rest) (rest a0)
         (= sys 'car) (car a0)
         (= sys 'cdr) (cdr a0)
         (= sys 'odd?) (odd? a0)
@@ -220,7 +245,7 @@
         (= sys 'len) (len a0)
         (= sys 'size) (size a0)
         true (if (= (len args) 1)
-               (error `(syscall-not-found-with-1-arg, sys, args))
+               (error `(syscall-not-found-with-1-arg ~sys ~args))
                (let [a1 (nth 1 args)]
                  (cond
                    (= sys 'cons) (cons a0 a1)
@@ -230,7 +255,7 @@
                    (= sys 'or) (or a0 a1)
                    (= sys 'nth) (nth a0 a1)
                    (= sys 'append) (append a0 a1)
-                   true (error `(syscall-not-found, sys, args)))))))))
+                   true (error `(syscall-not-found ~sys ~args)))))))))
 
 
 
@@ -279,8 +304,7 @@
                        true (let [vs-r (map-eval expr env)
                                   f (car (ret-v vs-r))
                                   args (cdr (ret-v vs-r))
-                                  local-bindings (func-apply-args f {} args)
-                                  ]
+                                  local-bindings (func-apply-args f {} args)]
                               (if (func? f)
                                 (ret
                                  (ret-v (eval (func-body f)
@@ -288,22 +312,20 @@
                                                      (merge (ret-e vs-r)
                                                             (func-env f)))))
                                  (ret-e vs-r))
-                                (error `(error-cannot-apply-nonfunc, f))))))
-      (symbol? expr) (ret (get env expr) env)
+                                (error `(error-cannot-apply-nonfunc ~f))))))
+      (symbol? expr)
+      (let [v (get env expr)]
+        (if (= nil v)
+          (error `(error-unbound-variable ~expr))
+          (ret v  env)))
       true (ret expr env))))
 
 
-(def exa '(x 1 y 2))
-
-(assert-eq '(x 1) (take 2 exa))
-
 (print (size '(1 2 3 4 5)))
 
-(assert-eq '() (after 2 '(y 2)))
-
-(assert-eq '((x 1) (y 2)) (group-by 2 exa))
-
 (assert-eval 1 {} 1)
+
+(assert-eval '(len '()) {} 0)
 
 (assert-eval '(let (x 1 y 2) x) {} 1)
 
@@ -339,11 +361,6 @@
                        x
                        (+ x 1)) {})
            (ret '(3 2 2 3) {'x 2}))
-
-(assert-eq (zip '(a b c) '(1 2 3))
-           '((a 1)
-             (b 2)
-             (c 3)))
 
 (assert-eval '((fn (x) (+ 1 x)) 1) {} 2)
 
