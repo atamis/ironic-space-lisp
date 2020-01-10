@@ -6,6 +6,7 @@ use crate::syscall;
 use crate::syscall::Syscall;
 use crate::syscall::SyscallFactory;
 use im::vector::Vector;
+use im::OrdMap;
 use im::OrdSet;
 
 /// A `list` syscall factory.
@@ -129,12 +130,25 @@ fn assoc(a: Literal, b: Literal, c: Literal) -> Result<Literal> {
 }
 
 fn get(a: Literal, b: Literal) -> Result<Literal> {
-    let m = a.ensure_map()?;
+    match a {
+        Literal::Map(ref m) => get_map(m, b),
+        Literal::Set(ref s) => get_set(s, b),
+        x => Err(err_msg(format!(
+            "Type error, expected map or set, got {:?}",
+            x
+        ))),
+    }
+}
 
+fn get_map(m: &OrdMap<Literal, Literal>, b: Literal) -> Result<Literal> {
     Ok(match m.get(&b) {
         Some(l) => l.clone(),
         None => Literal::Nil,
     })
+}
+
+fn get_set(s: &OrdSet<Literal>, b: Literal) -> Result<Literal> {
+    Ok(Literal::Boolean(s.contains(&b)))
 }
 
 fn merge(a: Literal, b: Literal) -> Result<Literal> {
@@ -325,7 +339,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get() {
+    fn test_get_map() {
         let b = Literal::Keyword("a".to_string());
         let m = Literal::Map(ordmap![b.clone() => 1.into()]);
 
@@ -336,6 +350,16 @@ mod tests {
             get(m, Literal::Keyword("b".to_string())).unwrap(),
             Literal::Nil
         );
+    }
+
+    #[test]
+    fn test_get_set() {
+        let b: Literal = 1.into();
+        let c: Literal = 2.into();
+        let s = Literal::Set(ordset![b.clone()]);
+
+        assert_eq!(get(s.clone(), b.clone()).unwrap(), true.into());
+        assert_eq!(get(s.clone(), c.clone()).unwrap(), false.into());
     }
 
     #[test]
