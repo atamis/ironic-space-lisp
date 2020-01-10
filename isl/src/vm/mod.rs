@@ -458,7 +458,7 @@ impl VM {
         let addr = match a {
             Literal::Address(addr) => addr,
             Literal::Closure(_, addr) => addr,
-            _ => return Err(err_msg("attempted to jump to non-address")),
+            _ => return Err(err_msg(format!("attempted to jump to non-address {:?}", a))),
         };
 
         self.frames.push(Frame::new(addr));
@@ -580,7 +580,7 @@ impl VM {
         let addr = match c {
             Literal::Address(addr) => addr,
             Literal::Closure(_, addr) => addr,
-            _ => return Err(err_msg("attempted to jump to non-address")),
+            _ => return Err(err_msg(format!("attempted to jump to non-address {:?}", c))),
         };
 
         if let Literal::Closure(arity, _) = c {
