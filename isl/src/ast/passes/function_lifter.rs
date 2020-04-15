@@ -6,15 +6,15 @@ use crate::ast::Def;
 use crate::ast::DefVisitor;
 use crate::ast::AST;
 use crate::data::Address;
-use crate::data::Keyword;
 use crate::data::Literal;
+use crate::data::Symbol;
 use crate::errors::*;
 
 /// Represents a function as a list of arguments and an `AST` node.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ASTFunction {
     /// A list of the names of the arguments to this function.
-    pub args: Vec<Keyword>,
+    pub args: Vec<Symbol>,
     /// The [`AST`] body of this function.
     pub body: Rc<AST>,
 }
@@ -145,7 +145,7 @@ impl ASTVisitor<AST> for FunctionRegistry {
         Ok(AST::Do(new_exprs))
     }
 
-    fn lambda_expr(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<AST> {
+    fn lambda_expr(&mut self, args: &[Symbol], body: &Rc<AST>) -> Result<AST> {
         let new_body = Rc::new(self.visit(body)?);
         let i = self.add_function(ASTFunction {
             args: args.to_vec(),
@@ -155,7 +155,7 @@ impl ASTVisitor<AST> for FunctionRegistry {
         Ok(AST::Value(Literal::Closure(args.len(), (i, 0))))
     }
 
-    fn var_expr(&mut self, k: &Keyword) -> Result<AST> {
+    fn var_expr(&mut self, k: &Symbol) -> Result<AST> {
         Ok(AST::Var(k.clone()))
     }
 
@@ -204,10 +204,10 @@ pub trait LASTVisitor<T> {
     }
 
     /// Process a single top level function.
-    fn ast_function(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<T>;
+    fn ast_function(&mut self, args: &[Symbol], body: &Rc<AST>) -> Result<T>;
 
     /// Process a single top level function that is the entry function for this `LAST`.
-    fn ast_function_entry(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<T> {
+    fn ast_function_entry(&mut self, args: &[Symbol], body: &Rc<AST>) -> Result<T> {
         self.ast_function(args, body)
     }
 }
@@ -227,7 +227,7 @@ mod import {
     }
 
     impl LASTVisitor<ASTFunction> for Import {
-        fn ast_function(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<ASTFunction> {
+        fn ast_function(&mut self, args: &[Symbol], body: &Rc<AST>) -> Result<ASTFunction> {
             Ok(ASTFunction {
                 args: args.to_vec(),
                 body: Rc::new(self.visit(body).context("Visiting body of function")?),
@@ -274,12 +274,12 @@ mod import {
             Ok(AST::Do(new_exprs))
         }
 
-        fn lambda_expr(&mut self, _args: &[Keyword], _body: &Rc<AST>) -> Result<AST> {
+        fn lambda_expr(&mut self, _args: &[Symbol], _body: &Rc<AST>) -> Result<AST> {
             Err(err_msg("Not implemented"))
         }
 
         #[allow(clippy::ptr_arg)]
-        fn var_expr(&mut self, k: &Keyword) -> Result<AST> {
+        fn var_expr(&mut self, k: &Symbol) -> Result<AST> {
             Ok(AST::Var(k.clone()))
         }
 
@@ -313,7 +313,7 @@ mod tests {
 
     #[test]
     fn test_normal() {
-        p("(let (x 1 y 2) x)").unwrap();
+        p("(let [x 1 y 2] x)").unwrap();
     }
 
     #[test]

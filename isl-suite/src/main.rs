@@ -46,7 +46,7 @@ fn main() {
         ),
         (
             // This was n = 100, but got stack overflows from it.
-            "(def f (fn (n) (if (= n 0) #t (f (- n 1))))) (f 10)",
+            "(def f (fn (n) (if (= n 0) true (f (- n 1))))) (f 10)",
             Some(true.into()),
         ),
         ("(def f (fn [x y] x)) (f 1)", None),

@@ -7,8 +7,8 @@
 #![allow(clippy::needless_pass_by_value)]
 
 use crate::data::Address;
-use crate::data::Keyword;
 use crate::data::Literal;
+use crate::data::Symbol;
 use crate::env;
 use crate::errors::*;
 use std::collections::HashMap;
@@ -29,6 +29,9 @@ pub type A1Fn = Box<dyn Fn(Literal) -> Result<Literal> + Send + Sync + 'static>;
 /// A syscall that takes 2 values and returns 1 value.
 pub type A2Fn = Box<dyn Fn(Literal, Literal) -> Result<Literal> + Sync + Send + 'static>;
 
+/// A syscall that takes 3 values and returns 1 value.
+pub type A3Fn = Box<dyn Fn(Literal, Literal, Literal) -> Result<Literal> + Sync + Send + 'static>;
+
 /// Tagged pointers to syscall implementations.
 pub enum Syscall {
     /// A stack function.
@@ -37,6 +40,9 @@ pub enum Syscall {
     A1(A1Fn),
     /// Arity-2 function.
     A2(A2Fn),
+
+    /// Arity-3 function
+    A3(A3Fn),
 }
 
 impl Syscall {
@@ -46,6 +52,7 @@ impl Syscall {
             Syscall::Stack(_) => None,
             Syscall::A1(_) => Some(1),
             Syscall::A2(_) => Some(2),
+            Syscall::A3(_) => Some(3),
         }
     }
 }
@@ -53,11 +60,11 @@ impl Syscall {
 /// Produces a list of names and syscalls.
 pub trait SyscallFactory {
     /// Returns a list associating a name with a syscall function pointer.
-    fn syscalls(&self) -> Vec<(Keyword, Syscall)>;
+    fn syscalls(&self) -> Vec<(Symbol, Syscall)>;
 }
 
 /// Convert static strings to String structs. Useful for naming syscalls after string literals.
-fn destatic(v: Vec<(&'static str, Syscall)>) -> Vec<(Keyword, Syscall)> {
+fn destatic(v: Vec<(&'static str, Syscall)>) -> Vec<(Symbol, Syscall)> {
     v.into_iter().map(|(k, s)| (k.to_string(), s)).collect()
 }
 

@@ -11,8 +11,8 @@ use crate::ast::Def;
 use crate::ast::DefVisitor;
 use crate::ast::AST;
 use crate::data;
-use crate::data::Keyword;
 use crate::data::Literal;
+use crate::data::Symbol;
 use crate::errors::*;
 use crate::util::*;
 use std::rc::Rc;
@@ -27,22 +27,86 @@ pub fn pass(a: &AST) -> Result<AST> {
 struct Pass;
 
 impl Pass {
+    // If the call adds to the front of the literal, the vector should be
+    // reversed.
+    fn vec_to_calls<T>(
+        &mut self,
+        call: &str,
+        args: &T,
+        base: &data::Literal,
+        v: &mut Vec<AST>,
+    ) -> Result<AST>
+    where
+        // value, base collection
+        T: Fn(AST, AST) -> Vec<AST>,
+    {
+        if v.is_empty() {
+            Ok(AST::Value(base.clone()))
+        } else {
+            let value = v.pop().unwrap();
+            let coll_ast = self.vec_to_calls(call, args, base, v)?;
+            Ok(AST::Application {
+                f: Rc::new(AST::Var(call.to_string())),
+                args: args(value, coll_ast),
+            })
+        }
+    }
+
     // Vec should be reversed before being passed to consify
     // consify uses Vec::pop for better performance
     fn consify(&mut self, mut v: Vec<AST>) -> Result<AST> {
+        v.reverse();
+
+        self.vec_to_calls(
+            "cons",
+            &|val, coll| vec![val, coll],
+            &data::list(vec![]),
+            &mut v,
+        )
+    }
+
+    fn vectorize(&mut self, mut v: Vec<AST>) -> Result<AST> {
+        self.vec_to_calls(
+            "conj",
+            &|val, coll| vec![coll, val],
+            &Literal::Vector(vector![]),
+            &mut v,
+        )
+    }
+
+    fn setize(&mut self, mut v: Vec<AST>) -> Result<AST> {
+        self.vec_to_calls(
+            "conj",
+            &|val, coll| vec![coll, val],
+            &Literal::Set(ordset![]),
+            &mut v,
+        )
+    }
+
+    fn mapize(&mut self, mut v: Vec<AST>) -> Result<AST> {
         if v.is_empty() {
-            Ok(AST::Value(data::list(vec![])))
+            Ok(AST::Value(Literal::Map(ordmap![])))
         } else {
+            // This is outside in.
+            let value = v
+                .pop()
+                .ok_or_else(|| err_msg("Expected value for map, got no value"))?;
+            let key = v
+                .pop()
+                .ok_or_else(|| err_msg("Expected value for map, got no value"))?;
+
+            let coll_ast = self.mapize(v)?;
+
             Ok(AST::Application {
-                f: Rc::new(AST::Var("cons".to_string())),
-                args: vec![v.pop().unwrap(), self.consify(v)?],
+                f: Rc::new(AST::Var("assoc".to_string())),
+                args: vec![coll_ast, key, value],
             })
         }
     }
 
     fn condify(&mut self, mut terms: Vec<(AST, AST)>) -> Result<AST> {
         if terms.is_empty() {
-            Ok(AST::Value(Literal::Keyword(
+            Ok(AST::Value(Literal::Symbol(
                 "incomplete-cond-use-true".to_string(),
             )))
         } else {
@@ -62,9 +126,23 @@ impl Pass {
     fn expand(&mut self, s: &str, args: &[AST]) -> Result<Option<AST>> {
         match s {
             "list" => {
-                let mut new_args = self.multi_visit(args)?;
-                new_args.reverse();
+                let new_args = self.multi_visit(args)?;
                 let new_ast = self.consify(new_args)?;
+                Ok(Some(new_ast))
+            }
+            "vector" => {
+                let new_args = self.multi_visit(args)?;
+                let new_ast = self.vectorize(new_args)?;
+                Ok(Some(new_ast))
+            }
+            "ord-map" => {
+                let new_args = self.multi_visit(args)?;
+                let new_ast = self.mapize(new_args)?;
+                Ok(Some(new_ast))
+            }
+            "set" => {
+                let new_args = self.multi_visit(args)?;
+                let new_ast = self.setize(new_args)?;
                 Ok(Some(new_ast))
             }
             "cond" => {
@@ -136,14 +214,14 @@ impl ASTVisitor<AST> for Pass {
         Ok(AST::Do(new_exprs))
     }
 
-    fn lambda_expr(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<AST> {
+    fn lambda_expr(&mut self, args: &[Symbol], body: &Rc<AST>) -> Result<AST> {
         Ok(AST::Lambda {
             args: args.to_vec(),
             body: Rc::new(self.visit(body)?),
         })
     }
 
-    fn var_expr(&mut self, k: &Keyword) -> Result<AST> {
+    fn var_expr(&mut self, k: &Symbol) -> Result<AST> {
         Ok(AST::Var(k.clone()))
     }
 
@@ -188,7 +266,7 @@ mod tests {
         pass(&ast)
     }
 
-    fn n(n: u32) -> AST {
+    fn n(n: i64) -> AST {
         AST::Value(Literal::Number(n))
     }
 
@@ -221,11 +299,86 @@ mod tests {
                 els: Rc::new(AST::If {
                     pred: Rc::new(n(3)),
                     then: Rc::new(n(4)),
-                    els: Rc::new(AST::Value(Literal::Keyword(
+                    els: Rc::new(AST::Value(Literal::Symbol(
                         "incomplete-cond-use-true".to_string()
                     )))
                 })
             }
         );
+    }
+
+    #[test]
+    fn test_vector() {
+        assert_eq!(
+            p("(vector 1 2)").unwrap(),
+            AST::Application {
+                f: Rc::new(AST::Var("conj".to_string())),
+                args: vec![
+                    AST::Application {
+                        f: Rc::new(AST::Var("conj".to_string())),
+                        args: vec![
+                            AST::Value(Literal::Vector(vector![])),
+                            AST::Value(Literal::Number(1)),
+                        ]
+                    },
+                    AST::Value(Literal::Number(2)),
+                ]
+            }
+        );
+
+        assert_eq!(
+            p("(vector)").unwrap(),
+            AST::Value(Literal::Vector(vector![])),
+        )
+    }
+
+    #[test]
+    fn test_set() {
+        assert_eq!(
+            p("(set 1 2)").unwrap(),
+            AST::Application {
+                f: Rc::new(AST::Var("conj".to_string())),
+                args: vec![
+                    AST::Application {
+                        f: Rc::new(AST::Var("conj".to_string())),
+                        args: vec![
+                            AST::Value(Literal::Set(ordset![])),
+                            AST::Value(Literal::Number(1)),
+                        ]
+                    },
+                    AST::Value(Literal::Number(2)),
+                ]
+            }
+        );
+
+        assert_eq!(p("(set)").unwrap(), AST::Value(Literal::Set(ordset![])),)
+    }
+
+    #[test]
+    fn test_map() {
+        assert_eq!(
+            p("(ord-map 1 2 3 4)").unwrap(),
+            AST::Application {
+                f: Rc::new(AST::Var("assoc".to_string())),
+                args: vec![
+                    //coll
+                    AST::Application {
+                        f: Rc::new(AST::Var("assoc".to_string())),
+                        args: vec![
+                            //coll
+                            AST::Value(Literal::Map(ordmap![])),
+                            // val
+                            AST::Value(Literal::Number(1)),
+                            AST::Value(Literal::Number(2)),
+                        ]
+                    },
+                    // val
+                    AST::Value(Literal::Number(3)),
+                    AST::Value(Literal::Number(4)),
+                ]
+            }
+        );
+
+        assert_eq!(p("(ord-map)").unwrap(), AST::Value(Literal::Map(ordmap![])),)
     }
 }

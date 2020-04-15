@@ -2,8 +2,8 @@
 use crate::ast::ASTVisitor;
 use crate::ast::Def;
 use crate::ast::AST;
-use crate::data::Keyword;
 use crate::data::Literal;
+use crate::data::Symbol;
 use crate::env::Env;
 use crate::errors::*;
 use im::hashset;
@@ -12,7 +12,7 @@ use std::rc::Rc;
 const OP_FUNCS: &[&str] = &["fork", "wait", "send", "pid", "terminate"];
 
 #[allow(dead_code)]
-type KeywordSet = hashset::HashSet<Keyword>;
+type SymbolSet = hashset::HashSet<Symbol>;
 
 /// Do the pass. See [`super::unbound`] for more information.
 ///
@@ -27,7 +27,7 @@ pub fn pass_default(asts: &[AST]) -> Result<()> {
 ///
 /// Check variables against an existing environment.
 pub fn pass(ast: &AST, env: &Env) -> Result<()> {
-    let mut hs: KeywordSet = env.keys().cloned().collect();
+    let mut hs: SymbolSet = env.keys().cloned().collect();
 
     for op_key in OP_FUNCS.iter().map(|s| *s) {
         hs.insert(op_key.to_string());
@@ -37,7 +37,7 @@ pub fn pass(ast: &AST, env: &Env) -> Result<()> {
     Ok(())
 }
 
-impl ASTVisitor<()> for KeywordSet {
+impl ASTVisitor<()> for SymbolSet {
     fn value_expr(&mut self, _l: &Literal) -> Result<()> {
         Ok(())
     }
@@ -76,7 +76,7 @@ impl ASTVisitor<()> for KeywordSet {
         Ok(())
     }
 
-    fn lambda_expr(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<()> {
+    fn lambda_expr(&mut self, args: &[Symbol], body: &Rc<AST>) -> Result<()> {
         let mut c = self.clone();
         for k in args {
             c.insert(k.clone());
@@ -86,7 +86,7 @@ impl ASTVisitor<()> for KeywordSet {
         Ok(())
     }
 
-    fn var_expr(&mut self, k: &Keyword) -> Result<()> {
+    fn var_expr(&mut self, k: &Symbol) -> Result<()> {
         if self.contains(k) {
             Ok(())
         } else {
@@ -142,10 +142,10 @@ mod tests {
 
     #[test]
     fn test_let() {
-        assert!(p("(let (test 0) asdf)").is_err());
-        assert!(p("(let (test 0) test)").is_ok());
-        assert!(p("(let (test 1) (let (asdf test) asdf))").is_ok());
-        assert!(p("(let (test 1) (let (asdf nottest) asdf))").is_err());
+        assert!(p("(let [test 0] asdf)").is_err());
+        assert!(p("(let [test 0] test)").is_ok());
+        assert!(p("(let [test 1] (let [asdf test] asdf))").is_ok());
+        assert!(p("(let [test 1] (let [asdf nottest] asdf))").is_err());
     }
 
     #[test]

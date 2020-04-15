@@ -18,9 +18,9 @@
 //! assert_eq!(parser::parse("123").unwrap()[0], Literal::Number(123));
 //! ```
 //!
-//! Keywords a strings of characters that are alphanumeric, or in the set
+//! Symbols a strings of characters that are alphanumeric, or in the set
 //! `"-!??*+/$<>.="`, except for the first character, which cannot be
-//! numeric. This outputs a [`Literal::Keyword`](data::Literal::Keyword)
+//! numeric. This outputs a [`Literal::Symbol`](data::Literal::Symbol)
 //!
 //! ```
 //! # use isl::parser::parse;
@@ -58,7 +58,7 @@
 //! assert_eq!(parse("`keyword").unwrap(),
 //!            parse("(quasiquote keyword)").unwrap());
 //!
-//! assert_eq!(parse("`(+ 1 2 ,x)").unwrap(),
+//! assert_eq!(parse("`(+ 1 2 ~x)").unwrap(),
 //!            parse("(quasiquote (+ 1 2 (unquote x)))").unwrap());
 //! ```
 //!
@@ -72,11 +72,6 @@
 use crate::data;
 use crate::data::Literal;
 use crate::errors::*;
-use nom::types::CompleteStr;
-use nom::IResult;
-use nom::{anychar, digit};
-use std::fmt::Debug;
-use std::str::FromStr;
 
 /// Legacy struct, delegates to [`parser::parse`](parse)
 pub struct Parser();
@@ -100,24 +95,72 @@ impl Parser {
 }
 
 /// Parses a string to a vector of [`Literal`](data::Literal)s.
+// pub fn parse(input: &str) -> Result<Vec<data::Literal>> {
+//     let mut input = CompleteStr(input);
+//     let mut lits = vec![];
+
+//     while input != CompleteStr("") {
+//         match tagged_expr(input) {
+//             Ok((rem, l)) => {
+//                 lits.push(l);
+//                 input = rem;
+//             }
+//             e => return Err(format_err!("Parse error: {:?}", e)),
+//         }
+//     }
+
+//     Ok(lits)
+// }
+
 pub fn parse(input: &str) -> Result<Vec<data::Literal>> {
-    let mut input = CompleteStr(input);
-    let mut lits = vec![];
-
-    while input != CompleteStr("") {
-        match tagged_expr(input) {
-            Ok((rem, l)) => {
-                lits.push(l);
-                input = rem;
-            }
-            e => return Err(format_err!("Parse error: {:?}", e)),
-        }
-    }
-
-    Ok(lits)
+    Ok(read_all(input)?.iter().map(Literal::from).collect())
 }
 
-fn cstr(s: &str) -> CompleteStr {
+fn read_all(input: &str) -> Result<Vec<edn::Value>> {
+    let mut parser = edn::parser::Parser::new(input);
+    let mut out = vec![];
+
+    while let Some(r) = parser.read() {
+        out.push(r.map_err(|e| format_err!("Parser error [{}:{}]: {}", e.lo, e.hi, e.message))?);
+    }
+
+    Ok(out)
+}
+
+impl From<&edn::Value> for Literal {
+    fn from(v: &edn::Value) -> Literal {
+        use edn::Value;
+
+        match v {
+            Value::Nil => Literal::Nil,
+            Value::Boolean(b) => (*b).into(),
+            Value::String(s) => Literal::String(s.into()),
+            Value::Char(c) => Literal::Char(*c),
+            Value::Integer(n) => Literal::Number(*n),
+            Value::Float(n) => Literal::Float(*n),
+            Value::Symbol(s) => Literal::Symbol(s.to_string()),
+            Value::Keyword(s) => Literal::Keyword(s.to_string()),
+            Value::List(v) => Literal::List(v.iter().map(|x| x.into()).collect::<im::Vector<_>>()),
+            Value::Vector(v) => {
+                Literal::Vector(v.iter().map(|x| x.into()).collect::<im::Vector<_>>())
+            }
+            Value::Map(v) => Literal::Map(
+                v.iter()
+                    .map(|(k, v)| -> (Literal, Literal) { (k.into(), v.into()) })
+                    .collect::<im::OrdMap<_, _>>(),
+            ),
+            Value::Set(s) => Literal::Set(
+                s.iter()
+                    .map(|x| -> Literal { x.into() })
+                    .collect::<im::OrdSet<_>>(),
+            ),
+            Value::Tagged(s, b) => Literal::Tagged(s.to_string(), Box::new((&**b).into())),
+            //_ => panic!(format!("Not implemented: {:?}", v)),
+        }
+    }
+}
+
+/*fn cstr(s: &str) -> CompleteStr {
     CompleteStr(s)
 }
 
@@ -169,7 +212,7 @@ named!(keyword<CompleteStr, Literal >,
        do_parse!(
            f: verify!(anychar, keyword_element_first) >>
                rest: take_while!(keyword_element) >>
-               (Literal::Keyword({
+               (Literal::Symbol({
                    let mut s = rest.to_string();
                    s.insert(0, f);
                    s
@@ -215,7 +258,7 @@ named_attr!(#[doc = "Raw nom parser for parsing single tagged exprs."], pub tagg
                               _ => unreachable!(),
                           };
 
-                          data::list(vec![Literal::Keyword(key.to_string()), expr])
+                          data::list(vec![Literal::Symbol(key.to_string()), expr])
                       },
                       None => expr,
                   }
@@ -227,69 +270,73 @@ named_attr!(#[doc = "Raw nom parser for parsing single tagged exprs."], pub tagg
 named_attr!(
     #[doc = "Raw nom parser for parsing mulitple exprs."],
     pub exprs<CompleteStr, Vec<Literal> >, complete!(ws!(many0!(complete!(tagged_expr)))));
+*/
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::data::list;
     use crate::data::Literal;
-    use crate::data::Literal::Keyword;
+    use crate::data::Literal::Map;
     use crate::data::Literal::Number;
+    use crate::data::Literal::Set;
+    use crate::data::Literal::Symbol;
+    use crate::data::Literal::Vector;
 
     fn k(s: &str) -> Literal {
-        Keyword(s.to_string())
+        Symbol(s.to_string())
+    }
+
+    fn p(s: &str) -> Result<Vec<Literal>> {
+        parse(s)
+    }
+
+    fn p1(s: &str) -> Result<Literal> {
+        Ok(p(s)?.pop().unwrap())
     }
 
     #[test]
     fn isl_test_num() {
-        let p = apper(number);
-        assert!(p("22").is_ok());
-        assert_eq!(p("22").unwrap(), Number(22));
+        assert!(p1("22").is_ok());
+        assert_eq!(p1("22").unwrap(), Number(22));
 
-        assert_eq!(p("304032").unwrap(), Number(304032));
-        assert!(p("99999999999999999999999999999999999999999999").is_err());
+        assert_eq!(p1("304032").unwrap(), Number(304032));
+        assert!(p1("99999999999999999999999999999999999999999999").is_err());
     }
 
     #[test]
     fn isl_test_keyword() {
-        let p = apper(keyword);
+        assert_eq!(p1("asdf").unwrap(), k("asdf"));
+        assert_eq!(p1("a1234").unwrap(), k("a1234"));
+        assert_eq!(p1("a12-34").unwrap(), k("a12-34"));
 
-        assert_eq!(p("asdf").unwrap(), k("asdf"));
-        assert_eq!(p("a1234").unwrap(), k("a1234"));
-        assert_eq!(p("a12-34").unwrap(), k("a12-34"));
+        assert_eq!(p1("+").unwrap(), k("+"));
+        assert_eq!(p1("-").unwrap(), k("-"));
+        assert_eq!(p1("*").unwrap(), k("*"));
+        assert_eq!(p1("/").unwrap(), k("/"));
 
-        assert_eq!(p("+").unwrap(), k("+"));
-        assert_eq!(p("-").unwrap(), k("-"));
-        assert_eq!(p("*").unwrap(), k("*"));
-        assert_eq!(p("/").unwrap(), k("/"));
+        assert_eq!(p1("asdf?").unwrap(), k("asdf?"));
+        assert_eq!(p1("asdf!").unwrap(), k("asdf!"));
+        assert_eq!(p1("<>").unwrap(), k("<>"));
+        assert_eq!(p1("><").unwrap(), k("><"));
 
-        assert_eq!(p("asdf?").unwrap(), k("asdf?"));
-        assert_eq!(p("asdf!").unwrap(), k("asdf!"));
-        assert_eq!(p("<>").unwrap(), k("<>"));
-        assert_eq!(p("><").unwrap(), k("><"));
+        assert_eq!(p1("asdf.qwer").unwrap(), k("asdf.qwer"));
 
-        assert_eq!(p("asdf.qwer").unwrap(), k("asdf.qwer"));
-
-        assert!(p("1234").is_err())
+        // Because we can't isolate tests anymore, this will have to do
+        //assert!(p1("1234").is_err())
     }
 
     #[test]
     fn isl_test_boolean() {
-        let p = apper(boolean);
+        assert_eq!(p1("true").unwrap(), Literal::Boolean(true));
+        assert_eq!(p1("false").unwrap(), Literal::Boolean(false));
 
-        assert_eq!(p("#t").unwrap(), Literal::Boolean(true));
-        assert_eq!(p("#f").unwrap(), Literal::Boolean(false));
-
-        let p = apper(expr);
-
-        assert_eq!(p("( #t )").unwrap(), list(vec![Literal::Boolean(true)]));
+        assert_eq!(p1("( true )").unwrap(), list(vec![Literal::Boolean(true)]));
     }
 
     #[test]
     fn isl_test_items() {
-        let k = |s: &str| Keyword(s.to_string());
-
-        let p = apper(exprs);
+        let k = |s: &str| Symbol(s.to_string());
 
         assert_eq!(p("asdf").unwrap(), vec![k("asdf")]);
         assert_eq!(p("asdf qwer").unwrap(), vec![k("asdf"), k("qwer")]);
@@ -305,15 +352,13 @@ mod tests {
 
     #[test]
     fn isl_test_list() {
-        let k = |s: &str| Keyword(s.to_string());
+        let k = |s: &str| Symbol(s.to_string());
 
-        let p = apper(expr);
-
-        assert_eq!(p("()").unwrap(), list(vec![]));
-        assert_eq!(p("(asdf)").unwrap(), list(vec![k("asdf")]));
-        assert_eq!(p("(  asdf   )").unwrap(), list(vec![k("asdf")]));
+        assert_eq!(p1("()").unwrap(), list(vec![]));
+        assert_eq!(p1("(asdf)").unwrap(), list(vec![k("asdf")]));
+        assert_eq!(p1("(  asdf   )").unwrap(), list(vec![k("asdf")]));
         assert_eq!(
-            p("(  asdf  1234 )").unwrap(),
+            p1("(  asdf  1234 )").unwrap(),
             list(vec![k("asdf"), Number(1234)])
         );
 
@@ -323,17 +368,15 @@ mod tests {
 
     #[test]
     fn isl_test_nested_exprs() {
-        let k = |s: &str| Keyword(s.to_string());
-
-        let p = apper(expr);
+        let k = |s: &str| Symbol(s.to_string());
 
         assert_eq!(
-            p("(((())))").unwrap(),
+            p1("(((())))").unwrap(),
             list(vec![list(vec![list(vec![list(vec![])])])])
         );
 
         assert_eq!(
-            p("(test1 (+ 1 2 3 4))").unwrap(),
+            p1("(test1 (+ 1 2 3 4))").unwrap(),
             list(vec![
                 k("test1"),
                 list(vec![k("+"), Number(1), Number(2), Number(3), Number(4)])
@@ -343,10 +386,8 @@ mod tests {
 
     #[test]
     fn isl_test_quotes() {
-        let p = apper(tagged_expr);
-
         assert_eq!(
-            p("'(1 2 3 4)").unwrap(),
+            p1("'(1 2 3 4)").unwrap(),
             list(vec![
                 k("quote"),
                 list(vec![Number(1), Number(2), Number(3), Number(4)])
@@ -354,7 +395,7 @@ mod tests {
         );
 
         assert_eq!(
-            p("`(1 2 3 4)").unwrap(),
+            p1("`(1 2 3 4)").unwrap(),
             list(vec![
                 k("quasiquote"),
                 list(vec![Number(1), Number(2), Number(3), Number(4)])
@@ -362,11 +403,79 @@ mod tests {
         );
 
         assert_eq!(
-            p(",(1 2 3 4)").unwrap(),
+            p1("~(1 2 3 4)").unwrap(),
             list(vec![
                 k("unquote"),
                 list(vec![Number(1), Number(2), Number(3), Number(4)])
             ])
+        );
+    }
+
+    #[test]
+    fn test_vector() {
+        assert_eq!(p1("[]").unwrap(), Vector(vector![]));
+        assert_eq!(
+            p1("[1 2 3]").unwrap(),
+            Vector(vector![Number(1), Number(2), Number(3)])
+        );
+    }
+
+    #[test]
+    fn test_map() {
+        assert_eq!(p1("{}").unwrap(), Map(ordmap! {}));
+        assert_eq!(
+            p1("{1 2 3 4}").unwrap(),
+            Map(ordmap! {Number(1) => Number(2), Number(3) => Number(4)})
+        );
+        assert!(p1("{1 2 3}").is_err());
+        assert!(p1("{1}").is_err());
+    }
+
+    #[test]
+    fn test_set() {
+        assert_eq!(p1("#{}").unwrap(), Set(ordset![]));
+        assert_eq!(
+            p1("#{1 2 3 4}").unwrap(),
+            Set(ordset![Number(1), Number(2), Number(3), Number(4)])
+        );
+
+        // TODO
+        //assert!(p1("#{1 1}").is_err());
+    }
+
+    // It's assumed these are tested more exhaustively by the external parser.
+    #[test]
+    fn test_nil() {
+        assert_eq!(p1("nil").unwrap(), Literal::Nil);
+    }
+
+    #[test]
+    fn test_string() {
+        assert_eq!(p1("\"test\"").unwrap(), Literal::String("test".into()));
+    }
+
+    #[test]
+    fn test_char() {
+        assert_eq!(p1("\\c").unwrap(), Literal::Char('c'));
+    }
+
+    #[test]
+    fn test_keyword() {
+        assert_eq!(p1(":test").unwrap(), Literal::Keyword("test".into()));
+    }
+
+    #[test]
+    fn test_float() {
+        assert_eq!(p1("1.1").unwrap(), Literal::Float((1.1).into()));
+        assert_eq!(p1("+1.1").unwrap(), Literal::Float((1.1).into()));
+        assert_eq!(p1("-1.1").unwrap(), Literal::Float((-1.1).into()));
+    }
+
+    #[test]
+    fn test_tagged() {
+        assert_eq!(
+            p1("#test true").unwrap(),
+            Literal::Tagged("test".into(), Box::new(Literal::Boolean(true)))
         );
     }
 }

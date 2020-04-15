@@ -9,8 +9,8 @@ use crate::ast::passes::local::visitors::LocalASTVisitor;
 use crate::ast::passes::local::visitors::LocalDefVisitor;
 use crate::ast::passes::local::GlobalDef;
 use crate::ast::passes::local::LocalAST;
-use crate::data::Keyword;
 use crate::data::Literal;
+use crate::data::Symbol;
 use crate::errors::*;
 use crate::vm::bytecode::Bytecode;
 use crate::vm::bytecode::Chunk;
@@ -61,7 +61,7 @@ pub enum IrOp {
 pub struct Compiler;
 
 impl visitors::GlobalDefVisitor<IrChunk> for Compiler {
-    fn visit_globaldef(&mut self, name: &Keyword, value: &LocalAST) -> Result<IrChunk> {
+    fn visit_globaldef(&mut self, name: &Symbol, value: &LocalAST) -> Result<IrChunk> {
         let mut body_chunk = self.visit(value)?;
 
         body_chunk.push(IrOp::Lit(name.clone().into()));
@@ -161,8 +161,8 @@ impl visitors::LocalASTVisitor<IrChunk> for Compiler {
         Ok(chunk)
     }
 
-    fn globalvar_expr(&mut self, name: &Keyword) -> Result<IrChunk> {
-        Ok(vec![IrOp::Lit(Literal::Keyword(name.clone())), IrOp::Load])
+    fn globalvar_expr(&mut self, name: &Symbol) -> Result<IrChunk> {
+        Ok(vec![IrOp::Lit(Literal::Symbol(name.clone())), IrOp::Load])
     }
 
     fn localvar_expr(&mut self, index: usize) -> Result<IrChunk> {
@@ -240,7 +240,7 @@ impl visitors::LocalASTVisitor<IrChunk> for Compiler {
 impl visitors::LLASTVisitor<IrChunk> for Compiler {
     fn visit_local_function(
         &mut self,
-        args: &[Keyword],
+        args: &[Symbol],
         body: &Rc<LocalAST>,
         entry: bool,
     ) -> Result<IrChunk> {
@@ -433,8 +433,8 @@ mod tests {
 
     #[test]
     fn test_let() {
-        assert_eq!(run("(let (x 1 y 2) x)").unwrap(), Literal::Number(1));
-        assert_eq!(run("(let (x 1 y 2) y)").unwrap(), Literal::Number(2));
+        assert_eq!(run("(let [x 1 y 2] x)").unwrap(), Literal::Number(1));
+        assert_eq!(run("(let [x 1 y 2] y)").unwrap(), Literal::Number(2));
     }
 
     fn lifted_compile(s: &'static str) -> Bytecode {
@@ -469,7 +469,7 @@ mod tests {
 
     #[test]
     fn test_compile_env() {
-        let code = lifted_compile("(def x (lambda (y) y)) (let (y 4) (do (x 5) y))");
+        let code = lifted_compile("(def x (lambda (y) y)) (let [y 4] (do (x 5) y))");
 
         code.dissassemble();
 
@@ -521,7 +521,7 @@ mod tests {
 
     #[test]
     fn test_localdefs() {
-        let code = lifted_compile("(let (x 2) (do (def y 1) y))");
+        let code = lifted_compile("(let [x 2] (do (def y 1) y))");
 
         code.dissassemble();
 
@@ -536,7 +536,7 @@ mod tests {
 
     #[test]
     fn test_localdefs2() {
-        let code = lifted_compile("(def y 3) (let (x 2) (def y 1)) y");
+        let code = lifted_compile("(def y 3) (let [x 2] (def y 1)) y");
 
         code.dissassemble();
 
@@ -553,7 +553,7 @@ mod tests {
     fn test_async_ops_execution() {
         use crate::exec;
 
-        let code = lifted_compile("(let (me (pid)) (if (fork) (send me 'hello) (wait)))");
+        let code = lifted_compile("(let [me (pid)] (if (fork) (send me 'hello) (wait)))");
 
         code.dissassemble();
 
@@ -624,7 +624,7 @@ mod tests {
     fn bench_toolchain(b: &mut Bencher) {
         use test;
         b.iter(|| {
-            let ast = str_to_ast("(def add1 (lambda (x) (let (y 1) (+ 1 1)))) (add1 5)").unwrap();
+            let ast = str_to_ast("(def add1 (lambda (x) (let [y 1] (+ 1 1)))) (add1 5)").unwrap();
 
             let last = function_lifter::lift_functions(&ast).unwrap();
 

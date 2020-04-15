@@ -5,8 +5,8 @@ use crate::ast::Def;
 use crate::ast::DefVisitor;
 use crate::ast::LiftedAST;
 use crate::ast::AST;
-use crate::data::Keyword;
 use crate::data::Literal;
+use crate::data::Symbol;
 use crate::errors::*;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -28,7 +28,7 @@ pub enum LocalAST {
         body: Rc<LocalAST>,
     },
     Do(Vec<LocalAST>),
-    GlobalVar(Keyword),
+    GlobalVar(Symbol),
     LocalVar(usize),
     Application {
         f: Rc<LocalAST>,
@@ -45,11 +45,11 @@ pub struct LocalDef {
     pub value: LocalAST,
 }
 
-/// A global def relating a keyword name to a [`LocalAST`].
+/// A global def relating a Symbol name to a [`LocalAST`].
 #[derive(Debug, PartialEq)]
 pub struct GlobalDef {
     /// The name of this global def.
-    pub name: Keyword,
+    pub name: Symbol,
     /// The [`LocalAST`] body of this global def.
     pub value: LocalAST,
 }
@@ -58,7 +58,7 @@ pub struct GlobalDef {
 #[derive(Debug)]
 pub struct LocalFunction {
     /// This functions argument names.
-    pub args: Vec<Keyword>,
+    pub args: Vec<Symbol>,
     /// The body of the function
     pub body: Rc<LocalAST>,
 }
@@ -95,7 +95,7 @@ impl Localizer {
 }
 
 impl LASTVisitor<LocalFunction> for Localizer {
-    fn ast_function(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<LocalFunction> {
+    fn ast_function(&mut self, args: &[Symbol], body: &Rc<AST>) -> Result<LocalFunction> {
         let mut l = FunctionLocalizer::new(args, false);
 
         Ok(LocalFunction {
@@ -104,7 +104,7 @@ impl LASTVisitor<LocalFunction> for Localizer {
         })
     }
 
-    fn ast_function_entry(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<LocalFunction> {
+    fn ast_function_entry(&mut self, args: &[Symbol], body: &Rc<AST>) -> Result<LocalFunction> {
         let mut l = FunctionLocalizer::new(args, true);
 
         Ok(LocalFunction {
@@ -116,13 +116,13 @@ impl LASTVisitor<LocalFunction> for Localizer {
 
 #[derive(Clone, Debug)]
 struct FunctionLocalizer {
-    names: HashMap<Keyword, usize>,
+    names: HashMap<Symbol, usize>,
     index: usize,
     top_level_defs: bool,
 }
 
 impl FunctionLocalizer {
-    fn new(args: &[Keyword], top_level_defs: bool) -> FunctionLocalizer {
+    fn new(args: &[Symbol], top_level_defs: bool) -> FunctionLocalizer {
         let mut l = FunctionLocalizer {
             names: HashMap::new(),
             index: 0,
@@ -130,13 +130,13 @@ impl FunctionLocalizer {
         };
 
         for k in args {
-            l.check_keyword(k);
+            l.check_symbol(k);
         }
 
         l
     }
 
-    pub fn check_keyword(&mut self, k: &str) -> usize {
+    pub fn check_symbol(&mut self, k: &str) -> usize {
         if let Some(i) = self.names.get(k) {
             return *i;
         }
@@ -146,7 +146,7 @@ impl FunctionLocalizer {
         i
     }
 
-    pub fn get_keyword(&mut self, k: &str) -> Option<usize> {
+    pub fn get_symbol(&mut self, k: &str) -> Option<usize> {
         self.names.get(k).copied()
     }
 }
@@ -154,7 +154,7 @@ impl FunctionLocalizer {
 impl DefVisitor<LocalDef> for FunctionLocalizer {
     fn visit_def(&mut self, name: &str, value: &AST) -> Result<LocalDef> {
         Ok(LocalDef {
-            name: self.check_keyword(&name),
+            name: self.check_symbol(&name),
             value: self.visit(value)?,
         })
     }
@@ -200,12 +200,12 @@ impl ASTVisitor<LocalAST> for FunctionLocalizer {
         Ok(LocalAST::Do(self.multi_visit(exprs)?))
     }
 
-    fn lambda_expr(&mut self, _args: &[Keyword], _body: &Rc<AST>) -> Result<LocalAST> {
+    fn lambda_expr(&mut self, _args: &[Symbol], _body: &Rc<AST>) -> Result<LocalAST> {
         Err(err_msg("local pass does not support lambda"))
     }
 
-    fn var_expr(&mut self, k: &Keyword) -> Result<LocalAST> {
-        Ok(match self.get_keyword(k) {
+    fn var_expr(&mut self, k: &Symbol) -> Result<LocalAST> {
+        Ok(match self.get_symbol(k) {
             Some(i) => LocalAST::LocalVar(i),
             None => LocalAST::GlobalVar(k.to_string()),
         })
@@ -231,8 +231,8 @@ pub mod visitors {
     use super::LocalAST;
     use super::LocalDef;
     use super::LocalLiftedAST;
-    use crate::data::Keyword;
     use crate::data::Literal;
+    use crate::data::Symbol;
     use crate::errors::*;
     use std::rc::Rc;
 
@@ -305,8 +305,9 @@ pub mod visitors {
         /// Callback for `LocalAST::Do`, passing in a slice of `LocalAST`.
         fn do_expr(&mut self, exprs: &[LocalAST]) -> Result<R>;
 
+        #[allow(clippy::ptr_arg)]
         /// Callback for `LocalAST::GlobalVar`, passing in a reference to the name.
-        fn globalvar_expr(&mut self, name: &Keyword) -> Result<R>;
+        fn globalvar_expr(&mut self, name: &Symbol) -> Result<R>;
 
         /// Callback for `LocalAST::LocalVar`, passing the index directly.
         fn localvar_expr(&mut self, index: usize) -> Result<R>;
@@ -375,8 +376,9 @@ pub mod visitors {
             Ok(res)
         }
 
+        #[allow(clippy::ptr_arg)]
         /// Callback for a single `GlobalDef`, passing in the name and value `LocalAST`.
-        fn visit_globaldef(&mut self, name: &Keyword, value: &LocalAST) -> Result<R>;
+        fn visit_globaldef(&mut self, name: &Symbol, value: &LocalAST) -> Result<R>;
     }
 
     /// Traverse a `LocalLiftedAST`, with error context tagging.
@@ -405,7 +407,7 @@ pub mod visitors {
         /// Visit a local function, passing in references to the arguments, body, and whether this function is the entry.
         fn visit_local_function(
             &mut self,
-            args: &[Keyword],
+            args: &[Symbol],
             body: &Rc<LocalAST>,
             entry: bool,
         ) -> Result<R>;
@@ -440,11 +442,11 @@ mod tests {
     #[test]
     fn test_localizer() {
         let mut l = FunctionLocalizer::new(&vec![], true);
-        let i1 = l.check_keyword("test");
+        let i1 = l.check_symbol("test");
 
-        assert_eq!(i1, l.check_keyword("test"));
+        assert_eq!(i1, l.check_symbol("test"));
 
-        let i2 = l.check_keyword("test2");
+        let i2 = l.check_symbol("test2");
 
         assert_ne!(i1, i2);
     }

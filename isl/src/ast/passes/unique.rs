@@ -8,8 +8,8 @@ use crate::ast::ASTVisitor;
 use crate::ast::Def;
 use crate::ast::DefVisitor;
 use crate::ast::AST;
-use crate::data::Keyword;
 use crate::data::Literal;
+use crate::data::Symbol;
 use crate::errors::*;
 use im::hashmap::HashMap;
 use im::hashset::HashSet;
@@ -29,13 +29,13 @@ pub fn pass(last: &LiftedAST) -> Result<LiftedAST> {
 
 #[derive(Default, Clone)]
 struct Unique {
-    bindings: HashSet<Keyword>,
-    renames: HashMap<Keyword, Keyword>,
+    bindings: HashSet<Symbol>,
+    renames: HashMap<Symbol, Symbol>,
     top_level_defs: bool,
 }
 
 impl Unique {
-    fn convert_fn(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<ASTFunction> {
+    fn convert_fn(&mut self, args: &[Symbol], body: &Rc<AST>) -> Result<ASTFunction> {
         Ok(ASTFunction {
             args: args.to_vec(),
             body: Rc::new(self.visit(body)?),
@@ -44,7 +44,7 @@ impl Unique {
 }
 
 impl LASTVisitor<ASTFunction> for Unique {
-    fn ast_function(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<ASTFunction> {
+    fn ast_function(&mut self, args: &[Symbol], body: &Rc<AST>) -> Result<ASTFunction> {
         let mut u = self.clone();
 
         for k in args {
@@ -54,7 +54,7 @@ impl LASTVisitor<ASTFunction> for Unique {
         u.convert_fn(args, body)
     }
 
-    fn ast_function_entry(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<ASTFunction> {
+    fn ast_function_entry(&mut self, args: &[Symbol], body: &Rc<AST>) -> Result<ASTFunction> {
         let mut u = self.clone();
 
         u.top_level_defs = true;
@@ -134,11 +134,11 @@ impl ASTVisitor<AST> for Unique {
         Ok(AST::Do(exprs))
     }
 
-    fn lambda_expr(&mut self, _args: &[Keyword], _body: &Rc<AST>) -> Result<AST> {
+    fn lambda_expr(&mut self, _args: &[Symbol], _body: &Rc<AST>) -> Result<AST> {
         Err(err_msg("lambda exprs not supported"))
     }
 
-    fn var_expr(&mut self, k: &Keyword) -> Result<AST> {
+    fn var_expr(&mut self, k: &Symbol) -> Result<AST> {
         Ok(AST::Var(match self.renames.get(k) {
             Some(new_name) => new_name.clone(),
             None => k.to_string(),
@@ -178,7 +178,7 @@ mod tests {
 
     #[test]
     fn test_let_rebinding() {
-        let last1 = do_pass("(let (x 2) (let (x 1) x))").unwrap();
+        let last1 = do_pass("(let [x 2] (let [x 1] x))").unwrap();
         let f1 = &last1.fr.functions[0];
 
         if let AST::Let { defs: _, ref body } = *f1.body {
@@ -197,7 +197,7 @@ mod tests {
 
     #[test]
     fn test_internal_defs() {
-        let last1 = do_pass("(let (x 2) (do (def x 1) x))").unwrap();
+        let last1 = do_pass("(let [x 2] (do (def x 1) x))").unwrap();
         let f1 = &last1.fr.functions[0];
 
         if let AST::Let { defs: _, ref body } = *f1.body {

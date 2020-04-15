@@ -80,10 +80,10 @@ pub enum Op {
 
     /// Returns the Pid of this VM, if available.
     ///
-    /// Puts this VM's Pid on the stack, or #f if the VM has no Pid.
+    /// Puts this VM's Pid on the stack, or false if the VM has no Pid.
     Pid,
 
-    /// Fork this VM, returning #t if in the forked VM, #f if in the orignal.
+    /// Fork this VM, returning true if in the forked VM, false if in the orignal.
     ///
     /// Throws an error if this VM does not have an execution handle installed.
     Fork,

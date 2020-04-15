@@ -2,10 +2,12 @@
 
 use crate::data::Literal;
 use crate::errors::*;
-use crate::syscall::destatic;
+use crate::syscall;
 use crate::syscall::Syscall;
 use crate::syscall::SyscallFactory;
 use im::vector::Vector;
+use im::OrdMap;
+use im::OrdSet;
 
 /// A `list` syscall factory.
 #[derive(Default)]
@@ -20,7 +22,7 @@ impl Factory {
 
 impl SyscallFactory for Factory {
     fn syscalls(&self) -> Vec<(String, Syscall)> {
-        destatic(vec![
+        syscall::destatic(vec![
             ("len", Syscall::A1(Box::new(len))),
             ("cons", Syscall::A2(Box::new(cons))),
             ("car", Syscall::A1(Box::new(car))),
@@ -30,12 +32,16 @@ impl SyscallFactory for Factory {
             ("empty?", Syscall::A1(Box::new(empty))),
             ("nth", Syscall::A2(Box::new(n))),
             ("append", Syscall::A2(Box::new(append))),
+            ("conj", Syscall::A2(Box::new(conj))),
+            ("assoc", Syscall::A3(Box::new(assoc))),
+            ("get", Syscall::A2(Box::new(get))),
+            ("merge", Syscall::A2(Box::new(merge))),
         ])
     }
 }
 
 fn len(a: Literal) -> Result<Literal> {
-    Ok(Literal::Number(a.ensure_list()?.len() as u32))
+    Ok(Literal::Number(a.ensure_list()?.len() as i64))
 }
 
 // improper lists banned BTFO
@@ -88,6 +94,68 @@ fn append(a: Literal, b: Literal) -> Result<Literal> {
     a.append(b);
 
     Ok(Literal::List(a))
+}
+
+fn conj(a: Literal, b: Literal) -> Result<Literal> {
+    // a is collection
+    // b is value
+
+    match a {
+        Literal::List(v) => conj_list(v, b),
+        Literal::Vector(v) => conj_vector(v, b),
+        Literal::Set(s) => conj_set(s, b),
+        a => Err(err_msg(format!("Error attempted to conj onto {:?}", a))),
+    }
+}
+
+fn conj_list(mut v: Vector<Literal>, b: Literal) -> Result<Literal> {
+    v.push_front(b);
+    Ok(Literal::List(v))
+}
+
+fn conj_vector(mut v: Vector<Literal>, b: Literal) -> Result<Literal> {
+    v.push_back(b);
+    Ok(Literal::Vector(v))
+}
+
+fn conj_set(mut s: OrdSet<Literal>, b: Literal) -> Result<Literal> {
+    s.insert(b);
+    Ok(Literal::Set(s))
+}
+
+fn assoc(a: Literal, b: Literal, c: Literal) -> Result<Literal> {
+    let mut m = a.ensure_map()?;
+    m.insert(b, c);
+    Ok(Literal::Map(m))
+}
+
+fn get(a: Literal, b: Literal) -> Result<Literal> {
+    match a {
+        Literal::Map(ref m) => get_map(m, b),
+        Literal::Set(ref s) => get_set(s, b),
+        x => Err(err_msg(format!(
+            "Type error, expected map or set, got {:?}",
+            x
+        ))),
+    }
+}
+
+fn get_map(m: &OrdMap<Literal, Literal>, b: Literal) -> Result<Literal> {
+    Ok(match m.get(&b) {
+        Some(l) => l.clone(),
+        None => Literal::Nil,
+    })
+}
+
+fn get_set(s: &OrdSet<Literal>, b: Literal) -> Result<Literal> {
+    Ok(Literal::Boolean(s.contains(&b)))
+}
+
+fn merge(a: Literal, b: Literal) -> Result<Literal> {
+    let m1 = a.ensure_map()?;
+    let m2 = b.ensure_map()?;
+
+    Ok(m2.union(m1).into())
 }
 
 #[cfg(test)]
@@ -211,5 +279,99 @@ mod tests {
         assert_eq!(append(lst1.clone(), lst2).unwrap(), lst3);
 
         assert_eq!(append(lst1.clone(), list(vec![])).unwrap(), lst1);
+    }
+
+    #[test]
+    fn test_conj_list() {
+        let lst1 = list_lit![1];
+
+        let b = Literal::Number(2);
+
+        let lst2 = list_lit![2, 1];
+
+        assert_eq!(conj(lst1, b).unwrap(), lst2);
+    }
+
+    #[test]
+    fn test_conj_vector() {
+        let lst1 = Literal::Vector(vector![1.into()]);
+
+        let b = Literal::Number(2);
+
+        let lst2 = Literal::Vector(vector![1.into(), 2.into()]);
+
+        assert_eq!(conj(lst1, b).unwrap(), lst2);
+    }
+
+    #[test]
+    fn test_conj_set() {
+        let lst1 = Literal::Set(ordset![2.into()]);
+
+        let b = Literal::Number(1);
+
+        let lst2 = Literal::Set(ordset![1.into(), 2.into()]);
+
+        assert_eq!(conj(lst1, b).unwrap(), lst2);
+    }
+
+    #[test]
+    fn test_assoc() {
+        let m1 = Literal::Map(ordmap![1.into() => 2.into()]);
+
+        let b = Literal::Number(3);
+        let c = Literal::Number(4);
+
+        let m2 = Literal::Map(ordmap![1.into() => 2.into(), 3.into() => 4.into()]);
+
+        assert_eq!(assoc(m1, b, c).unwrap(), m2);
+    }
+
+    #[test]
+    fn test_assoc_remap() {
+        let m1 = Literal::Map(ordmap![1.into() => 2.into()]);
+
+        let b = Literal::Number(1);
+        let c = Literal::Number(3);
+
+        let m2 = Literal::Map(ordmap![1.into() => 3.into()]);
+
+        assert_eq!(assoc(m1, b, c).unwrap(), m2);
+    }
+
+    #[test]
+    fn test_get_map() {
+        let b = Literal::Keyword("a".to_string());
+        let m = Literal::Map(ordmap![b.clone() => 1.into()]);
+
+        assert_eq!(get(m.clone(), b.clone()).unwrap(), 1.into());
+        assert!(get(b, Literal::Nil).is_err());
+
+        assert_eq!(
+            get(m, Literal::Keyword("b".to_string())).unwrap(),
+            Literal::Nil
+        );
+    }
+
+    #[test]
+    fn test_get_set() {
+        let b: Literal = 1.into();
+        let c: Literal = 2.into();
+        let s = Literal::Set(ordset![b.clone()]);
+
+        assert_eq!(get(s.clone(), b.clone()).unwrap(), true.into());
+        assert_eq!(get(s.clone(), c.clone()).unwrap(), false.into());
+    }
+
+    #[test]
+    fn test_merge() {
+        let m1 = Literal::Map(ordmap![1.into() => 2.into(), 3.into() => 4.into()]);
+
+        let m2 = Literal::Map(ordmap![1.into() => (-1).into(), 5.into() => 6.into()]);
+
+        let m3 = Literal::Map(
+            ordmap![1.into() => (-1).into(), 3.into() => 4.into(), 5.into() => 6.into()],
+        );
+
+        assert_eq!(merge(m1, m2).unwrap(), m3);
     }
 }
