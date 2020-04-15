@@ -603,7 +603,7 @@ fn test_op_watch() {
 
     let v = ret.ensure_list().unwrap();
 
-    assert_eq!(v[0], "exit".into());
+    assert_eq!(v[0], data::Literal::Keyword("exit".into()));
 
     assert!(v[1].is_pid());
 }
