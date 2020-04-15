@@ -50,6 +50,7 @@ impl Router {
             rx,
             queue: VecDeque::new(),
             state: RouterState::new(),
+            watches: DiGraphMap::new(),
             quitting: false,
             debug: false,
         }
