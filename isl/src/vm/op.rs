@@ -88,6 +88,11 @@ pub enum Op {
     /// Throws an error if this VM does not have an execution handle installed.
     Fork,
 
+    /// Watch the `pid`, receiving the message `[:exit <pid>]` when it exits.
+    ///
+    /// `<pid>`
+    Watch,
+
     /// Load a local var.
     ///
     /// parameter: index
@@ -127,6 +132,7 @@ impl Op {
             Op::Send => "Send",
             Op::Fork => "Fork",
             Op::Pid => "Pid",
+            Op::Watch => "Watch",
             Op::LoadLocal(_) => "LoadLocal",
             Op::StoreLocal(_) => "StoreLocal",
             Op::Terminate => "Terminate",
@@ -159,6 +165,7 @@ impl fmt::Debug for Op {
             Op::Send => write!(f, "o>"),
             Op::Fork => write!(f, "oF"),
             Op::Pid => write!(f, "oMe"),
+            Op::Watch => write!(f, "oW"),
             Op::LoadLocal(i) => write!(f, "oLL{:}", i),
             Op::StoreLocal(i) => write!(f, "oSL{:}", i),
             Op::Terminate => write!(f, "oT"),

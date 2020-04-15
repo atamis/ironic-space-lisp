@@ -410,6 +410,7 @@ impl VM {
             Op::Send => self.op_send().context("Executing operation send")?,
             Op::Fork => self.op_fork().context("Executing operation fork")?,
             Op::Pid => self.op_pid().context("Executing operation pid")?,
+            Op::Watch => self.op_watch().context("Executing operation watch")?,
             Op::LoadLocal(i) => self
                 .op_load_local(i)
                 .context("Executing operation load local")?,
@@ -630,6 +631,21 @@ impl VM {
             .as_mut()
             .expect("Forking requires registered ExecHandler")
             .spawn(new_vm)?;
+
+        Ok(())
+    }
+
+    fn op_watch(&mut self) -> Result<()> {
+        let watched = self
+            .stack
+            .pop()
+            .ok_or_else(|| err_msg("Attempted to pop stack for watch target"))?
+            .ensure_pid()?;
+
+        self.proc
+            .as_mut()
+            .expect("Watching requires registered ExecHandler")
+            .watch(watched)?;
 
         Ok(())
     }
