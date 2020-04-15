@@ -15,12 +15,12 @@ use crate::vm::bytecode;
 
 /// Read ISL lisp implementation. See `examples/lisp.isl`.
 pub fn read_lisp<'a>() -> Result<&'a str> {
-    Ok(include_str!("../examples/lisp.isl"))
+    Ok(include_str!("../../examples/lisp.isl"))
 }
 
 /// Read ISL's syscall test. See `examples/syscalls.isl`.
 pub fn read_syscall_test<'a>() -> Result<&'a str> {
-    Ok(include_str!("../examples/syscalls.isl"))
+    Ok(include_str!("../../examples/syscalls.isl"))
 }
 
 /// An empty [`vm::VM`] with the default libraries.
