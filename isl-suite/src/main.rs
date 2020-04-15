@@ -84,10 +84,10 @@ fn main() {
                 ok,
             };
 
-            records.insert(name.to_string(), res);
+            records.insert((**name).to_string(), res);
         }
         let case = SuiteCase {
-            expr: s.to_string(),
+            expr: (*s).to_string(),
             expected: format!("{:#?}", expected),
             records,
         };

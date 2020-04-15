@@ -69,7 +69,7 @@ pub fn self_hosted() -> Result<()> {
 
     let mut exec = exec::Exec::new();
 
-    let (vm, res) = exec.sched(vm, &syscalls);
+    let (_vm, res) = exec.sched(vm, &syscalls);
 
     println!(
         "syscalls: {:?}",

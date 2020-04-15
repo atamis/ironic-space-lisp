@@ -141,7 +141,7 @@ fn exec_future(
         };
 
         if let VMState::Done(_) = vm.state {
-            let l = { vm.state.get_ret().unwrap() };
+            let l =  vm.state.get_ret().unwrap() ;
             if !has_proc {
                 vm.proc = None;
             }

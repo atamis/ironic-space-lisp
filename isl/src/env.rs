@@ -102,7 +102,7 @@ impl EnvStack {
         for (idx, e) in rest.iter().enumerate() {
             // idx is the idx of the env - 1, because of split_at
 
-            let last = { self.envs[idx].clone() };
+            let last = self.envs[idx].clone();
 
             denvs.push(last.difference(e.clone()));
         }

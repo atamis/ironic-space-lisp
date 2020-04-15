@@ -259,19 +259,19 @@ pub fn parse(e: &Literal) -> Result<AST> {
 fn parse_vector(v: &im::Vector<Literal>) -> Result<AST> {
     let args: Vec<AST> = v.iter().map(parse).collect::<Result<Vec<AST>>>()?; // make sure there are no parse errors
 
-    return Ok(AST::Application {
+    Ok(AST::Application {
         f: Rc::new(AST::Var("vector".into())),
         args,
-    });
+    })
 }
 
 fn parse_set(v: &im::OrdSet<Literal>) -> Result<AST> {
     let args: Vec<AST> = v.iter().map(parse).collect::<Result<Vec<AST>>>()?; // make sure there are no parse errors
 
-    return Ok(AST::Application {
+    Ok(AST::Application {
         f: Rc::new(AST::Var("set".into())),
         args,
-    });
+    })
 }
 
 fn parse_map(v: &im::OrdMap<Literal, Literal>) -> Result<AST> {
@@ -281,10 +281,10 @@ fn parse_map(v: &im::OrdMap<Literal, Literal>) -> Result<AST> {
         .map(parse)
         .collect::<Result<Vec<AST>>>()?; // make sure there are no parse errors
 
-    return Ok(AST::Application {
+    Ok(AST::Application {
         f: Rc::new(AST::Var("ord-map".into())),
         args,
-    });
+    })
 }
 
 fn parse_compound(first: &Literal, rest: &Vector<Literal>) -> Result<AST> {

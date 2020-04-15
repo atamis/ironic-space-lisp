@@ -1,7 +1,6 @@
 //! Error handling code
 //!
 //! Currently reexports some [ `failure` ] types, and `Result<T>` type like `error_chain` used.
-use failure;
 #[allow(unused_imports)]
 use failure::Error;
 
