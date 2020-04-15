@@ -103,10 +103,7 @@ impl Router {
             println!("Found that {:?} watched {:?} die", watcher, p);
             self.queue.push_back(RouterMessage::Send(
                 watcher,
-                vector![
-                    data::Literal::Keyword("exit".into()),
-                    p.into()
-                ].into(),
+                vector![data::Literal::Keyword("exit".into()), p.into()].into(),
             ))
         }
     }

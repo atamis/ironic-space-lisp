@@ -328,6 +328,9 @@ mod tests {
 
         let msg = executor::block_on(handle1.receive()).unwrap();
 
-        assert_eq!(msg, list_lit![data::Literal::Keyword("exit".into()), watched_pid]);
+        assert_eq!(
+            msg,
+            list_lit![data::Literal::Keyword("exit".into()), watched_pid]
+        );
     }
 }
