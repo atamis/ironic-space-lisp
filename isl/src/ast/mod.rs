@@ -10,8 +10,8 @@ use im::vector::Vector;
 use std::rc::Rc;
 
 use crate::data;
-use crate::data::Keyword;
 use crate::data::Literal;
+use crate::data::Symbol;
 use crate::env;
 use crate::errors::*;
 
@@ -35,10 +35,10 @@ pub enum AST {
         then: Rc<AST>,
         /// The false branch.
         ///
-        /// This would be `else`, but that's a reserved keyword.
+        /// This would be `else`, but that's a reserved Symbol.
         els: Rc<AST>,
     },
-    /// A single def expression, defining a keyword based on a body.
+    /// A single def expression, defining a Symbol based on a body.
     Def(Rc<Def>),
     /// A let expression, allowing for local bindings in a body.
     Let {
@@ -52,12 +52,12 @@ pub enum AST {
     /// Lambda expression representing a function, having args and a body.
     Lambda {
         /// A list of the argument names.
-        args: Vec<Keyword>,
+        args: Vec<Symbol>,
         /// The body.
         body: Rc<AST>,
     },
     /// A variable ref expression.
-    Var(Keyword),
+    Var(Symbol),
     /// A function application expression.
     Application {
         /// The function expression.
@@ -71,7 +71,7 @@ pub enum AST {
 #[derive(Debug, PartialEq)]
 pub struct Def {
     /// The name of the `Def`.
-    pub name: Keyword,
+    pub name: Symbol,
     /// The [`AST`] representing the body of the `Def`.
     pub value: AST,
 }
@@ -184,11 +184,11 @@ pub trait ASTVisitor<R> {
     fn do_expr(&mut self, exprs: &[AST]) -> Result<R>;
 
     /// Callback for `AST::Lambda`, passing in a slice of the arguments and the body.
-    fn lambda_expr(&mut self, args: &[Keyword], body: &Rc<AST>) -> Result<R>;
+    fn lambda_expr(&mut self, args: &[Symbol], body: &Rc<AST>) -> Result<R>;
 
     /// Callback for `AST::Var`, passing in the name.
     #[allow(clippy::ptr_arg)]
-    fn var_expr(&mut self, k: &Keyword) -> Result<R>;
+    fn var_expr(&mut self, k: &Symbol) -> Result<R>;
 
     /// Callback for `AST::Application`, passing in the function, and a slice of the arguments.
     fn application_expr(&mut self, f: &Rc<AST>, args: &[AST]) -> Result<R>;
@@ -230,27 +230,65 @@ pub fn parse_multi(exprs: &[Literal]) -> Result<AST> {
 /// Parse raw sexprs ([`Literal`]) into an AST.
 pub fn parse(e: &Literal) -> Result<AST> {
     match e {
-        Literal::List(ref vec) => {
-            match vec.len() {
-                0 => Err(err_msg("empty list not valid")), // TODO
-                1 => parse_compound(&vec[0], &Vector::new()),
-                _ => {
-                    let (first, rest) = vec.clone().split_at(1);
-                    parse_compound(&first[0], &rest)
-                }
+        Literal::List(ref vec) => match vec.len() {
+            0 => Ok(AST::Value(vector![].into())),
+            1 => parse_compound(&vec[0], &Vector::new()),
+            _ => {
+                let (first, rest) = vec.clone().split_at(1);
+                parse_compound(&first[0], &rest)
             }
-        }
-        Literal::Keyword(k) => Ok(AST::Var(k.clone())),
+        },
+        Literal::Nil => Ok(AST::Value(Literal::Nil)),
         Literal::Boolean(_) => Ok(AST::Value(e.clone())),
+        Literal::String(_) => Ok(AST::Value(e.clone())),
+        Literal::Char(_) => Ok(AST::Value(e.clone())),
+        Literal::Symbol(k) => Ok(AST::Var(k.clone())),
+        Literal::Keyword(_) => Ok(AST::Value(e.clone())),
         Literal::Number(_) => Ok(AST::Value(e.clone())),
+        Literal::Float(_) => Ok(AST::Value(e.clone())),
+        Literal::Vector(v) => parse_vector(v),
+        Literal::Map(m) => parse_map(m),
+        Literal::Set(s) => parse_set(s),
+        Literal::Tagged(_, v) => parse(v), // TODO
         Literal::Address(_) => Err(err_msg("Address literals not supported")),
         Literal::Closure(_, _) => Err(err_msg("Closure literals not supported")),
         Literal::Pid(_) => Err(err_msg("Pid literals are not supported")),
     }
 }
 
+fn parse_vector(v: &im::Vector<Literal>) -> Result<AST> {
+    let args: Vec<AST> = v.iter().map(parse).collect::<Result<Vec<AST>>>()?; // make sure there are no parse errors
+
+    Ok(AST::Application {
+        f: Rc::new(AST::Var("vector".into())),
+        args,
+    })
+}
+
+fn parse_set(v: &im::OrdSet<Literal>) -> Result<AST> {
+    let args: Vec<AST> = v.iter().map(parse).collect::<Result<Vec<AST>>>()?; // make sure there are no parse errors
+
+    Ok(AST::Application {
+        f: Rc::new(AST::Var("set".into())),
+        args,
+    })
+}
+
+fn parse_map(v: &im::OrdMap<Literal, Literal>) -> Result<AST> {
+    let args: Vec<AST> = v
+        .iter()
+        .flat_map(|(k, v)| vec![k, v])
+        .map(parse)
+        .collect::<Result<Vec<AST>>>()?; // make sure there are no parse errors
+
+    Ok(AST::Application {
+        f: Rc::new(AST::Var("ord-map".into())),
+        args,
+    })
+}
+
 fn parse_compound(first: &Literal, rest: &Vector<Literal>) -> Result<AST> {
-    let r = if let Literal::Keyword(s) = first {
+    let r = if let Literal::Symbol(s) = first {
         match s.as_ref() {
             "if" => parse_if(first, rest).context("Parsing let expr"),
             "def" => parse_def_expr(first, rest).context("Parsing def expr"),
@@ -287,10 +325,10 @@ fn parse_def_partial(v: &Vector<Literal>) -> Result<Def> {
 
     let name;
 
-    if let Literal::Keyword(ref s) = v[0] {
+    if let Literal::Symbol(ref s) = v[0] {
         name = s.clone();
     } else {
-        return Err(err_msg("first term of def must be keyword"));
+        return Err(err_msg("first term of def must be Symbol"));
     }
 
     let v = parse(&v[1]).context("Second term of def must be valid AST")?;
@@ -332,7 +370,7 @@ fn parse_let(_first: &Literal, rest: &Vector<Literal>) -> Result<AST> {
     let def_literals = rest
         .get(0)
         .ok_or_else(|| err_msg("let requires def list as first term (let (defs+) body)"))?
-        .ensure_list()
+        .ensure_vector()
         .context("Parsing list of defs")?;
 
     let body_literals = rest.skip(1);
@@ -380,7 +418,7 @@ fn parse_lambda(_first: &Literal, rest: &Vector<Literal>) -> Result<AST> {
         .ok_or_else(|| err_msg("lambda requires an argument list, (lambda (args*) body)"))?
         .ensure_list()?
         .iter()
-        .map(Literal::ensure_keyword)
+        .map(Literal::ensure_symbol)
         .collect::<Result<_>>()?;
 
     let body = rest
@@ -415,7 +453,7 @@ fn parse_quasiquote(_first: &Literal, rest: &Vector<Literal>) -> Result<AST> {
 }
 
 fn dynamic_quasiquote(a: &Literal) -> Result<AST> {
-    let uq = Literal::Keyword("unquote".to_string());
+    let uq = Literal::Symbol("unquote".to_string());
     // Is dynamic structure necessary
     if a.contains(&uq) {
         if let Literal::List(l) = a {
@@ -560,7 +598,7 @@ mod tests {
 
     #[test]
     fn test_let() {
-        let p1 = ps("(let (test 0) 0)").unwrap();
+        let p1 = ps("(let [test 0] 0)").unwrap();
 
         assert_eq!(
             p1,
@@ -573,7 +611,7 @@ mod tests {
             }
         );
 
-        let p2 = ps("(let (test 0 asdf 0) 0)").unwrap();
+        let p2 = ps("(let [test 0 asdf 0] 0)").unwrap();
 
         assert_eq!(
             p2,
@@ -592,11 +630,11 @@ mod tests {
             }
         );
 
-        let p3 = ps("(let (test 0 asdf) 0)");
+        let p3 = ps("(let [test 0 asdf] 0)");
 
         assert!(p3.is_err());
 
-        let p4 = ps("(let (test 0))").unwrap();
+        let p4 = ps("(let [test 0])").unwrap();
 
         assert_eq!(
             p4,
@@ -609,7 +647,7 @@ mod tests {
             }
         );
 
-        let p5 = ps("(let () 0)").unwrap();
+        let p5 = ps("(let [] 0)").unwrap();
 
         assert_eq!(
             p5,
@@ -705,7 +743,7 @@ mod tests {
             }
         );
 
-        let p2 = ps("(+)").unwrap();
+        let p2 = ps("(+ )").unwrap();
 
         assert_eq!(
             p2,
@@ -728,13 +766,20 @@ mod tests {
         assert_eq!(ps("`1").unwrap(), AST::Value(Literal::Number(1)));
 
         assert_eq!(
-            ps("`(test asdf ,(+ 1 2 3))").unwrap(),
+            ps("`(test asdf ~(+ 1 2 3))").unwrap(),
             ps("(list 'test 'asdf (+ 1 2 3))").unwrap()
         );
 
         assert_eq!(
-            ps("`(test asdf ,x)").unwrap(),
+            ps("`(test asdf ~x)").unwrap(),
             ps("(list 'test 'asdf x)").unwrap()
         );
+    }
+
+    #[test]
+    fn test_im_structures() {
+        assert_eq!(ps("[1 2 3]").unwrap(), ps("(vector 1 2 3)").unwrap());
+        assert_eq!(ps("{1 2 3 4}").unwrap(), ps("(ord-map 1 2 3 4)").unwrap());
+        assert_eq!(ps("#{1 2 3 4}").unwrap(), ps("(set 1 2 3 4)").unwrap());
     }
 }

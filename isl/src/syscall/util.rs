@@ -1,6 +1,6 @@
 //! Holds general utility syscalls.
 //!
-//! Registers syscalls `list?, keyword?, print, or, and, even?, odd?, error`
+//! Registers syscalls `list?, Symbol?, print, or, and, even?, odd?, error`
 use crate::data::Literal;
 use crate::errors::*;
 use crate::syscall::destatic;
@@ -22,7 +22,7 @@ impl SyscallFactory for Factory {
     fn syscalls(&self) -> Vec<(String, Syscall)> {
         destatic(vec![
             ("list?", Syscall::A1(Box::new(list_pred))),
-            ("keyword?", Syscall::A1(Box::new(keyword_pred))),
+            ("symbol?", Syscall::A1(Box::new(symbol_pred))),
             ("print", Syscall::A1(Box::new(println))),
             ("or", Syscall::A2(Box::new(or))),
             ("and", Syscall::A2(Box::new(and))),
@@ -30,6 +30,7 @@ impl SyscallFactory for Factory {
             ("odd?", Syscall::A1(Box::new(odd_pred))),
             ("error", Syscall::A1(Box::new(vm_error))),
             ("size", Syscall::A1(Box::new(size))),
+            ("map?", Syscall::A1(Box::new(map_pred))),
         ])
     }
 }
@@ -38,8 +39,8 @@ fn list_pred(a: Literal) -> Result<Literal> {
     Ok(Literal::Boolean(a.is_list()))
 }
 
-fn keyword_pred(a: Literal) -> Result<Literal> {
-    Ok(Literal::Boolean(a.is_keyword()))
+fn symbol_pred(a: Literal) -> Result<Literal> {
+    Ok(Literal::Boolean(a.is_symbol()))
 }
 
 fn println(a: Literal) -> Result<Literal> {
@@ -69,7 +70,11 @@ fn vm_error(a: Literal) -> Result<Literal> {
 
 fn size(a: Literal) -> Result<Literal> {
     use crate::size::DataSize;
-    Ok(Literal::Number(a.data_size() as u32))
+    Ok(Literal::Number(a.data_size() as i64))
+}
+
+fn map_pred(a: Literal) -> Result<Literal> {
+    Ok(Literal::Boolean(a.is_map()))
 }
 
 #[cfg(test)]
@@ -92,12 +97,12 @@ mod tests {
     }
 
     #[test]
-    fn test_keyword_pred() {
+    fn test_symbol_pred() {
         assert_eq!(
-            keyword_pred(Literal::Keyword("test".to_string())).unwrap(),
+            symbol_pred(Literal::Symbol("test".to_string())).unwrap(),
             mytrue()
         );
-        assert_eq!(keyword_pred(Literal::Number(1)).unwrap(), myfalse());
+        assert_eq!(symbol_pred(Literal::Number(1)).unwrap(), myfalse());
     }
 
     #[test]

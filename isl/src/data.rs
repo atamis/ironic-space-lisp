@@ -1,12 +1,17 @@
 //! Runtime data definitions
 //!
-//! For the singleton `Literal` structs (Number, Boolean, Address, keyword, List),
+//! For the singleton `Literal` structs (Number, Boolean, Address, Symbol, List),
 //! this module implemented `From` on the base Rust data types to ease literal
 //! construction.
 
 use crate::errors::*;
 #[doc(hidden)]
 pub use im::vector::Vector;
+#[doc(hidden)]
+pub use im::OrdMap;
+#[doc(hidden)]
+pub use im::OrdSet;
+use ordered_float::OrderedFloat;
 use std::fmt;
 
 /// A data type used to represent a code location.
@@ -17,11 +22,11 @@ use std::fmt;
 /// be used in future interpreter implementations.
 pub type Address = (usize, usize);
 
-/// Type alias for base keyword type.
+/// Type alias for base Symbol type.
 ///
-/// `Strings` are not efficient keywords, so in theory, this alias could be used to
+/// `Strings` are not efficient Symbols, so in theory, this alias could be used to
 /// replace `Strings` with some other data structure.
-pub type Keyword = String;
+pub type Symbol = String;
 
 /// Mutate an address to increase the second value (the operation index) by 1.
 pub fn address_inc(a: &mut Address) {
@@ -41,22 +46,55 @@ impl Pid {
 }
 
 /// Enum representing valid runtime values for Ironic Space Lisp.
-#[derive(Clone, Eq, PartialEq, is_enum_variant)]
+#[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash, is_enum_variant)]
 pub enum Literal {
-    /// Unsigned 32 bit number.
-    Number(u32),
+    /// Nil, styled `nil`, representing no value.
+    Nil,
 
-    /// Boolean, styled `#t` or `#f`.
+    /// Boolean, styled `true` or `false`.
     Boolean(bool),
 
-    /// An `[Address]`, or a tuple of 2 `usize`, representing an executable block of code.
-    Address(Address),
+    /// A string, styled surrounded by double quotes, representing a string of
+    /// characters.
+    String(String),
 
-    /// A keyword, stored as a string.
-    Keyword(Keyword),
+    /// A single character.
+    Char(char),
+
+    /// A Symbol, stored as a string.
+    Symbol(Symbol),
+
+    /// A Symbol, stored as a string.
+    Keyword(Symbol),
+
+    /// Signed 64 bit number.
+    Number(i64), // TODO Integer
+
+    /// A floating point number (`f64`), wrapped in an
+    /// [`OrderedFloat`](ordered_float::OrderedFloat) to support ordering.
+    Float(OrderedFloat<f64>),
 
     /// A list, using the immutable [`Vector`](im::vector::Vector) data structure.
     List(Vector<Literal>),
+
+    /// A vector, using the immutable [`Vector`](im::vector::Vector) data
+    /// structure.
+    Vector(Vector<Literal>),
+
+    /// A map, using the immutable [`OrdMap`](im::OrdMap) data structure. Maps
+    /// `Literal` to `Literal`.
+    Map(OrdMap<Literal, Literal>),
+
+    /// A set, using the immutable [`OrdSet`](im::OrdSet) data structure. Values
+    /// must be unique.
+    Set(OrdSet<Literal>),
+
+    /// A tagged value, with the first argument being the tag and the second the
+    /// literal itself.
+    Tagged(String, Box<Literal>),
+
+    /// An `[Address]`, or a tuple of 2 `usize`, representing an executable block of code.
+    Address(Address),
 
     /// A closure, an [`Address`] that includes an arity.
     Closure(usize, Address),
@@ -73,12 +111,67 @@ pub fn list(v: Vec<Literal>) -> Literal {
 impl fmt::Debug for Literal {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Literal::Nil => write!(f, "nil"),
+            Literal::Boolean(true) => write!(f, "true"),
+            Literal::Boolean(false) => write!(f, "false"),
+            Literal::String(s) => write!(f, "{:?}", s),
+            Literal::Char(c) => write!(f, "\\{}", c),
             Literal::Number(n) => write!(f, "N({:?})", n),
-            Literal::Boolean(true) => write!(f, "#t"),
-            Literal::Boolean(false) => write!(f, "#f"),
+            Literal::Float(fl) => write!(f, "F({:?})", fl.into_inner()),
             Literal::Address(a) => write!(f, "A({:?})", a),
+            Literal::Symbol(s) => write!(f, "{:}", s),
             Literal::Keyword(k) => write!(f, ":{:}", k),
-            Literal::List(ref v) => write!(f, "{:?}", v),
+            Literal::List(ref v) => {
+                write!(f, "(")?;
+
+                for (idx, l) in v.iter().enumerate() {
+                    write!(f, "{:?}", l)?;
+                    if idx != v.len() - 1 {
+                        write!(f, " ")?;
+                    }
+                }
+
+                write!(f, ")")
+            }
+            Literal::Vector(ref v) => {
+                write!(f, "[")?;
+
+                for (idx, l) in v.iter().enumerate() {
+                    write!(f, "{:?}", l)?;
+                    if idx != v.len() - 1 {
+                        write!(f, " ")?;
+                    }
+                }
+
+                write!(f, "]")
+            }
+            Literal::Map(ref m) => {
+                write!(f, "{{")?;
+
+                for (idx, (k, v)) in m.iter().enumerate() {
+                    write!(f, "{:?} {:?}", k, v)?;
+
+                    if idx != m.len() - 1 {
+                        write!(f, ", ")?;
+                    }
+                }
+
+                write!(f, "}}")
+            }
+            Literal::Set(ref s) => {
+                write!(f, "#{{")?;
+
+                for (idx, k) in s.iter().enumerate() {
+                    write!(f, "{:?}", k)?;
+
+                    if idx != s.len() - 1 {
+                        write!(f, " ")?;
+                    }
+                }
+
+                write!(f, "}}")
+            }
+            Literal::Tagged(t, v) => write!(f, "#{} {:?}", t, v),
             Literal::Closure(arity, address) => write!(f, "{:?}/{:}", address, arity),
             Literal::Pid(Pid(n)) => write!(f, "<{}>", n),
         }
@@ -86,24 +179,25 @@ impl fmt::Debug for Literal {
 }
 
 impl Literal {
-    /// Make a new keyword from something that can be turned into a `String`
-    pub fn new_keyword<T>(s: T) -> Literal
+    /// Make a new Symbol from something that can be turned into a `String`
+    pub fn new_symbol<T>(s: T) -> Literal
     where
         T: Into<String>,
     {
-        Literal::Keyword(s.into())
+        Literal::Symbol(s.into())
     }
 
     /// Is something truthy? Used by if expressions and [ `JumpCond` ](super::vm::op::Op)
     pub fn truthy(&self) -> bool {
         match self {
+            Literal::Nil => false,
             Literal::Boolean(false) => false,
             _ => true,
         }
     }
 
     /// Attempt to destructure a [`Literal`] into a number, returning `Err()` if not possible.
-    pub fn ensure_number(&self) -> Result<u32> {
+    pub fn ensure_number(&self) -> Result<i64> {
         if let Literal::Number(n) = self {
             Ok(*n)
         } else {
@@ -143,12 +237,12 @@ impl Literal {
         }
     }
 
-    /// Attempt to destructure a [`Literal`] into a keyword, returning `Err()` if not possible.
-    pub fn ensure_keyword(&self) -> Result<Keyword> {
-        if let Literal::Keyword(a) = self {
+    /// Attempt to destructure a [`Literal`] into a Symbol, returning `Err()` if not possible.
+    pub fn ensure_symbol(&self) -> Result<Symbol> {
+        if let Literal::Symbol(a) = self {
             Ok(a.clone())
         } else {
-            Err(format_err!("Type error, expected keyword, got {:?}", self))
+            Err(format_err!("Type error, expected Symbol, got {:?}", self))
         }
     }
 
@@ -161,12 +255,54 @@ impl Literal {
         }
     }
 
+    /// Attempt to destructure a [`Literal`] into a vector, returning `Err()` if not possible.
+    pub fn ensure_vector(&self) -> Result<Vector<Literal>> {
+        if let Literal::Vector(ref v) = self {
+            Ok(v.clone())
+        } else {
+            Err(format_err!("Type error, expected vector, got {:?}", self))
+        }
+    }
+
     /// Attempt to destructure a [`Literal`] into a [`Pid`], returning `Err()` if not possible.
     pub fn ensure_pid(&self) -> Result<Pid> {
         if let Literal::Pid(n) = self {
             Ok(*n)
         } else {
             Err(format_err!("Type error, expected pid, got {:?}", self))
+        }
+    }
+
+    /// Attempt to destructure a [`Literal`] into a tuple of two literals.
+    ///
+    /// Converts 2 element lists and vectors to a tuple of 2 literals.
+    pub fn ensure_pair(&self) -> Result<(Literal, Literal)> {
+        // TODO maps
+        let v = match self {
+            Literal::List(ref v) => Ok(v),
+            Literal::Vector(ref v) => Ok(v),
+            x => Err(err_msg(format!(
+                "Type error, expected pair ((a b), [a b]), got {:?}",
+                x
+            ))),
+        }?;
+
+        if v.len() != 2 {
+            Err(err_msg(format!(
+                "Type error, expected pair, but len was {}",
+                v.len()
+            )))
+        } else {
+            Ok((v.get(0).unwrap().clone(), v.get(1).unwrap().clone()))
+        }
+    }
+
+    /// Attempt to destructure a [`Literal`] into a map, returning an error otherwise.
+    pub fn ensure_map(&self) -> Result<OrdMap<Literal, Literal>> {
+        if let Literal::Map(ref m) = self {
+            Ok(m.clone())
+        } else {
+            Err(err_msg(format!("Type error, expected map, got {:?}", self)))
         }
     }
 
@@ -191,21 +327,21 @@ impl Literal {
     }
 }
 
-impl From<u32> for Literal {
-    fn from(n: u32) -> Literal {
+impl From<i64> for Literal {
+    fn from(n: i64) -> Literal {
         Literal::Number(n)
     }
 }
 
 impl From<String> for Literal {
     fn from(s: String) -> Literal {
-        Literal::new_keyword(s)
+        Literal::new_symbol(s)
     }
 }
 
 impl<'a> From<&'a str> for Literal {
     fn from(s: &str) -> Literal {
-        Literal::new_keyword(s)
+        Literal::new_symbol(s)
     }
 }
 
@@ -236,6 +372,12 @@ impl From<Vec<Literal>> for Literal {
 impl From<Pid> for Literal {
     fn from(p: Pid) -> Literal {
         Literal::Pid(p)
+    }
+}
+
+impl From<OrdMap<Literal, Literal>> for Literal {
+    fn from(m: OrdMap<Literal, Literal>) -> Literal {
+        Literal::Map(m)
     }
 }
 
@@ -288,7 +430,7 @@ mod tests {
 
         assert!(list(vec![Literal::Number(1)]).contains(&Literal::Number(1)));
         assert!(list(vec![
-            Literal::Keyword("test".to_string()),
+            Literal::Symbol("test".to_string()),
             Literal::Number(1)
         ])
         .contains(&Literal::Number(1)));
@@ -302,20 +444,20 @@ mod tests {
         ])])])])])
         .contains(&Literal::Number(1)));
 
-        assert!(list(vec![Literal::Keyword("test".to_string())])
-            .contains(&Literal::Keyword("test".to_string())))
+        assert!(list(vec![Literal::Symbol("test".to_string())])
+            .contains(&Literal::Symbol("test".to_string())))
     }
 
     #[test]
     fn test_from() {
-        let a1: Literal = (1 as u32).into();
+        let a1: Literal = (1 as i64).into();
         assert_eq!(a1, Literal::Number(1));
 
         let a2: Literal = "test".into();
-        assert_eq!(a2, Literal::Keyword("test".to_string()));
+        assert_eq!(a2, Literal::Symbol("test".to_string()));
 
         let a3: Literal = ("test".to_string()).into();
-        assert_eq!(a3, Literal::Keyword("test".to_string()));
+        assert_eq!(a3, Literal::Symbol("test".to_string()));
 
         let a4: Literal = true.into();
         assert_eq!(a4, Literal::Boolean(true));
@@ -337,6 +479,17 @@ mod tests {
         assert_eq!(
             list_lit![1, 2, 3,],
             list(vec![1.into(), 2.into(), 3.into()])
+        );
+    }
+
+    #[test]
+    fn test_ensure_pair() {
+        assert_eq!(list_lit![1, 2].ensure_pair().unwrap(), (1.into(), 2.into()));
+        assert_eq!(
+            Literal::Vector(vector![1.into(), 2.into()])
+                .ensure_pair()
+                .unwrap(),
+            (1.into(), 2.into())
         );
     }
 }

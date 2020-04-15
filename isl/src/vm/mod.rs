@@ -311,6 +311,20 @@ impl VM {
                 stack.push(v);
                 Ok(())
             }
+            Syscall::A3(ref f) => {
+                let arg1 = stack.pop().ok_or_else(|| {
+                    err_msg("Error popping stack for first arg of 2-arity syscall")
+                })?;
+                let arg2 = stack.pop().ok_or_else(|| {
+                    err_msg("Error popping stack for second arg of 2-arity syscall")
+                })?;
+                let arg3 = stack.pop().ok_or_else(|| {
+                    err_msg("Error popping stack for third arg of 2-arity syscall")
+                })?;
+                let v = f(arg1, arg2, arg3).context("While executing 3-arity syscall")?;
+                stack.push(v);
+                Ok(())
+            }
         }
     }
 
@@ -445,7 +459,7 @@ impl VM {
         let addr = match a {
             Literal::Address(addr) => addr,
             Literal::Closure(_, addr) => addr,
-            _ => return Err(err_msg("attempted to jump to non-address")),
+            _ => return Err(err_msg(format!("attempted to jump to non-address {:?}", a))),
         };
 
         self.frames.push(Frame::new(addr));
@@ -490,30 +504,30 @@ impl VM {
     }
 
     fn op_load(&mut self) -> Result<()> {
-        let keyword = self
+        let symbol = self
             .stack
             .pop()
-            .ok_or_else(|| err_msg("Attempted to pop stack for keyword for load"))?
-            .ensure_keyword()?;
+            .ok_or_else(|| err_msg("Attempted to pop stack for Symbol for load"))?
+            .ensure_symbol()?;
 
-        let val = self.environment.get(&keyword)?;
+        let val = self.environment.get(&symbol)?;
 
         self.stack.push(val.clone());
         Ok(())
     }
 
     fn op_store(&mut self) -> Result<()> {
-        let keyword = self
+        let symbol = self
             .stack
             .pop()
-            .ok_or_else(|| err_msg("Attempted to pop stack for keyword for store"))?
-            .ensure_keyword()?;
+            .ok_or_else(|| err_msg("Attempted to pop stack for Symbol for store"))?
+            .ensure_symbol()?;
         let value = self
             .stack
             .pop()
             .ok_or_else(|| err_msg("Attempted to pop stack for value for store"))?;
 
-        self.environment.insert(keyword, value)?;
+        self.environment.insert(symbol, value)?;
 
         Ok(())
     }
@@ -567,7 +581,7 @@ impl VM {
         let addr = match c {
             Literal::Address(addr) => addr,
             Literal::Closure(_, addr) => addr,
-            _ => return Err(err_msg("attempted to jump to non-address")),
+            _ => return Err(err_msg(format!("attempted to jump to non-address {:?}", c))),
         };
 
         if let Literal::Closure(arity, _) = c {
@@ -667,7 +681,7 @@ impl VM {
     }
 
     fn op_load_local(&mut self, index: usize) -> Result<()> {
-        let val = { self.local_cap_ref(index)?.clone() };
+        let val = self.local_cap_ref(index)?.clone();
 
         self.stack.push(val);
 

@@ -144,7 +144,7 @@ fn test_op_load() {
     assert!(vm.environment.get("test").is_err());
     vm.environment.insert("test".to_string(), 0.into()).unwrap();
     assert_eq!(*vm.environment.get("test").unwrap(), Literal::Number(0));
-    vm.op_lit(Literal::Keyword("test".to_string())).unwrap();
+    vm.op_lit(Literal::Symbol("test".to_string())).unwrap();
     vm.op_load().unwrap();
     assert_eq!(*vm.stack.last().unwrap(), Literal::Number(0));
 }
@@ -155,7 +155,7 @@ fn test_op_store() {
 
     assert!(vm.environment.get("test").is_err());
     vm.op_lit(Literal::Number(0)).unwrap();
-    vm.op_lit(Literal::Keyword("test".to_string())).unwrap();
+    vm.op_lit(Literal::Symbol("test".to_string())).unwrap();
     vm.op_store().unwrap();
     assert_eq!(*vm.environment.get("test").unwrap(), Literal::Number(0));
 }
@@ -177,7 +177,7 @@ fn test_op_pushenv_popenv() {
         .insert("test2".to_string(), 1.into())
         .unwrap();
     assert_eq!(*vm.environment.get("test2").unwrap(), Literal::Number(1));
-    vm.op_lit(Literal::Keyword("test1".to_string())).unwrap();
+    vm.op_lit(Literal::Symbol("test1".to_string())).unwrap();
     vm.op_load().unwrap();
     assert_eq!(*vm.stack.last().unwrap(), Literal::Number(0));
 
@@ -529,7 +529,7 @@ fn test_syscalls() {
     let mut vm = VM::new(Bytecode::new(vec![vec![
         Op::Lit(Literal::Number(1)),
         Op::Lit(Literal::Number(1)),
-        Op::Lit(Literal::Keyword("+".to_string())),
+        Op::Lit(Literal::Symbol("+".to_string())),
         Op::Load,
         Op::Call,
         Op::Return,
@@ -616,7 +616,7 @@ fn bench_nested_envs(b: &mut Bencher) {
     use crate::compiler::compile;
     use crate::parser;
 
-    let s = "(let (x 0) (let (y 1) (let (z 2) x)))";
+    let s = "(let [x 0] (let [y 1] (let [z 2] x)))";
     let lits = parser::parse(&s).unwrap();
 
     let mut vm = VM::new(bytecode::Bytecode::new(vec![]));

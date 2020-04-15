@@ -2,8 +2,8 @@ use super::VMConfig;
 use super::VMState;
 use super::VM;
 use crate::data::Address;
-use crate::data::Keyword;
 use crate::data::Literal;
+use crate::data::Symbol;
 use crate::env;
 use crate::errors::*;
 use crate::syscall;
@@ -17,7 +17,7 @@ use crate::vm::Frame;
 pub struct Builder {
     codes: Vec<Bytecode>,
     sys_facts: Vec<Box<dyn syscall::SyscallFactory>>,
-    env: Vec<(Keyword, Literal)>,
+    env: Vec<(Symbol, Literal)>,
     conf: VMConfig,
 }
 
@@ -58,7 +58,7 @@ impl Builder {
     }
 
     /// Adds a key value pair to the global environment of the [`VM`].
-    pub fn env(&mut self, k: Keyword, v: Literal) -> &mut Builder {
+    pub fn env(&mut self, k: Symbol, v: Literal) -> &mut Builder {
         self.env.push((k, v));
         self
     }

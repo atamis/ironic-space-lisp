@@ -8,8 +8,8 @@ use crate::ast::Def;
 use crate::ast::DefVisitor;
 use crate::ast::AST;
 use crate::data::Address;
-use crate::data::Keyword;
 use crate::data::Literal;
+use crate::data::Symbol;
 use crate::env::Env;
 use crate::errors::*;
 use crate::syscall;
@@ -88,11 +88,11 @@ impl<'a, 'b> ASTVisitor<Literal> for Context<'a, 'b> {
             .ok_or_else(|| err_msg("do expressions can't be empty"))?)
     }
 
-    fn lambda_expr(&mut self, _args: &[Keyword], _body: &Rc<AST>) -> Result<Literal> {
+    fn lambda_expr(&mut self, _args: &[Symbol], _body: &Rc<AST>) -> Result<Literal> {
         Err(err_msg("Not implemented"))
     }
 
-    fn var_expr(&mut self, k: &Keyword) -> Result<Literal> {
+    fn var_expr(&mut self, k: &Symbol) -> Result<Literal> {
         let r = self
             .env
             .get(k)
@@ -227,6 +227,7 @@ impl Interpreter {
                     syscall::Syscall::A1(f) => f(args.remove(0)),
                     // these are both 0 because args gets mutated, and the second arg is now the first.
                     syscall::Syscall::A2(f) => f(args.remove(0), args.remove(0)),
+                    syscall::Syscall::A3(f) => f(args.remove(0), args.remove(0), args.remove(0)),
                 }
             }
             None => Err(format_err!("Couldn't find function for address {:?}", addr)),
@@ -309,19 +310,19 @@ mod tests {
     #[test]
     fn eval_boolean() {
         let mut i = Interpreter::new();
-        assert_eq!(pi(&mut i, "#t").unwrap(), Literal::Boolean(true));
-        assert_eq!(pi(&mut i, "#f").unwrap(), Literal::Boolean(false));
+        assert_eq!(pi(&mut i, "true").unwrap(), Literal::Boolean(true));
+        assert_eq!(pi(&mut i, "false").unwrap(), Literal::Boolean(false));
     }
 
     #[test]
     fn test_if() {
         let mut i = Interpreter::new();
 
-        let p1 = pi(&mut i, "(if #t 1 0)").unwrap();
+        let p1 = pi(&mut i, "(if true 1 0)").unwrap();
 
         assert_eq!(p1, Literal::Number(1));
 
-        let p2 = pi(&mut i, "(if #f 1 0)").unwrap();
+        let p2 = pi(&mut i, "(if false 1 0)").unwrap();
 
         assert_eq!(p2, Literal::Number(0));
     }
@@ -339,7 +340,7 @@ mod tests {
     #[test]
     fn test_let() {
         let mut i = Interpreter::new();
-        let p1 = pi(&mut i, "(let (test 5) test)").unwrap();
+        let p1 = pi(&mut i, "(let [test 5] test)").unwrap();
         assert_eq!(p1, Literal::Number(5));
         assert!(pi(&mut i, "test").is_err());
         assert!(i.global.get(&"test".to_string()).is_none());
@@ -360,7 +361,7 @@ mod tests {
     fn test_import() {
         let mut i = Interpreter::new();
         assert_eq!(pi_last(&mut i, "1").unwrap(), 1.into());
-        assert_eq!(pi_last(&mut i, "(if #f 1 2)").unwrap(), 2.into());
+        assert_eq!(pi_last(&mut i, "(if false 1 2)").unwrap(), 2.into());
     }
 
     #[test]
@@ -379,13 +380,13 @@ mod tests {
     fn test_syscalls() {
         let mut i = Interpreter::new();
         assert_eq!(pi_last(&mut i, "(+ 1 2)").unwrap(), 3.into());
-        assert_eq!(pi_last(&mut i, "(cons 1 '())").unwrap(), list_lit!(1));
+        assert_eq!(pi_last(&mut i, "(cons 1 ())").unwrap(), list_lit!(1));
     }
 
     #[test]
     fn test_with_last() {
         // TODO: add list syscall, but make it throw error telling you to run ast::passes::internal_macro
-        let last = last_no_unbound("(def a (fn (x y) (cons x (cons y '()))) )");
+        let last = last_no_unbound("(def a (fn (x y) (cons x (cons y ()))) )");
         let mut i = Interpreter::with_last(&last).unwrap();
 
         assert_eq!(pi_last(&mut i, "(a 1 2)").unwrap(), list_lit!(1, 2));

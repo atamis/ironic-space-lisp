@@ -46,7 +46,7 @@ fn main() {
         ),
         (
             // This was n = 100, but got stack overflows from it.
-            "(def f (fn (n) (if (= n 0) #t (f (- n 1))))) (f 10)",
+            "(def f (fn (n) (if (= n 0) true (f (- n 1))))) (f 10)",
             Some(true.into()),
         ),
         ("(def f (fn [x y] x)) (f 1)", None),
@@ -84,10 +84,10 @@ fn main() {
                 ok,
             };
 
-            records.insert(name.to_string(), res);
+            records.insert((**name).to_string(), res);
         }
         let case = SuiteCase {
-            expr: s.to_string(),
+            expr: (*s).to_string(),
             expected: format!("{:#?}", expected),
             records,
         };
