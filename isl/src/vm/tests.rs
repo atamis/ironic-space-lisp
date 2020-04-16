@@ -589,6 +589,8 @@ fn test_op_watch() {
         Op::Send,
         // Watch the sub VM pid
         Op::Watch,
+        // Pop the return value
+        Op::Pop,
         // Wait for the watch message
         Op::Wait,
         // Return the wait message

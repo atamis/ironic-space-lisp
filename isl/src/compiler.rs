@@ -50,6 +50,7 @@ pub enum IrOp {
     Send,
     Fork,
     Pid,
+    Watch,
     LoadLocal(usize),
     StoreLocal(usize),
     Terminate,
@@ -204,7 +205,7 @@ impl visitors::LocalASTVisitor<IrChunk> for Compiler {
                     chunk.push(IrOp::Fork);
                 }
                 "wait" => {
-                    arg_check("fork", 0)?;
+                    arg_check("wait", 0)?;
                     chunk.push(IrOp::Wait);
                 }
                 "send" => {
@@ -218,6 +219,11 @@ impl visitors::LocalASTVisitor<IrChunk> for Compiler {
                 "terminate" => {
                     arg_check("terminate", 1)?;
                     chunk.push(IrOp::Terminate);
+                }
+
+                "watch" => {
+                    arg_check("watch", 1)?;
+                    chunk.push(IrOp::Watch);
                 }
 
                 _ => normal_call = true,
@@ -374,6 +380,7 @@ pub fn pack(
             IrOp::Send => Op::Send,
             IrOp::Fork => Op::Fork,
             IrOp::Pid => Op::Pid,
+            IrOp::Watch => Op::Watch,
             IrOp::LoadLocal(idx) => Op::LoadLocal(*idx),
             IrOp::StoreLocal(idx) => Op::StoreLocal(*idx),
             IrOp::Terminate => Op::Terminate,
@@ -594,6 +601,14 @@ mod tests {
         assert_eq!(code.addr((0, 1)).unwrap(), Op::Pid);
         assert_eq!(code.addr((0, 2)).unwrap(), Op::Send);
         assert_eq!(code.addr((0, 3)).unwrap(), Op::Return);
+
+        let code = lifted_compile("(watch (pid))");
+
+        code.dissassemble();
+
+        assert_eq!(code.addr((0, 0)).unwrap(), Op::Pid);
+        assert_eq!(code.addr((0, 1)).unwrap(), Op::Watch);
+        assert_eq!(code.addr((0, 2)).unwrap(), Op::Return);
     }
     #[test]
     fn test_async_ops_arity() {

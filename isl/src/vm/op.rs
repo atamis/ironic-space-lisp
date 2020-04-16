@@ -89,6 +89,7 @@ pub enum Op {
     Fork,
 
     /// Watch the `pid`, receiving the message `[:exit <pid>]` when it exits.
+    /// Returns the `pid` watched.
     ///
     /// `<pid>`
     Watch,

@@ -661,6 +661,8 @@ impl VM {
             .expect("Watching requires registered ExecHandler")
             .watch(watched)?;
 
+        self.stack.push(watched.into());
+
         Ok(())
     }
 
