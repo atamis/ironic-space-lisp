@@ -544,17 +544,12 @@ fn test_syscalls() {
 #[test]
 fn test_op_watch() {
     use crate::exec;
-    use crate::exec::ExecHandle;
-    use std::time::Duration;
-    use tokio::time;
-
-    let dur = Duration::from_millis(1000);
 
     let mut exec = exec::Exec::new();
 
-    // God I wish I had swap
-    let mut vm = VM::new(Bytecode::new(vec![vec![]]));
+    let vm = VM::new(Bytecode::new(vec![vec![]]));
 
+    // God I wish I had swap
     let code = Bytecode::new(vec![vec![
         // Put main VM pid on the stack
         Op::Pid,
