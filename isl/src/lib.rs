@@ -36,6 +36,7 @@ pub mod env;
 pub mod errors;
 pub mod exec;
 pub mod interpreter;
+pub mod packer;
 pub mod parser;
 pub mod repl;
 pub mod self_hosted;

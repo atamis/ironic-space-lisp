@@ -11,6 +11,8 @@ use std::fmt;
 pub struct Bytecode {
     /// Vec of chunks.
     pub chunks: Vec<Chunk>,
+    /// Pooled literals
+    pub pool: Vec<Literal>,
 }
 
 /// A `Vec` of operations
@@ -48,6 +50,10 @@ impl Chunk {
                 print!("\t{:}", i);
             }
 
+            if let Op::LoadPool(i) = op {
+                print!("\t{:}", i);
+            }
+
             println!()
         }
     }
@@ -64,7 +70,14 @@ impl Bytecode {
     ///
     /// The 2nd level vectors are converted to chunks.
     pub fn new(v: Vec<Vec<Op>>) -> Bytecode {
+        Bytecode::with_pool(v, vec![])
+    }
+
+    /// Create a new bytecode from a double vector operations and a pool of
+    /// literals.
+    pub fn with_pool(v: Vec<Vec<Op>>, pool: Vec<Literal>) -> Bytecode {
         Bytecode {
+            pool,
             chunks: v.into_iter().map(|c| Chunk { ops: c }).collect(),
         }
     }
@@ -84,6 +97,11 @@ impl Bytecode {
 
     /// Prints a plain text disassembly of all the chunks to STDOUT.
     pub fn dissassemble(&self) {
+        println!("################    POOL  ################");
+        for (index, lit) in self.pool.iter().enumerate() {
+            println!("\t{:}\t{:?}", index, lit);
+        }
+
         for (chunk_idx, chunk) in self.chunks.iter().enumerate() {
             println!("################ CHUNK #{:?} ################", chunk_idx);
             chunk.dissassemble(chunk_idx);
@@ -96,6 +114,8 @@ impl Bytecode {
     /// chunks.
     pub fn import(&mut self, code: &Bytecode) -> Address {
         let new_chunk_idx = self.chunks.len();
+
+        let current_pool = self.pool.len();
 
         let mut new_chunks: Vec<Chunk> = code
             .chunks
@@ -112,6 +132,7 @@ impl Bytecode {
                         Op::Lit(Literal::Closure(arity, (a1, a2))) => {
                             Op::Lit(Literal::Closure(*arity, ((a1 + new_chunk_idx), *a2)))
                         }
+                        Op::LoadPool(i) => Op::LoadPool(i + current_pool),
                         x => x.clone(),
                     })
                     .collect(),
@@ -120,6 +141,13 @@ impl Bytecode {
 
         self.chunks.append(&mut new_chunks);
 
+        self.pool.append(&mut code.pool.clone());
+
         (new_chunk_idx, 0)
+    }
+
+    /// Count all operations in the bytecode
+    pub fn count_ops(&self) -> usize {
+        self.chunks.iter().map(|chunk| chunk.ops.len()).sum()
     }
 }

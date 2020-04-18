@@ -447,6 +447,18 @@ fn test_load_local() {
 }
 
 #[test]
+fn test_literal_pool() {
+    let mut vm = VM::new(Bytecode::with_pool(
+        vec![],
+        vec![Literal::Number(1), Literal::Number(2)],
+    ));
+
+    vm.op_load_pool(0).unwrap();
+
+    assert_eq!(*vm.stack.last().unwrap(), Literal::from(1));
+}
+
+#[test]
 fn test_op_terminate() {
     let mut vm = VM::new(Bytecode::new(vec![vec![]]));
 
