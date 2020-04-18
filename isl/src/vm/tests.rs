@@ -541,6 +541,70 @@ fn test_syscalls() {
     );
 }
 
+#[test]
+fn test_op_watch() {
+    use crate::exec;
+
+    let mut exec = exec::Exec::new();
+
+    let vm = VM::new(Bytecode::new(vec![vec![]]));
+
+    // God I wish I had swap
+    let code = Bytecode::new(vec![vec![
+        // Put main VM pid on the stack
+        Op::Pid,
+        // Address for main-vm
+        Op::Lit(Literal::Address((0, 11).into())),
+        // Address for sub-vm
+        Op::Lit(Literal::Address((0, 5).into())),
+        // Fork
+        Op::Fork,
+        // Jump based on which VM we're in
+        Op::JumpCond,
+        // Store the main pid
+        Op::StoreLocal(0),
+        // Put our pid on the stack
+        Op::Pid,
+        // Restore the main pid
+        Op::LoadLocal(0),
+        // SUBVM
+        // Send our pid to the main VM
+        Op::Send,
+        // Wait for the signal
+        Op::Wait,
+        // Exit
+        Op::Return,
+        // MAINVM CONTINUED
+        // Receive sub VM's pid
+        Op::Wait,
+        // Duplicate sub VM's pid twice
+        Op::Dup,
+        Op::Dup,
+        // Send the sub VM its own pid to let it know to exit
+        Op::Send,
+        // Watch the sub VM pid
+        Op::Watch,
+        // Pop the return value
+        Op::Pop,
+        // Wait for the watch message
+        Op::Wait,
+        // Return the wait message
+        Op::Return,
+    ]]);
+
+    let (_, res) = exec.sched(vm, &code);
+
+    let ret = res.unwrap();
+
+    assert!(ret.is_list());
+
+    let v = ret.ensure_list().unwrap();
+
+    assert_eq!(v[0], data::Literal::Keyword("exit".into()));
+
+    assert!(v[1].is_pid());
+}
+
 // Benchmarks
 
 #[bench]

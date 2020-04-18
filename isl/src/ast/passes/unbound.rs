@@ -9,7 +9,7 @@ use crate::errors::*;
 use im::hashset;
 use std::rc::Rc;
 
-const OP_FUNCS: &[&str] = &["fork", "wait", "send", "pid", "terminate"];
+const OP_FUNCS: &[&str] = &["fork", "wait", "send", "pid", "terminate", "watch"];
 
 #[allow(dead_code)]
 type SymbolSet = hashset::HashSet<Symbol>;

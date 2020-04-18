@@ -28,6 +28,8 @@ pub trait ExecHandle: Send + Sync + fmt::Debug {
     fn send(&mut self, pid: data::Pid, msg: Literal) -> Result<()>;
     /// Spawn a new `VM`, consuming the `VM` and returning its `Pid`.
     fn spawn(&mut self, vm: vm::VM) -> Result<data::Pid>;
+    /// Watch this PID
+    fn watch(&mut self, watched: data::Pid) -> Result<()>;
     /// Asynchronously receive a Literal from your inbox.
     async fn receive(&mut self) -> Option<Literal>;
 }
@@ -82,6 +84,13 @@ impl ExecHandle for RouterHandle {
         tokio::spawn(f);
 
         Ok(pid)
+    }
+
+    fn watch(&mut self, watched: data::Pid) -> Result<()> {
+        Ok(self
+            .router
+            .try_send(RouterMessage::Watch(self.pid, watched))
+            .context("Error sending on a router channel")?)
     }
 }
 
@@ -301,5 +310,27 @@ mod tests {
         handle2.send(handle1.pid, "test-message2".into()).unwrap();
         let msg = executor::block_on(handle1.receive()).unwrap();
         assert_eq!(msg, "test-message2".into());
+    }
+
+    #[test]
+    fn test_watches() {
+        let mut runtime = Runtime::new().unwrap();
+        let router = router(&mut runtime);
+
+        let mut handle1 = RouterHandle::new(router.clone());
+        let mut handle2 = RouterHandle::new(router.clone());
+
+        let watched_pid = handle2.get_pid();
+
+        handle1.watch(watched_pid).unwrap();
+
+        drop(handle2);
+
+        let msg = executor::block_on(handle1.receive()).unwrap();
+
+        assert_eq!(
+            msg,
+            list_lit![data::Literal::Keyword("exit".into()), watched_pid]
+        );
     }
 }

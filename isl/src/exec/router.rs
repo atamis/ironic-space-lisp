@@ -6,6 +6,8 @@ use crate::futures::StreamExt;
 use futures::channel::mpsc;
 use futures::future::select;
 use futures::future::Either;
+use petgraph::graphmap::DiGraphMap;
+use petgraph::Direction;
 use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::time::Duration;
@@ -25,6 +27,9 @@ pub enum RouterMessage {
     Register(data::Pid, mpsc::Sender<Literal>),
     /// Send some data to the channel associated with a Pid.
     Send(data::Pid, Literal),
+    /// Establish a one way watch between the first and the second pid so that
+    /// the first pid is informed when the second exits.
+    Watch(data::Pid, data::Pid),
     /// Safely close the router once all other handlers are dropped..
     Quit,
 }
@@ -32,6 +37,8 @@ pub enum RouterMessage {
 struct Router {
     rx: mpsc::Receiver<RouterMessage>,
     queue: VecDeque<RouterMessage>,
+    // Map of watchers -> watched
+    watches: DiGraphMap<data::Pid, ()>,
     state: RouterState,
     quitting: bool,
     debug: bool,
@@ -43,6 +50,7 @@ impl Router {
             rx,
             queue: VecDeque::new(),
             state: RouterState::new(),
+            watches: DiGraphMap::new(),
             quitting: false,
             debug: false,
         }
@@ -76,6 +84,7 @@ impl Router {
                 Some(RouterMessage::Close(p)) => self.close(p),
                 Some(RouterMessage::Register(p, tx)) => self.register(p, tx),
                 Some(RouterMessage::Send(p, l)) => self.send(p, l),
+                Some(RouterMessage::Watch(p1, p2)) => self.watch(p1, p2),
                 Some(RouterMessage::Quit) => self.quit(),
             };
         }
@@ -90,6 +99,13 @@ impl Router {
 
     fn close(&mut self, p: data::Pid) {
         self.state.remove(&p);
+        for watcher in self.watches.neighbors_directed(p, Direction::Incoming) {
+            println!("Found that {:?} watched {:?} die", watcher, p);
+            self.queue.push_back(RouterMessage::Send(
+                watcher,
+                vector![data::Literal::Keyword("exit".into()), p.into()].into(),
+            ))
+        }
     }
 
     fn register(&mut self, p: data::Pid, tx: mpsc::Sender<Literal>) {
@@ -108,6 +124,10 @@ impl Router {
         } else {
             eprintln!("Attempted to send to non-existant pid {:?}: {:?}", p, l)
         }
+    }
+
+    fn watch(&mut self, watcher: data::Pid, watched: data::Pid) {
+        self.watches.add_edge(watcher, watched, ());
     }
 
     fn quit(&mut self) {
