@@ -122,4 +122,12 @@ impl Bytecode {
 
         (new_chunk_idx, 0)
     }
+
+    /// Count all operations in the bytecode
+    pub fn count_ops(&self) -> usize {
+        self.chunks
+            .iter()
+            .map(|chunk| chunk.ops.len())
+            .fold(0, |x, y| x + y)
+    }
 }

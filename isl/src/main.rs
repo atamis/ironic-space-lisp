@@ -5,7 +5,7 @@ use clap::{App, SubCommand};
 use isl::errors::*;
 use isl::repl;
 use isl::self_hosted;
-use isl::size::DataSize;
+use isl::{packer, size::DataSize};
 
 use std::io::prelude::*;
 
@@ -119,6 +119,10 @@ fn inspect(content: &str) -> Result<()> {
         let code = compiler::compile(&llast).context("While compiling")?;
 
         code.dissassemble();
+
+        let packed = packer::make_packed(&code);
+
+        packed.dissassemble();
     }
 
     Ok(())
