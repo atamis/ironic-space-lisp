@@ -147,4 +147,19 @@ mod test {
         assert_eq!(v.chunks[0].ops[0], Op::LoadPool(0));
         assert_eq!(v.chunks[0].ops[1], Op::LoadPool(1));
     }
+
+    #[test]
+    fn test_pool_extraction_dedup() {
+        let v = &mut Bytecode::new(vec![
+            vec![Op::Lit(Literal::from(1)), Op::Lit(Literal::from(1))],
+            vec![Op::Lit(Literal::from(1))],
+        ]);
+
+        extract_to_pool(v);
+
+        assert_eq!(v.pool, vec![Literal::from(1)]);
+        assert_eq!(v.chunks[0].ops[0], Op::LoadPool(0));
+        assert_eq!(v.chunks[0].ops[1], Op::LoadPool(0));
+        assert_eq!(v.chunks[1].ops[0], Op::LoadPool(0));
+    }
 }
