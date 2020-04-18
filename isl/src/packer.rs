@@ -48,6 +48,31 @@ pub fn make_packed(code: &Bytecode) -> Bytecode {
     Bytecode::new(vec![pack(code)])
 }
 
+pub fn extract_to_pool(code: &mut Bytecode) {
+    let mut pool_index = code.pool.len();
+    // Mapping between ending literals and eventual index
+    let mut lits: HashMap<Literal, usize> = HashMap::new();
+
+    for chunk in &mut code.chunks {
+        for op in &mut chunk.ops {
+            if let Op::Lit(l) = op {
+                if !lits.contains_key(l) {
+                    lits.insert(l.clone(), pool_index);
+                    pool_index += 1;
+                }
+
+                *op = Op::LoadPool(*lits.get(l).unwrap());
+            }
+        }
+    }
+
+    let mut new_lits = lits.into_iter().collect::<Vec<(Literal, usize)>>();
+    new_lits.sort_by_key(|(_, i)| *i);
+
+    code.pool
+        .append(&mut new_lits.into_iter().map(|(l, _)| l).collect());
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -97,5 +122,29 @@ mod test {
         ]));
 
         assert_eq!(v, vec![Op::Dup, Op::Pop, Op::Lit(Literal::Address((0, 1)))]);
+    }
+
+    #[test]
+    fn test_simple_pool_extraction() {
+        let v = &mut Bytecode::new(vec![vec![Op::Lit(Literal::from(1))]]);
+
+        extract_to_pool(v);
+
+        assert_eq!(v.pool, vec![Literal::from(1)]);
+        assert_eq!(v.chunks[0].ops[0], Op::LoadPool(0))
+    }
+
+    #[test]
+    fn test_pool_extraction_existing_pool() {
+        let v = &mut Bytecode::with_pool(
+            vec![vec![Op::LoadPool(0), Op::Lit(Literal::from(1))]],
+            vec![Literal::from(2)],
+        );
+
+        extract_to_pool(v);
+
+        assert_eq!(v.pool, vec![Literal::from(2), Literal::from(1)]);
+        assert_eq!(v.chunks[0].ops[0], Op::LoadPool(0));
+        assert_eq!(v.chunks[0].ops[1], Op::LoadPool(1));
     }
 }
