@@ -1,3 +1,4 @@
+//! Tools to manipulate existing bytecodes in functionality maintaining ways
 use crate::{data::Literal, vm};
 use std::collections::HashMap;
 use vm::{bytecode::Bytecode, op::Op};

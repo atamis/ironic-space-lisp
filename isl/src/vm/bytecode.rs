@@ -11,6 +11,8 @@ use std::fmt;
 pub struct Bytecode {
     /// Vec of chunks.
     pub chunks: Vec<Chunk>,
+    /// Pooled literals
+    pub pool: Vec<Literal>,
 }
 
 /// A `Vec` of operations
@@ -64,7 +66,14 @@ impl Bytecode {
     ///
     /// The 2nd level vectors are converted to chunks.
     pub fn new(v: Vec<Vec<Op>>) -> Bytecode {
+        Bytecode::with_pool(v, vec![])
+    }
+
+    /// Create a new bytecode from a double vector operations and a pool of
+    /// literals.
+    pub fn with_pool(v: Vec<Vec<Op>>, pool: Vec<Literal>) -> Bytecode {
         Bytecode {
+            pool,
             chunks: v.into_iter().map(|c| Chunk { ops: c }).collect(),
         }
     }
