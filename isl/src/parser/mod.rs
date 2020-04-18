@@ -62,10 +62,10 @@
 //!            parse("(quasiquote (+ 1 2 (unquote x)))").unwrap());
 //! ```
 //!
-//! Note that [`parser::parse`](parser::parse) attempts to parse the string completely
+//! Note that [`parser::parse`](parse) attempts to parse the string completely
 //! into potentially multiple literal values, which it returns as an vector.
-//! However, the parser exposes the raw nom parsers [`exprs`](parser::exprs), [`tagged_expr`](parser::exprs),
-//! and [`expr`](parser::expr), which could be used to parse single literals.
+//! However, the parser exposes the raw nom parsers `exprs`, `tagged_expr`,
+//! and `expr`, which could be used to parse single literals.
 //!
 //! This parser uses `nom::types::CompleteStr`, which ensures the input
 //! strings are completely consumed.

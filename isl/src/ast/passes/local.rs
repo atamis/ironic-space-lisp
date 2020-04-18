@@ -1,4 +1,5 @@
-//! Convert a [`LiftedAST`](function_lifter::LiftedAST) to a form that uses local definitions.
+//! Convert a [`LiftedAST`](crate::ast::passes::function_lifter::LiftedAST) to a
+//! form that uses local definitions.
 use crate::ast::passes::function_lifter::LASTVisitor;
 use crate::ast::ASTVisitor;
 use crate::ast::Def;

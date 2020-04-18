@@ -1,4 +1,4 @@
-//! Pass to lift functions out of the [`AST`](super::AST) and into a function registry.
+//! Pass to lift functions out of the [`AST`](super::super::AST) and into a function registry.
 use std::rc::Rc;
 
 use crate::ast::ASTVisitor;

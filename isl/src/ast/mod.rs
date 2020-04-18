@@ -1,10 +1,11 @@
-//! [`AST`](ast::AST) definition, AST parser, and the [`ASTVisitor`](ast::ASTVisitor) utility trait.
+//! [`AST`](crate::ast::AST) definition, AST parser, and the
+//! [`ASTVisitor`](crate::ast::ASTVisitor) utility trait.
 //!
 //! This AST specifies some special forms. The construction of the
 //! [`Literal`](data::Literal) values makes matching them properly difficulty,
 //! and providing meaningful errors harder. This simplifies the
 //! error reporting, an offers an easy way of traversing the AST,
-//! the [`ASTVisitor`](ast::ASTVisitor) trait.
+//! the [`ASTVisitor`](crate::ast::ASTVisitor) trait.
 
 use im::vector::Vector;
 use std::rc::Rc;

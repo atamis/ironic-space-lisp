@@ -1,4 +1,4 @@
-//! Determine if any variables are unbound in an [`AST`](super::AST).
+//! Determine if any variables are unbound in an [`AST`](crate::ast::AST).
 use crate::ast::ASTVisitor;
 use crate::ast::Def;
 use crate::ast::AST;

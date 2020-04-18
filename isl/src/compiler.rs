@@ -1,4 +1,5 @@
-//! Compile [`AST`](ast::AST)s to [`Bytecode`](vm::bytecode::Bytecode).
+//! Compile [`AST`](crate::ast::AST)s to
+//! [`Bytecode`](crate::vm::bytecode::Bytecode).
 use std::rc::Rc;
 
 use crate::ast::passes::local;
@@ -23,9 +24,11 @@ pub type IrChunkSlice<'a> = &'a [IrOp];
 
 /// Intermediate operation representation.
 ///
-/// As an intermediate representation, it's largely flat, except for [`IrOp::JumpCond`], which
-/// represents its potential jump targets as pointers to other IrChunks. Functions
-/// are handled by [`function_lifter`] and [`compile()`] rather
+/// As an intermediate representation, it's largely flat, except for
+/// [`IrOp::JumpCond`], which represents its potential jump targets as pointers
+/// to other IrChunks. Functions are handled by
+/// [`function_lifter`](crate::ast::passes::function_lifter) and
+/// [`compile`] rather
 /// represented in IrOp.
 #[derive(Debug, PartialEq)]
 #[allow(missing_docs)]
@@ -58,7 +61,8 @@ pub enum IrOp {
 
 /// Empty struct that implements `ASTVisitor<IrChunk>`.
 ///
-/// See `ASTVisitor<IrChunk>` and [`ASTVisitor`] for information.
+/// See `ASTVisitor<IrChunk>` and [`ASTVisitor`](crate::ast::ASTVisitor) for
+/// information.
 pub struct Compiler;
 
 impl visitors::GlobalDefVisitor<IrChunk> for Compiler {
@@ -286,7 +290,7 @@ fn alloc_chunk(code: &mut Bytecode) -> usize {
     idx
 }
 
-/// Compile and pack a [`LiftedAST`](function_lifter::LiftedAST) into a new bytecode.
+/// Compile and pack a [`LiftedAST`](crate::ast::passes::function_lifter::LiftedAST) into a new bytecode.
 pub fn compile(llast: &local::LocalLiftedAST) -> Result<Bytecode> {
     let mut code = Bytecode::new(vec![]);
 
