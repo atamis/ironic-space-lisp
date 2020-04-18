@@ -48,29 +48,40 @@ pub fn make_packed(code: &Bytecode) -> Bytecode {
     Bytecode::new(vec![pack(code)])
 }
 
+/// Extract all literals to literal pool in this bytecode.
+///
+/// Doesn't modify existing literals in the pool.
 pub fn extract_to_pool(code: &mut Bytecode) {
     let mut pool_index = code.pool.len();
     // Mapping between ending literals and eventual index
-    let mut lits: HashMap<Literal, usize> = HashMap::new();
+    let existing_lits: HashMap<Literal, usize> = code
+        .pool
+        .iter()
+        .cloned()
+        .enumerate()
+        .map(|(i, l)| (l, i))
+        .collect();
+
+    let mut new_lits: HashMap<Literal, usize> = HashMap::new();
 
     for chunk in &mut code.chunks {
         for op in &mut chunk.ops {
             if let Op::Lit(l) = op {
-                if !lits.contains_key(l) {
-                    lits.insert(l.clone(), pool_index);
+                if !existing_lits.contains_key(l) && !new_lits.contains_key(l) {
+                    new_lits.insert(l.clone(), pool_index);
                     pool_index += 1;
                 }
 
-                *op = Op::LoadPool(*lits.get(l).unwrap());
+                *op = Op::LoadPool(*existing_lits.get(l).or_else(|| new_lits.get(l)).unwrap());
             }
         }
     }
 
-    let mut new_lits = lits.into_iter().collect::<Vec<(Literal, usize)>>();
-    new_lits.sort_by_key(|(_, i)| *i);
+    let mut new_lit_vec = new_lits.into_iter().collect::<Vec<(Literal, usize)>>();
+    new_lit_vec.sort_by_key(|(_, i)| *i);
 
     code.pool
-        .append(&mut new_lits.into_iter().map(|(l, _)| l).collect());
+        .append(&mut new_lit_vec.into_iter().map(|(l, _)| l).collect());
 }
 
 #[cfg(test)]
@@ -161,5 +172,25 @@ mod test {
         assert_eq!(v.chunks[0].ops[0], Op::LoadPool(0));
         assert_eq!(v.chunks[0].ops[1], Op::LoadPool(0));
         assert_eq!(v.chunks[1].ops[0], Op::LoadPool(0));
+    }
+
+    #[test]
+    fn test_pool_extraction_dedup2() {
+        let v = &mut Bytecode::with_pool(
+            vec![
+                vec![Op::Lit(Literal::from(1)), Op::Lit(Literal::from(1))],
+                vec![Op::Lit(Literal::from(1))],
+                vec![Op::LoadPool(0)],
+            ],
+            vec![Literal::from(1)],
+        );
+
+        extract_to_pool(v);
+
+        assert_eq!(v.pool, vec![Literal::from(1)]);
+        assert_eq!(v.chunks[0].ops[0], Op::LoadPool(0));
+        assert_eq!(v.chunks[0].ops[1], Op::LoadPool(0));
+        assert_eq!(v.chunks[1].ops[0], Op::LoadPool(0));
+        assert_eq!(v.chunks[2].ops[0], Op::LoadPool(0));
     }
 }
