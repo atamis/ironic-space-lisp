@@ -430,6 +430,9 @@ impl VM {
             Op::StoreLocal(i) => self
                 .op_store_local(i)
                 .context("Executing operation store local")?,
+            Op::LoadPool(i) => self
+                .op_load_pool(i)
+                .context("Executing operation load pool")?,
             Op::Terminate => self
                 .op_terminate()
                 .context("Executing operation terminate")?,
@@ -681,6 +684,20 @@ impl VM {
         let local_ref = self.local_cap_ref(index)?;
 
         *local_ref = msg;
+
+        Ok(())
+    }
+
+    fn op_load_pool(&mut self, index: usize) -> Result<()> {
+        println!("{:?}", self.code.pool);
+
+        self.stack.push(
+            self.code
+                .pool
+                .get(index)
+                .ok_or_else(|| err_msg(format!("Loading from pool index {:}", index)))?
+                .clone(),
+        );
 
         Ok(())
     }

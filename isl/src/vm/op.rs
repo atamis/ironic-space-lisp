@@ -99,6 +99,11 @@ pub enum Op {
     /// `<value>`
     StoreLocal(usize),
 
+    /// Load a literal from the literal pool based on indx.
+    ///
+    /// parameter: index
+    LoadPool(usize),
+
     /// Terminate the VM immediately, returning the value. This should also
     /// empty the frames and stack.
     ///
@@ -129,6 +134,7 @@ impl Op {
             Op::Pid => "Pid",
             Op::LoadLocal(_) => "LoadLocal",
             Op::StoreLocal(_) => "StoreLocal",
+            Op::LoadPool(_) => "LoadPool",
             Op::Terminate => "Terminate",
         }
     }
@@ -161,6 +167,7 @@ impl fmt::Debug for Op {
             Op::Pid => write!(f, "oMe"),
             Op::LoadLocal(i) => write!(f, "oLL{:}", i),
             Op::StoreLocal(i) => write!(f, "oSL{:}", i),
+            Op::LoadPool(i) => write!(f, "oLP{:}", i),
             Op::Terminate => write!(f, "oT"),
         }
     }

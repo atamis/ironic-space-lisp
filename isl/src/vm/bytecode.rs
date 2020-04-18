@@ -50,6 +50,10 @@ impl Chunk {
                 print!("\t{:}", i);
             }
 
+            if let Op::LoadPool(i) = op {
+                print!("\t{:}", i);
+            }
+
             println!()
         }
     }
@@ -93,6 +97,11 @@ impl Bytecode {
 
     /// Prints a plain text disassembly of all the chunks to STDOUT.
     pub fn dissassemble(&self) {
+        println!("################    POOL  ################");
+        for (index, lit) in self.pool.iter().enumerate() {
+            println!("\t{:}\t{:?}", index, lit);
+        }
+
         for (chunk_idx, chunk) in self.chunks.iter().enumerate() {
             println!("################ CHUNK #{:?} ################", chunk_idx);
             chunk.dissassemble(chunk_idx);
@@ -105,6 +114,8 @@ impl Bytecode {
     /// chunks.
     pub fn import(&mut self, code: &Bytecode) -> Address {
         let new_chunk_idx = self.chunks.len();
+
+        let current_pool = self.pool.len();
 
         let mut new_chunks: Vec<Chunk> = code
             .chunks
@@ -121,6 +132,7 @@ impl Bytecode {
                         Op::Lit(Literal::Closure(arity, (a1, a2))) => {
                             Op::Lit(Literal::Closure(*arity, ((a1 + new_chunk_idx), *a2)))
                         }
+                        Op::LoadPool(i) => Op::LoadPool(i + current_pool),
                         x => x.clone(),
                     })
                     .collect(),
@@ -128,6 +140,8 @@ impl Bytecode {
             .collect();
 
         self.chunks.append(&mut new_chunks);
+
+        self.pool.append(&mut code.pool.clone());
 
         (new_chunk_idx, 0)
     }
